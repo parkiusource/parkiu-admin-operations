@@ -1,139 +1,118 @@
-import { motion } from 'framer-motion';
-import { useOnboarding } from '../hooks/useOnboarding';
-import { Button } from '@/components/common';
-import { CheckCircle, User, ShieldCheck, LucideIcon } from 'lucide-react';
-import { CircleParking } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FirstStep, SecondStep, ThirdStep } from '@/components/Onboarding';
 
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      when: 'beforeChildren',
-      staggerChildren: 0.2,
-    },
-  },
-};
+interface StepRef {
+  submitForm: () => Promise<void>;
+}
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
+const OnboardingForm = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const firstStepRef = useRef<StepRef>(null);
+  const secondStepRef = useRef<StepRef>(null);
 
-const stepIcons: Record<number, LucideIcon> = {
-  1: User,
-  2: CircleParking,
-  3: ShieldCheck,
-};
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      try {
+        await firstStepRef.current?.submitForm();
+        setCurrentStep(2);
+      } catch (error) {
+        console.error('Error en el primer paso:', error);
+      }
+    } else if (currentStep === 2) {
+      try {
+        await secondStepRef.current?.submitForm();
+        setCurrentStep(3);
+      } catch (error) {
+        console.error('Error en el segundo paso:', error);
+      }
+    }
+  };
 
-export const OnboardingForm = () => {
-  const {
-    currentStep,
-    nextStep,
-  } = useOnboarding();
-
-  const steps = [
-    {
-      id: 0,
-      buttonLabel: 'Comenzar',
-    },
-    {
-      id: 1,
-      title: 'Información Básica',
-      description: 'Completa tu perfil de administrador',
-      buttonLabel: 'Guardar y Continuar',
-    },
-    {
-      id: 2,
-      title: 'Parqueadero',
-      description: 'Registra tu primer parqueadero',
-      buttonLabel: 'Guardar y Continuar',
-    },
-    {
-      id: 3,
-      title: 'Verificación',
-      description: 'Verificaremos tu identidad para continuar',
-      buttonLabel: 'Ir al Dashboard',
-    },
-  ];
-
-  const currentStepData = steps.find((s) => s.id === currentStep);
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <motion.div
-          className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-blue-100/50 p-8"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div variants={itemVariants}>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Bienvenido a Parkiu
+    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+
+      <div className="relative isolate px-6 pt-14 lg:px-8">
+        <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+              Configuración Inicial
             </h1>
-            <p className="text-gray-500 mb-12">
-              Configura tu cuenta en unos sencillos pasos
+            <p className="mt-6 text-lg leading-8 text-gray-300">
+              Paso {currentStep} de 3
             </p>
-          </motion.div>
-
-          <div className="mb-12">
-            <div className="relative">
-              <div className="absolute left-0 top-2 w-full h-0.5 bg-gray-100">
-                <div
-                  className="h-full bg-blue-400 transition-all duration-500"
-                  style={{ width: `${(currentStep / 3) * 100}%` }}
-                />
-              </div>
-              <div className="relative flex justify-between">
-                {steps.slice(1).map(({ id, title }) => {
-                  const StepIcon = stepIcons[id];
-                  const isCompleted = currentStep > id;
-                  const isCurrent = currentStep === id;
-
-                  return (
-                    <div key={id} className="flex flex-col items-center">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${
-                          isCompleted
-                            ? 'bg-blue-400 border-blue-400 text-white'
-                            : isCurrent
-                            ? 'bg-white border-blue-400 text-blue-500 ring-4 ring-blue-50'
-                            : 'bg-white border-gray-200 text-gray-400'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle className="w-6 h-6" />
-                        ) : (
-                          <StepIcon className="w-6 h-6" />
-                        )}
-                      </div>
-                      <span
-                        className={`mt-3 text-sm font-medium ${
-                          isCompleted || isCurrent ? 'text-blue-600' : 'text-gray-400'
-                        }`}
-                      >
-                        {title}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
-          <div className="mt-8">
-            <Button
-              onClick={nextStep}
-              className="w-full"
-            >
-              {currentStepData?.buttonLabel}
-            </Button>
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-xl">
+            <AnimatePresence mode="wait">
+              {currentStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FirstStep ref={firstStepRef} setLoading={setLoading} />
+                </motion.div>
+              )}
+
+              {currentStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SecondStep ref={secondStepRef} onComplete={() => setCurrentStep(3)} />
+                </motion.div>
+              )}
+
+              {currentStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ThirdStep />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {currentStep < 3 && (
+              <div className="mt-8 flex justify-between">
+                <button
+                  onClick={handleBack}
+                  disabled={currentStep === 1 || loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-md hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Atrás
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Cargando...' : 'Siguiente'}
+                </button>
+              </div>
+            )}
           </div>
-        </motion.div>
-      </main>
+        </div>
+      </div>
     </div>
   );
 };
+
+export { OnboardingForm };
