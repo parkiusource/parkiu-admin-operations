@@ -1,1 +1,1 @@
-export * from './components/OnboardingForm';
+export * from './components/EnhancedOnboardingForm';

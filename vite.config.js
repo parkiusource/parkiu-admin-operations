@@ -12,5 +12,30 @@ export default defineConfig({
         alias: {
             '@': resolve(__dirname, './src')
         }
+    },
+    build: {
+        target: 'esnext',
+        minify: 'terser',
+        cssMinify: true,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+                    'ui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
+                    'query-vendor': ['@tanstack/react-query'],
+                    'utils-vendor': ['date-fns', 'axios']
+                }
+            }
+        },
+        chunkSizeWarningLimit: 1000,
+        terserOptions: {
+            compress: {
+                drop_console: true,
+                drop_debugger: true
+            }
+        }
+    },
+    optimizeDeps: {
+        include: ['react', 'react-dom', 'react-router-dom']
     }
 });
