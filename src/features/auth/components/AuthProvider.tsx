@@ -12,11 +12,8 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
-  // El callback debe coincidir con la ruta registrada en Auth0
   const redirectUri = window.location.origin + '/callback';
 
-  // Redirección después del login
-  // Si quieres redirigir a otra ruta después del login, usa loginWithRedirect({ appState: { returnTo: '/onboarding' } })
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
     navigate(appState?.returnTo || '/dashboard', { replace: true });
   };
@@ -45,5 +42,4 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
   );
 };
 
-// Para mantener compatibilidad con el import anterior
 export { Auth0ProviderWithNavigate as AuthProvider };

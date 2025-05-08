@@ -1,0 +1,120 @@
+import { useState, useRef, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { User, ShieldCheck } from 'lucide-react';
+import { CircleParking } from 'lucide-react';
+import { FirstStep, SecondStep, ThirdStep } from '@/components/Onboarding';
+
+interface StepFormRef {
+  submitForm: () => Promise<void>;
+}
+
+const steps = [
+  { id: 1, title: 'Información Básica', icon: User },
+  { id: 2, title: 'Parqueadero', icon: CircleParking },
+  { id: 3, title: 'Verificación', icon: ShieldCheck },
+];
+
+export default function EnhancedOnboardingForm() {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const firstStepRef = useRef<StepFormRef>(null);
+  const secondStepRef = useRef<StepFormRef>(null);
+
+  // Barra de progreso visual
+  const ProgressBar = () => (
+    <div className="mb-10">
+      <div className="relative flex justify-between items-center mb-2">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          const isActive = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
+          return (
+            <div key={step.id} className="flex flex-col items-center flex-1">
+              <div
+                className={`w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300
+                  ${isCompleted ? 'bg-blue-500 border-blue-500 text-white' :
+                    isActive ? 'bg-white border-blue-500 text-blue-500 ring-4 ring-blue-100' :
+                    'bg-white border-gray-200 text-gray-400'}
+                `}
+              >
+                <Icon className="w-6 h-6" />
+              </div>
+              <span className={`mt-2 text-xs font-medium ${isActive || isCompleted ? 'text-blue-600' : 'text-gray-400'}`}>{step.title}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="relative h-1 bg-gray-200 rounded-full">
+        <div
+          className="absolute h-1 bg-blue-500 rounded-full transition-all duration-500"
+          style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+
+  // Manejo de pasos
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      await firstStepRef.current?.submitForm();
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      await secondStepRef.current?.submitForm();
+      setCurrentStep(3);
+    }
+  };
+  const handleBack = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  // Renderizado de pasos
+  const StepComponent = useMemo(() => {
+    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} />;
+    if (currentStep === 2) return <SecondStep ref={secondStepRef} onComplete={() => setCurrentStep(3)} />;
+    if (currentStep === 3) return <ThirdStep />;
+    return null;
+  }, [currentStep]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50 to-white">
+      <motion.div
+        className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl shadow-primary/10 p-4 sm:p-6 border-t-4 border-primary"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="flex flex-col items-center mb-3">
+          <img src="/logo-parkiu.svg" alt="ParkiÜ" className="w-20 h-20 drop-shadow-md mb-2" />
+          <h1 className="text-2xl font-extrabold text-primary text-center mb-1">¡Bienvenido a ParkiÜ!</h1>
+          <p className="text-sm text-secondary text-center max-w-xs">Configura tu cuenta para aprovechar todos los beneficios de la plataforma y gestiona tu parqueadero de manera inteligente.</p>
+        </div>
+        <div className="mb-4">
+          <ProgressBar />
+        </div>
+        <div className="space-y-3">
+          <div className="bg-white rounded-xl p-4 border border-background">
+            {StepComponent}
+          </div>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={handleBack}
+              disabled={currentStep === 1 || loading}
+              className="btn-secondary"
+            >
+              Atrás
+            </button>
+            {currentStep < 3 && (
+              <button
+                onClick={handleNext}
+                disabled={loading}
+                className="btn text-lg font-bold shadow-lg"
+              >
+                {loading ? 'Cargando...' : '¡Comenzar ahora!'}
+              </button>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

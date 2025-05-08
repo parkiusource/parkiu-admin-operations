@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { LuCar, LuMapPin, LuTrendingUp, LuUsers } from 'react-icons/lu';
 import { CircleParking } from 'lucide-react';
+import { ParkingMap } from './ParkingMap';
+import { mockParkingSpots } from './mockParkingSpots';
+
+interface ParkingSpot {
+  id: number;
+  status: 'available' | 'occupied' | string;
+}
 
 interface DashboardStats {
   totalVehicles: number;
@@ -9,7 +16,7 @@ interface DashboardStats {
   todayTransactions: number;
 }
 
-// Datos simulados para las métricas (temporal hasta tener el backend)
+// Datos simulados para las métricas (fallback)
 const mockMetrics = {
   weeklyStats: [
     { day: 'Lun', value: 85 },
@@ -35,25 +42,58 @@ export default function Dashboard() {
     occupiedSpots: 0,
     todayTransactions: 0,
   });
+  const [metrics, setMetrics] = useState(mockMetrics);
 
-  // TODO: Reemplazar con llamadas reales al backend
   useEffect(() => {
-    // Simulación de carga de datos
-    const loadStats = async () => {
-      // Aquí irían las llamadas al backend
-      setStats({
-        totalVehicles: 25,
-        availableSpots: 15,
-        occupiedSpots: 10,
-        todayTransactions: 30,
-      });
-    };
-
-    loadStats();
+    let isMounted = true;
+    (async () => {
+      try {
+        // Import dinámico solo si existe el archivo y es entorno local
+        const dbModule = await import('../../db/schema');
+        const ParkiuDB = dbModule.ParkiuDB;
+        const db = new ParkiuDB();
+        const [
+          vehicles,
+          spots,
+          transactions
+        ] = await Promise.all([
+          db.vehicles?.where?.('status').equals('parked').count() ?? 0,
+          db.parkingSpots?.toArray?.() ?? [],
+          db.transactions?.where?.('entryTime')
+            .between(
+              new Date(new Date().setHours(0, 0, 0, 0)),
+              new Date(new Date().setHours(23, 59, 59, 999))
+            )
+            .count() ?? 0
+        ]);
+        const availableSpots = (spots as ParkingSpot[]).filter((spot) => spot.status === 'available').length;
+        const occupiedSpots = (spots as ParkingSpot[]).filter((spot) => spot.status === 'occupied').length;
+        if (isMounted) {
+          setStats({
+            totalVehicles: vehicles,
+            availableSpots,
+            occupiedSpots,
+            todayTransactions: transactions,
+          });
+        }
+        // Aquí podrías calcular weeklyStats y popularHours reales si tienes datos
+      } catch {
+        // Si falla el import dinámico o la DB, usar mock
+        setStats({
+          totalVehicles: 25,
+          availableSpots: 15,
+          occupiedSpots: 10,
+          todayTransactions: 30,
+        });
+        setMetrics(mockMetrics);
+        // Opcional: console.warn('Fallo la carga de datos reales, usando mock');
+      }
+    })();
+    return () => { isMounted = false; };
   }, []);
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Stats Overview */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Vehículos */}
@@ -76,7 +116,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
         {/* Espacios Disponibles */}
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
@@ -97,7 +136,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
         {/* Espacios Ocupados */}
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
@@ -118,7 +156,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
         {/* Transacciones Hoy */}
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
@@ -141,49 +178,54 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Visualizador tipo mapa */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Mapa de Parqueadero</h3>
+        <ParkingMap spots={mockParkingSpots} onSpotClick={(spot) => alert(`Espacio ${spot.number}: ${spot.status}`)} />
+      </div>
+
       {/* Metrics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Occupancy Chart */}
         <div className="bg-white p-6 rounded-xl shadow">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Ocupación Semanal</h3>
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <h3 className="text-lg font-semibold text-secondary">Ocupación Semanal</h3>
+            <div className="flex items-center space-x-2 text-sm text-muted">
               <LuTrendingUp className="w-4 h-4" />
               <span>+12% vs semana anterior</span>
             </div>
           </div>
           <div className="h-64 flex items-end justify-between space-x-2">
-            {mockMetrics.weeklyStats.map((stat) => (
+            {metrics.weeklyStats.map((stat) => (
               <div key={stat.day} className="flex-1 flex flex-col items-center">
                 <div
-                  className="w-full bg-blue-100 rounded-t-lg transition-all duration-300 hover:bg-blue-200"
+                  className="w-full bg-primary/10 rounded-t-lg transition-all duration-300 hover:bg-primary/20"
                   style={{ height: `${stat.value}%` }}
                 />
-                <span className="mt-2 text-xs text-gray-500">{stat.day}</span>
+                <span className="mt-2 text-xs text-muted">{stat.day}</span>
               </div>
             ))}
           </div>
         </div>
-
         {/* Popular Hours */}
         <div className="bg-white p-6 rounded-xl shadow">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Horas Populares</h3>
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <h3 className="text-lg font-semibold text-secondary">Horas Populares</h3>
+            <div className="flex items-center space-x-2 text-sm text-muted">
               <LuUsers className="w-4 h-4" />
               <span>Promedio diario</span>
             </div>
           </div>
           <div className="space-y-4">
-            {mockMetrics.popularHours.map((hour) => (
+            {metrics.popularHours.map((hour) => (
               <div key={hour.hour} className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{hour.hour}</span>
-                  <span className="text-gray-900 font-medium">{hour.occupancy}%</span>
+                  <span className="text-muted">{hour.hour}</span>
+                  <span className="text-secondary font-medium">{hour.occupancy}%</span>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-background rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                    className="h-full bg-primary rounded-full transition-all duration-300"
                     style={{ width: `${hour.occupancy}%` }}
                   />
                 </div>
@@ -192,38 +234,37 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
       {/* Quick Actions */}
       <div className="bg-white shadow sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <h3 className="text-lg leading-6 font-medium text-secondary">
             Acciones Rápidas
           </h3>
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <button
               type="button"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              onClick={() => {/* TODO: Implementar registro de entrada */}}
+              className="btn"
+              onClick={() => alert('Registrar Entrada (lógica pendiente)')}
             >
               Registrar Entrada
             </button>
             <button
               type="button"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              onClick={() => {/* TODO: Implementar registro de salida */}}
+              className="btn-secondary"
+              onClick={() => alert('Registrar Salida (lógica pendiente)')}
             >
               Registrar Salida
             </button>
             <button
               type="button"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              onClick={() => {/* TODO: Implementar búsqueda */}}
+              className="btn-secondary"
+              onClick={() => alert('Buscar Vehículo (lógica pendiente)')}
             >
               Buscar Vehículo
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

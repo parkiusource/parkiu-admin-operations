@@ -79,7 +79,7 @@ const ParkingStats = memo(() => (
 const ParkingCTA = memo(({ onJoinClick }: ParkingCTAProps) => (
   <div className="mt-4 p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg">
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4 text-sm text-gray-600">
+      <div className="flex items-center gap-4 text-sm text-secondary">
         <div className="flex items-center gap-1">
           <Clock className="w-4 h-4" />
           <span>Información básica</span>
@@ -93,7 +93,7 @@ const ParkingCTA = memo(({ onJoinClick }: ParkingCTAProps) => (
         <span className="font-semibold">¡Únete a Parkiu!</span>
       </button>
     </div>
-    <p className="text-xs text-gray-500 mt-2">
+    <p className="text-xs text-muted mt-2">
       Gestiona tu parqueadero de manera inteligente y aumenta tus ingresos
     </p>
   </div>

@@ -19,6 +19,10 @@ const createClient = () => {
       }
     } catch (error) {
       console.error('Error getting token:', error);
+      // If token acquisition fails, redirect to login
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return config;
   });
@@ -27,14 +31,39 @@ const createClient = () => {
     auth0Client = auth0Instance;
   };
 
-  const getToken = async () => {
+  const getToken = async (retryCount = 0): Promise<string | null> => {
     try {
       if (!auth0Client) {
         throw new Error('Auth0 client not initialized');
       }
-      return await auth0Client.getTokenSilently();
+
+      // Try to get the token with refresh token
+      const response = await auth0Client.getTokenSilently({
+        detailedResponse: true,
+        timeoutInSeconds: 10,
+        authorizationParams: {
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: 'openid profile email offline_access'
+        }
+      });
+
+      return response.access_token;
     } catch (error) {
       console.error('Error getting token:', error);
+
+      // If we haven't retried yet and it's a refresh token error, try one more time
+      if (retryCount === 0 && error instanceof Error && error.message.includes('refresh token')) {
+        console.log('Retrying token acquisition...');
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return getToken(retryCount + 1);
+      }
+
+      // If we're not on the login page, redirect there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+
       return null;
     }
   };
@@ -43,7 +72,6 @@ const createClient = () => {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      // Asegurarse de que error.response existe antes de acceder a sus propiedades
       const status = error?.response?.status;
       const url = error?.config?.url;
 
@@ -52,6 +80,10 @@ const createClient = () => {
           url,
           message: error?.response?.data?.message || 'No hay mensaje de error',
         });
+        // Redirect to login on 401
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       } else if (status === 403) {
         console.error('Error 403: Acceso prohibido', {
           url,

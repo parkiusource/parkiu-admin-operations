@@ -7,7 +7,7 @@ import VehicleEntry from './features/vehicles/VehicleEntry';
 import VehicleExit from './features/vehicles/VehicleExit';
 import ParkingView from './features/parking/ParkingView';
 import { LoginForm } from './features/auth/components/LoginForm';
-import { OnboardingForm } from './features/onboarding/components/OnboardingForm';
+import EnhancedOnboardingForm from './features/onboarding/components/EnhancedOnboardingForm';
 import { AuthProvider } from './features/auth/components/AuthProvider';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { useConnectionStatus } from './hooks';
@@ -35,7 +35,7 @@ function App() {
           <Routes>
             {/* Rutas públicas */}
             <Route path="/login" element={<LoginForm />} />
-            <Route path="/onboarding" element={<OnboardingForm />} />
+            <Route path="/onboarding" element={<EnhancedOnboardingForm />} />
             <Route path="/callback" element={<div>Loading...</div>} />
 
             {/* Rutas protegidas */}
