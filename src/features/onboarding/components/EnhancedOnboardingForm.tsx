@@ -1,8 +1,11 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, ShieldCheck } from 'lucide-react';
 import { CircleParking } from 'lucide-react';
 import { FirstStep, SecondStep, ThirdStep } from '@/components/Onboarding';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth0 } from '@auth0/auth0-react';
+import { getAdminProfile } from '@/services/profile';
 
 interface StepFormRef {
   submitForm: () => Promise<void>;
@@ -14,11 +17,36 @@ const steps = [
   { id: 3, title: 'Verificación', icon: ShieldCheck },
 ];
 
+const statusToStep: Record<string, number> = {
+  initial: 1,
+  pending_profile: 1,
+  pending_parking: 2,
+  pending_verify: 3,
+  active: 3, // El guard ya redirige si está activo
+};
+
 export default function EnhancedOnboardingForm() {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { data: profile, isLoading: isProfileLoading } = useQuery({
+    queryKey: ['adminProfile'],
+    queryFn: async () => {
+      const token = await getAccessTokenSilently();
+      return getAdminProfile(token);
+    },
+    enabled: isAuthenticated,
+  });
+
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const firstStepRef = useRef<StepFormRef>(null);
   const secondStepRef = useRef<StepFormRef>(null);
+
+  // Sincroniza el paso con el status del perfil
+  useEffect(() => {
+    if (profile?.status) {
+      setCurrentStep(statusToStep[profile.status] || 1);
+    }
+  }, [profile?.status]);
 
   // Barra de progreso visual
   const ProgressBar = () => (
@@ -74,6 +102,14 @@ export default function EnhancedOnboardingForm() {
     if (currentStep === 3) return <ThirdStep />;
     return null;
   }, [currentStep]);
+
+  if (isProfileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50 to-white">

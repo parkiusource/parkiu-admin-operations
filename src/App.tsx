@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { lazy, Suspense } from 'react';
 import { AuthProvider } from './features/auth/components/AuthProvider';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
+import { OnboardingGuard } from './features/onboarding/components/OnboardingGuard';
 import { useConnectionStatus } from './hooks';
 import { ToastContainer } from './components/Toast';
 import './index.css';
@@ -46,7 +47,14 @@ function App() {
             <Routes>
               {/* Rutas públicas */}
               <Route path="/login" element={<LoginForm />} />
-              <Route path="/onboarding" element={<EnhancedOnboardingForm />} />
+              <Route
+                path="/onboarding"
+                element={
+                  <OnboardingGuard>
+                    <EnhancedOnboardingForm />
+                  </OnboardingGuard>
+                }
+              />
               <Route path="/callback" element={<LoadingSpinner />} />
 
               {/* Rutas protegidas */}
