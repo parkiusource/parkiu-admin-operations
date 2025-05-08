@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ParkiuDB } from '../../db/schema';
 import { Vehicle } from '../../db/schema';
 
@@ -49,7 +49,7 @@ export default function VehicleExit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vehicle) return;
+    if (!vehicle || !vehicle.id || !vehicle.parkingSpotId) return;
 
     const db = new ParkiuDB();
 
@@ -71,7 +71,7 @@ export default function VehicleExit() {
         .and(item => item.status === 'active')
         .first();
 
-      if (transaction) {
+      if (transaction && transaction.id) {
         await db.transactions
           .where('id')
           .equals(transaction.id)

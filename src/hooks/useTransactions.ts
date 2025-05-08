@@ -7,7 +7,7 @@ const transactionService = new TransactionService();
 
 export const useTransactions = () => {
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  const { addToast } = useToast();
 
   const { data: activeTransactions, isLoading, error } = useQuery({
     queryKey: ['transactions', 'active'],
@@ -30,16 +30,10 @@ export const useTransactions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({
-        type: 'success',
-        message: 'Transacción creada exitosamente'
-      });
+      addToast('Transacción creada exitosamente', 'success');
     },
     onError: (error: Error) => {
-      showToast({
-        type: 'error',
-        message: error.message
-      });
+      addToast(error.message, 'error');
     }
   });
 
@@ -53,16 +47,10 @@ export const useTransactions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({
-        type: 'success',
-        message: 'Transacción completada exitosamente'
-      });
+      addToast('Transacción completada exitosamente', 'success');
     },
     onError: (error: Error) => {
-      showToast({
-        type: 'error',
-        message: error.message
-      });
+      addToast(error.message, 'error');
     }
   });
 

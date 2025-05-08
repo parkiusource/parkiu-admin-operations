@@ -2,31 +2,21 @@ import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 
 export function useConnectionStatus() {
-  const { setOffline, setSyncing } = useStore();
+  const setOffline = useStore((state) => state.setOffline);
 
   useEffect(() => {
-    const handleOnline = () => {
-      setOffline(false);
-      setSyncing(true);
-      // Aquí iría la lógica de sincronización
-      setTimeout(() => setSyncing(false), 1000);
-    };
-
-    const handleOffline = () => {
-      setOffline(true);
-    };
+    const handleOnline = () => setOffline(false);
+    const handleOffline = () => setOffline(true);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Verificar estado inicial
-    if (!navigator.onLine) {
-      setOffline(true);
-    }
+    // Establecer el estado inicial
+    setOffline(!navigator.onLine);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [setOffline, setSyncing]);
+  }, [setOffline]);
 }

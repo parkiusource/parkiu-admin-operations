@@ -48,27 +48,36 @@ export async function syncWithServer() {
     // Sincronizar vehículos
     if (pendingVehicles.length > 0) {
       await api.post('/vehicles/sync', pendingVehicles);
+      const vehicleIds = pendingVehicles
+        .map(v => v.id)
+        .filter((id): id is number => id !== undefined);
       await db.vehicles
         .where('id')
-        .anyOf(pendingVehicles.map(v => v.id))
+        .anyOf(vehicleIds)
         .modify({ syncStatus: 'synced' });
     }
 
     // Sincronizar espacios
     if (pendingSpots.length > 0) {
       await api.post('/parking-spots/sync', pendingSpots);
+      const spotIds = pendingSpots
+        .map(s => s.id)
+        .filter((id): id is number => id !== undefined);
       await db.parkingSpots
         .where('id')
-        .anyOf(pendingSpots.map(s => s.id))
+        .anyOf(spotIds)
         .modify({ syncStatus: 'synced' });
     }
 
     // Sincronizar transacciones
     if (pendingTransactions.length > 0) {
       await api.post('/transactions/sync', pendingTransactions);
+      const transactionIds = pendingTransactions
+        .map(t => t.id)
+        .filter((id): id is number => id !== undefined);
       await db.transactions
         .where('id')
-        .anyOf(pendingTransactions.map(t => t.id))
+        .anyOf(transactionIds)
         .modify({ syncStatus: 'synced' });
     }
 

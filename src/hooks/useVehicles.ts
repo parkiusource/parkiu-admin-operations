@@ -7,7 +7,7 @@ const vehicleService = new VehicleService();
 
 export const useVehicles = () => {
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  const { addToast } = useToast();
 
   const { data: vehicles, isLoading, error } = useQuery({
     queryKey: ['vehicles'],
@@ -30,16 +30,10 @@ export const useVehicles = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      showToast({
-        type: 'success',
-        message: 'Vehículo registrado exitosamente'
-      });
+      addToast('Vehículo registrado exitosamente', 'success');
     },
     onError: (error: Error) => {
-      showToast({
-        type: 'error',
-        message: error.message
-      });
+      addToast(error.message, 'error');
     }
   });
 
@@ -53,16 +47,10 @@ export const useVehicles = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      showToast({
-        type: 'success',
-        message: 'Vehículo actualizado exitosamente'
-      });
+      addToast('Vehículo actualizado exitosamente', 'success');
     },
     onError: (error: Error) => {
-      showToast({
-        type: 'error',
-        message: error.message
-      });
+      addToast(error.message, 'error');
     }
   });
 

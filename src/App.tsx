@@ -6,6 +6,10 @@ import Dashboard from './features/dashboard/Dashboard';
 import VehicleEntry from './features/vehicles/VehicleEntry';
 import VehicleExit from './features/vehicles/VehicleExit';
 import ParkingView from './features/parking/ParkingView';
+import { LoginForm } from './features/auth/components/LoginForm';
+import { OnboardingForm } from './features/onboarding/components/OnboardingForm';
+import { AuthProvider } from './features/auth/components/AuthProvider';
+import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { useConnectionStatus } from './hooks';
 import { ToastContainer } from './components/Toast';
 import './index.css';
@@ -27,15 +31,25 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <MainLayout>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/parking" element={<ParkingView />} />
-            <Route path="/vehicles/entry" element={<VehicleEntry />} />
-            <Route path="/vehicles/exit" element={<VehicleExit />} />
+            {/* Rutas públicas */}
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/onboarding" element={<OnboardingForm />} />
+            <Route path="/callback" element={<div>Loading...</div>} />
+
+            {/* Rutas protegidas */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/parking" element={<ParkingView />} />
+                <Route path="/vehicles/entry" element={<VehicleEntry />} />
+                <Route path="/vehicles/exit" element={<VehicleExit />} />
+              </Route>
+            </Route>
           </Routes>
-        </MainLayout>
+        </AuthProvider>
       </Router>
       <ToastContainer />
       <ReactQueryDevtools initialIsOpen={false} />
