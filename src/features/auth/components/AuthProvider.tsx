@@ -15,7 +15,9 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
   const redirectUri = window.location.origin + '/callback';
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
-    navigate(appState?.returnTo || '/dashboard', { replace: true });
+    // Si hay un returnTo en el appState, usarlo
+    // Si no hay returnTo, ir a onboarding por defecto para nuevos usuarios
+    navigate(appState?.returnTo || '/onboarding', { replace: true });
   };
 
   // Validación de configuración
