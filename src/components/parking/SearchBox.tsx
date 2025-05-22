@@ -1,100 +1,89 @@
-import { forwardRef, useCallback, useState } from 'react';
-import { UseQueryResult } from '@tanstack/react-query';
-
-interface Location {
-  lat: number;
-  lng: number;
-}
-
-interface SearchResult {
-  formattedAddress: string;
-  location: Location;
-}
-
-interface SearchHookResult {
-  results: SearchResult[];
-  isLoading: boolean;
-  error: Error | null;
-}
-
-type SearchHook = (textQuery: string, options?: { languageCode: string }) => UseQueryResult<SearchHookResult>;
+import { useState, useCallback, forwardRef } from 'react';
+import { useDebounce } from '@/api/base/useDebounce';
+import { useAutocompletePlaces, AutocompleteSuggestion } from '@/api/hooks/useAutocompletePlaces';
+import { Input } from '@/components/common/Input';
+import { LuX } from 'react-icons/lu';
+import { twMerge } from 'tailwind-merge';
 
 interface SearchBoxProps {
-  children?: React.ReactNode;
   placeholder?: string;
-  useSearchHook: SearchHook;
-  onResultSelected: (result: SearchResult) => void;
+  onResultSelected: (suggestion: { placeId: string; text: string }) => void;
   value?: string;
+  locationBias?: { lat: number; lng: number; radius: number };
 }
-
-interface ResultItemProps {
-  result: SearchResult;
-  onSelect: (result: SearchResult) => void;
-  onClose: () => void;
-}
-
-const ResultItem = ({ result, onSelect, onClose }: ResultItemProps) => (
-  <button
-    type="button"
-    className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-    onClick={() => {
-      onSelect(result);
-      onClose();
-    }}
-  >
-    <p className="text-sm font-medium text-gray-900 truncate">
-      {result.formattedAddress}
-    </p>
-  </button>
-);
 
 export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
-  ({ placeholder = 'Buscar dirección...', useSearchHook, onResultSelected, value }, ref) => {
-    const [query, setQuery] = useState(value || '');
-    const [isOpen, setIsOpen] = useState(false);
+  ({ placeholder = 'Buscar dirección...', onResultSelected, value, locationBias }, ref) => {
+    const [searchTerm, setSearchTerm] = useState(value || '');
+    const [popoverOpen, setPopoverOpen] = useState(false);
 
-    const { data, isLoading } = useSearchHook(query, { languageCode: 'es' });
+    const debouncedSearchTerm = useDebounce(searchTerm, 400);
+    const { results, isLoading, error } = useAutocompletePlaces(debouncedSearchTerm, locationBias);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
-      setQuery(newValue);
-      setIsOpen(true);
+      setSearchTerm(newValue);
+      setPopoverOpen(!!newValue);
     }, []);
 
-    const handleClose = useCallback(() => {
-      setIsOpen(false);
+    const handleClearSearch = useCallback(() => {
+      setSearchTerm('');
+      setPopoverOpen(false);
     }, []);
+
+    const handleSelect = (suggestion: AutocompleteSuggestion['placePrediction']) => {
+      setSearchTerm(suggestion.text.text);
+      setPopoverOpen(false);
+      onResultSelected({ ...suggestion, text: suggestion.text.text });
+    };
 
     return (
-      <div className="relative">
-        <div className="relative">
-          <input
+      <div className={twMerge('w-full')}>
+        <div className="relative w-full">
+          <Input
             ref={ref}
             type="text"
-            value={query}
-            onChange={handleInputChange}
             placeholder={placeholder}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+            value={searchTerm}
+            onChange={handleInputChange}
+            className="w-full py-2 pl-8 pr-4 text-base"
+            autoComplete="off"
           />
-          {isLoading && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
+          {!!searchTerm && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400"
+              onClick={handleClearSearch}
+              type="button"
+              aria-label="Limpiar búsqueda"
+            >
+              <LuX className="w-4 h-4" />
+            </button>
           )}
         </div>
-        {isOpen && data?.results && data.results.length > 0 && (
+        {popoverOpen && (
           <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
-            {data.results.map((result) => (
-              <ResultItem
-                key={result.formattedAddress}
-                result={result}
-                onSelect={onResultSelected}
-                onClose={handleClose}
-              />
+            {isLoading && <div className="p-4 text-gray-500">Cargando...</div>}
+            {!isLoading && results.length === 0 && (
+              <div className="p-4 text-gray-500">No se encontraron resultados</div>
+            )}
+            {!isLoading && results.map((suggestion) => (
+              <button
+                key={suggestion.placePrediction.placeId}
+                type="button"
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                onClick={() => handleSelect(suggestion.placePrediction)}
+              >
+                <span className="block text-sm font-medium text-gray-900 truncate">
+                  {suggestion.placePrediction.text.text}
+                </span>
+              </button>
             ))}
+            {error && <div className="p-4 text-red-500">Error: {error}</div>}
           </div>
         )}
       </div>
     );
   }
 );
+
+SearchBox.displayName = 'SearchBox';

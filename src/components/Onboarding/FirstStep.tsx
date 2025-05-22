@@ -1,17 +1,21 @@
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { Camera } from 'lucide-react';
 
 import { itemVariants } from './utils';
 import { Label } from '@/components/common/Label';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common';
-import { useCompleteProfile, useAdminProfile } from '@/api/hooks/useAdminOnboarding';
+import { useCompleteProfile } from '@/api/hooks/useAdminOnboarding';
 
 interface FirstStepProps {
-  user?: {
+  profile?: {
     email: string;
+    name: string;
+    nit: string;
+    contact_phone: string;
+    photo_url?: string | null;
   };
   setLoading: (loading: boolean) => void;
 }
@@ -22,19 +26,40 @@ interface FormData {
   nit: string;
   contact_phone: string;
   photo_url: File | null;
+  role: string;
 }
 
-interface AdminProfile {
+// Separate interface for storage to handle File type
+interface StoredFormData {
   email: string;
   name: string;
   nit: string;
   contact_phone: string;
   photo_url: string | null;
+  role: string;
 }
 
-const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps>(({ user = { email: '' }, setLoading }, ref) => {
+const formStorage = {
+  save: (data: Partial<FormData>) => {
+    const storageData: Partial<StoredFormData> = {
+      ...data,
+      photo_url: data.photo_url instanceof File ? data.photo_url.name : data.photo_url
+    };
+    localStorage.setItem('onboarding_step1', JSON.stringify(storageData));
+  },
+  load: () => {
+    const saved = localStorage.getItem('onboarding_step1');
+    return saved ? JSON.parse(saved) as Partial<StoredFormData> : null;
+  },
+  clear: () => {
+    localStorage.removeItem('onboarding_step1');
+  }
+};
+
+const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps>(({ profile, setLoading }, ref) => {
   const { mutateAsync: completeProfile } = useCompleteProfile();
-  const { data: profile } = useAdminProfile();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const {
     register,
@@ -45,34 +70,52 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
     formState: { errors, isValid },
   } = useForm<FormData>({
     defaultValues: {
-      email: user.email,
-      name: (profile as AdminProfile)?.name || '',
-      nit: (profile as AdminProfile)?.nit || '',
-      contact_phone: (profile as AdminProfile)?.contact_phone || '',
+      email: profile?.email || '',
+      name: profile?.name || '',
+      nit: profile?.nit || '',
+      contact_phone: profile?.contact_phone || '',
       photo_url: null,
+      role: 'temp_admin',
     },
     mode: 'onChange',
     reValidateMode: 'onChange',
   });
 
+  // Load saved form data on mount
+  useEffect(() => {
+    const savedData = formStorage.load();
+    if (savedData) {
+      Object.entries(savedData).forEach(([key, value]) => {
+        if (key === 'photo_url') {
+          // Skip photo_url as it's a File object
+          return;
+        }
+        setValue(key as keyof Omit<FormData, 'photo_url'>, value as string);
+      });
+    }
+  }, [setValue]);
+
   const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('email', data.email);
-      formData.append('name', data.name);
-      formData.append('nit', data.nit);
-      formData.append('contact_phone', data.contact_phone);
-      if (data.photo_url instanceof File) {
-        formData.append('photo_url', data.photo_url);
-      }
+      const payload = {
+        email: data.email,
+        name: data.name,
+        nit: data.nit,
+        contact_phone: data.contact_phone,
+        role: data.role,
+        photo_url: '', // No se usa por ahora
+      };
 
-      await completeProfile(formData);
+      await completeProfile(payload);
+      formStorage.clear(); // Clear storage after successful submission
       return data;
     } catch (error) {
       console.error('Error completing profile:', error);
       throw error;
     } finally {
+      setIsSubmitting(false);
       setLoading(false);
     }
   };
@@ -92,14 +135,42 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setImageError('La imagen no debe superar los 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setImageError('El archivo debe ser una imagen');
+        return;
+      }
+
+      setImageError(null);
       setValue('photo_url', file);
+      // Save form data with the file
+      formStorage.save({ photo_url: file });
     }
   };
 
   const watchProfileImage = watch('photo_url');
 
+  // Save form data on change
+  useEffect(() => {
+    const subscription = watch((value) => {
+      formStorage.save(value);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
   return (
-    <div className="px-2 py-4">
+    <div className="px-2 py-4 relative">
+      {isSubmitting && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+        </div>
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <motion.div variants={itemVariants} className="flex flex-col gap-2">
           <Label htmlFor="email" className="text-blue-100">
@@ -107,12 +178,19 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
           </Label>
           <Input
             id="email"
-            {...register('email', { required: 'Email es requerido' })}
+            {...register('email', {
+              required: 'Email es requerido',
+              pattern: {
+                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                message: 'Email inválido'
+              }
+            })}
             placeholder="Ingresa tu correo electrónico"
-            disabled={!!user.email}
+            disabled={!!profile?.email}
+            aria-invalid={errors.email ? "true" : "false"}
           />
           {errors.email && (
-            <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+            <p className="text-red-400 text-sm mt-1" role="alert">{errors.email.message}</p>
           )}
         </motion.div>
 
@@ -130,11 +208,16 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
                 }
                 return true;
               },
+              pattern: {
+                value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
+                message: 'El nombre solo debe contener letras y espacios'
+              }
             })}
             placeholder="Ingresa tu nombre completo"
+            aria-invalid={errors.name ? "true" : "false"}
           />
           {errors.name && (
-            <p className="text-red-400 text-xs pl-4">
+            <p className="text-red-400 text-xs pl-4" role="alert">
               {errors.name.message}
             </p>
           )}
@@ -154,9 +237,10 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
               },
             })}
             placeholder="Ingresa tu NIT o documento"
+            aria-invalid={errors.nit ? "true" : "false"}
           />
           {errors.nit && (
-            <p className="text-red-400 text-xs pl-4">{errors.nit.message}</p>
+            <p className="text-red-400 text-xs pl-4" role="alert">{errors.nit.message}</p>
           )}
         </motion.div>
 
@@ -175,9 +259,10 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
               },
             })}
             placeholder="Ingresa tu número de teléfono"
+            aria-invalid={errors.contact_phone ? "true" : "false"}
           />
           {errors.contact_phone && (
-            <p className="text-red-400 text-xs pl-4">{errors.contact_phone.message}</p>
+            <p className="text-red-400 text-xs pl-4" role="alert">{errors.contact_phone.message}</p>
           )}
         </motion.div>
 
@@ -200,6 +285,7 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
               variant="outline"
               onClick={() => document.getElementById('photo_url')?.click()}
               className="flex items-center gap-2"
+              aria-label={watchProfileImage ? 'Cambiar foto de perfil' : 'Subir foto de perfil'}
             >
               <Camera className="w-4 h-4" />
               {watchProfileImage ? 'Cambiar foto' : 'Subir foto'}
@@ -210,8 +296,12 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
               accept="image/*"
               className="hidden"
               onChange={handleImageChange}
+              aria-label="Seleccionar foto de perfil"
             />
           </div>
+          {imageError && (
+            <p className="text-red-400 text-xs mt-1" role="alert">{imageError}</p>
+          )}
         </motion.div>
       </form>
     </div>

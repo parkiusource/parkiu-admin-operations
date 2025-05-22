@@ -43,10 +43,10 @@ export default function EnhancedOnboardingForm() {
 
   // Sincroniza el paso con el status del perfil
   useEffect(() => {
-    if (profile?.status) {
-      setCurrentStep(statusToStep[profile.status] || 1);
+    if (profile?.profile?.status) {
+      setCurrentStep(statusToStep[profile.profile.status] || 1);
     }
-  }, [profile?.status]);
+  }, [profile?.profile?.status]);
 
   // Barra de progreso visual
   const ProgressBar = () => (
@@ -97,11 +97,11 @@ export default function EnhancedOnboardingForm() {
 
   // Renderizado de pasos
   const StepComponent = useMemo(() => {
-    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} />;
+    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} profile={profile?.profile} />;
     if (currentStep === 2) return <SecondStep ref={secondStepRef} onComplete={() => setCurrentStep(3)} />;
     if (currentStep === 3) return <ThirdStep />;
     return null;
-  }, [currentStep]);
+  }, [currentStep, profile]);
 
   if (isProfileLoading) {
     return (

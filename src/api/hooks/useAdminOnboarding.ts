@@ -35,6 +35,15 @@ interface ApiError {
   status: number;
 }
 
+export interface AdminProfilePayload {
+  email: string;
+  name: string;
+  nit: string;
+  contact_phone: string;
+  role: string;
+  photo_url: string;
+}
+
 // Hook para obtener el perfil del administrador
 export const useAdminProfile = () => {
   const { getAccessTokenSilently } = useAuth0();
@@ -88,13 +97,13 @@ export const useCompleteProfile = () => {
   const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
 
-  return useMutation<AdminProfile, ApiError, FormData>({
-    mutationFn: async (formData) => {
+  return useMutation<AdminProfile, ApiError, AdminProfilePayload>({
+    mutationFn: async (payload) => {
       const token = await getAccessTokenSilently();
       if (!token) {
         throw new Error('No authentication token available');
       }
-      return completeAdminProfile(token, formData);
+      return completeAdminProfile(token, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] });

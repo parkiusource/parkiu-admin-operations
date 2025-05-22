@@ -1,11 +1,11 @@
 import { forwardRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { SearchBox } from '@/components/parking/SearchBox';
-import { useSearchPlaces } from '@/api/hooks/useSearchPlaces';
+import { usePlaceDetails } from '@/api/hooks/usePlaceDetails';
 
 interface Location {
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
 }
 
 interface ParkingLot {
@@ -27,11 +27,32 @@ interface ParkingFormProps {
 
 export const ParkingForm = forwardRef<HTMLFormElement, ParkingFormProps>(
   ({ onSubmit, isLoading = false, initialValues = {}, inheritSubmit = true, className = '' }, ref) => {
-    const { register, handleSubmit, setValue, formState: { errors } } = useForm<ParkingLot>({
+    const { register, handleSubmit, setValue, formState: { errors }, watch } = useForm<ParkingLot>({
       defaultValues: initialValues,
     });
 
+    const { getDetails } = usePlaceDetails();
+    const addressValue = watch('address');
+
+    // Handler para selección de dirección desde SearchBox
+    const handleAddressSelect = async ({ placeId }: { placeId: string }) => {
+      const details = await getDetails(placeId);
+      if (details && details.location) {
+        setValue('address', details.formattedAddress || '');
+        setValue('location', {
+          latitude: details.location.latitude,
+          longitude: details.location.longitude,
+        });
+      } else {
+        alert('No se pudo obtener la ubicación del parqueadero');
+      }
+    };
+
     const handleFormSubmit = async (data: ParkingLot) => {
+      if (!data.location || typeof data.location.latitude !== 'number' || typeof data.location.longitude !== 'number') {
+        alert('No se pudo obtener la ubicación del parqueadero');
+        return;
+      }
       await onSubmit(data);
     };
 
@@ -59,12 +80,9 @@ export const ParkingForm = forwardRef<HTMLFormElement, ParkingFormProps>(
           <label className="block text-sm font-medium text-gray-700">
             Dirección
             <SearchBox
-              useSearchHook={useSearchPlaces}
-              onResultSelected={({ formattedAddress, location }) => {
-                setValue('address', formattedAddress);
-                setValue('location', location);
-              }}
-              value={initialValues?.address}
+              onResultSelected={handleAddressSelect}
+              value={addressValue}
+              locationBias={{ lat: 4.710989, lng: -74.072092, radius: 20000 }}
             />
           </label>
           {errors.address && (
