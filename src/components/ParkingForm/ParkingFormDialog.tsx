@@ -1,20 +1,7 @@
 import { forwardRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { ParkingForm } from './ParkingForm';
-
-interface Location {
-  lat: number;
-  lng: number;
-}
-
-interface ParkingLot {
-  id?: string;
-  name: string;
-  address: string;
-  location: Location;
-  total_spots: number;
-  price_per_hour: number;
-}
+import { ParkingLot } from '@/types/parking';
 
 interface ParkingFormDialogProps {
   children: React.ReactNode;

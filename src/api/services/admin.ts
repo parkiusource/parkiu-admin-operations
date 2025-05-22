@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AdminProfilePayload } from '../hooks/useAdminOnboarding';
+import { ParkingLotAPI } from '@/types/parking';
 
 interface AdminProfile {
   email: string;
@@ -7,44 +8,7 @@ interface AdminProfile {
   nit: string;
   contact_phone: string;
   photo_url: string | null;
-  parkingLots: ParkingLot[];
-}
-
-interface ParkingLot {
-  id?: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  total_spots: number;
-  price_per_hour: number;
-  admin_uuid?: string;
-  description?: string;
-  opening_time?: string;
-  closing_time?: string;
-  hourly_rate?: number;
-  daily_rate?: number;
-  monthly_rate?: number;
-  contact_name?: string;
-  contact_phone?: string;
-}
-
-interface ParkingLotAPI {
-  id?: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  total_spots: number;
-  hourly_rate: number;
-  admin_uuid?: string;
-  description?: string;
-  opening_time?: string;
-  closing_time?: string;
-  daily_rate?: number;
-  monthly_rate?: number;
-  contact_name?: string;
-  contact_phone?: string;
+  parkingLots: ParkingLotAPI[];
 }
 
 const API_URL = import.meta.env.VITE_API_BACKEND_URL;
@@ -73,7 +37,7 @@ export const completeAdminProfile = async (token: string, payload: AdminProfileP
 };
 
 // Obtener parqueaderos del administrador
-export const getParkingLots = async (token: string): Promise<ParkingLot[]> => {
+export const getParkingLots = async (token: string): Promise<ParkingLotAPI[]> => {
   const response = await axios.get(`${API_URL}/admin/parking-lots`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -81,7 +45,7 @@ export const getParkingLots = async (token: string): Promise<ParkingLot[]> => {
 };
 
 // Administrar nuevo parqueadero
-export const registerParkingLot = async (token: string, data: ParkingLot): Promise<ParkingLot> => {
+export const registerParkingLot = async (token: string, data: ParkingLotAPI): Promise<ParkingLotAPI> => {
   const response = await axios.post(`${API_URL}/admin/parking-lots`, data, {
     headers: { Authorization: `Bearer ${token}` },
   });

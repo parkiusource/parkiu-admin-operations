@@ -4,36 +4,7 @@ import { useForm } from 'react-hook-form';
 import { ParkingForm } from '@/components/admin/ParkingForm/ParkingForm';
 import { Card } from '@/components/common/Card/Card';
 import { useCreateParking } from '@/api/hooks/useCreateParking';
-
-interface ParkingLot {
-  id?: string;
-  name: string;
-  address: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  total_spots: number;
-  price_per_hour: number;
-}
-
-interface ParkingLotAPI {
-  id?: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  total_spots: number;
-  hourly_rate: number;
-  admin_uuid?: string;
-  description?: string;
-  opening_time?: string;
-  closing_time?: string;
-  daily_rate?: number;
-  monthly_rate?: number;
-  contact_name?: string;
-  contact_phone?: string;
-}
+import { ParkingLot, ParkingLotAPI, toParkingLotAPI, fromParkingLotAPI } from '@/types/parking';
 
 interface SecondStepProps {
   onComplete: (data: ParkingLot) => void;
@@ -63,14 +34,7 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
     const { mutateAsync: createParking, isPending } = useCreateParking({
       onSuccess: (data: ParkingLotAPI) => {
         formStorage.clear();
-        onComplete({
-          ...data,
-          location: {
-            latitude: data.latitude,
-            longitude: data.longitude
-          },
-          price_per_hour: data.hourly_rate
-        });
+        onComplete(fromParkingLotAPI(data));
       },
     });
 
@@ -138,14 +102,7 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
         if (data.price_per_hour <= 0) {
           throw new Error('El precio por hora debe ser mayor a 0');
         }
-        await createParking({
-          name: data.name,
-          address: data.address,
-          latitude: data.location.latitude,
-          longitude: data.location.longitude,
-          hourly_rate: Number(data.price_per_hour),
-          total_spots: Number(data.total_spots)
-        } as ParkingLotAPI);
+        await createParking(toParkingLotAPI(data));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al crear el parqueadero');
         throw err;

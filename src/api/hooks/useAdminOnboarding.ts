@@ -8,18 +8,7 @@ import {
   getOnboardingStatus,
   updateOnboardingStep,
 } from '../services/admin';
-
-interface ParkingLot {
-  id?: string;
-  name: string;
-  address: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  total_spots: number;
-  price_per_hour: number;
-}
+import { ParkingLot, toParkingLotAPI, fromParkingLotAPI } from '@/types/parking';
 
 interface AdminProfile {
   email: string;
@@ -55,7 +44,8 @@ export const useAdminProfile = () => {
       if (!token) {
         return null;
       }
-      return getAdminProfile(token);
+      const profile = await getAdminProfile(token);
+      return profile ? { ...profile, parkingLots: profile.parkingLots.map(fromParkingLotAPI) } : null;
     },
   });
 };
@@ -71,7 +61,8 @@ export const useAdminParkingLots = () => {
       if (!token) {
         return [];
       }
-      return getParkingLots(token);
+      const lots = await getParkingLots(token);
+      return lots.map(fromParkingLotAPI);
     },
   });
 };
@@ -103,7 +94,8 @@ export const useCompleteProfile = () => {
       if (!token) {
         throw new Error('No authentication token available');
       }
-      return completeAdminProfile(token, payload);
+      const profile = await completeAdminProfile(token, payload);
+      return { ...profile, parkingLots: profile.parkingLots.map(fromParkingLotAPI) };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
@@ -122,7 +114,9 @@ export const useRegisterParkingLot = () => {
       if (!token) {
         throw new Error('No authentication token available');
       }
-      return registerParkingLot(token, data);
+      const apiData = toParkingLotAPI(data);
+      const result = await registerParkingLot(token, apiData);
+      return fromParkingLotAPI(result);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminParkingLots'] });

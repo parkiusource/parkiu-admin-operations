@@ -1,42 +1,29 @@
 import { forwardRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { ParkingForm } from './ParkingForm';
-
-interface ParkingLot {
-  id?: string;
-  name: string;
-  address: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  total_spots: number;
-  price_per_hour: number;
-}
+import { ParkingLot } from '@/types/parking';
 
 interface ParkingFormDialogProps {
-  children: React.ReactNode;
+  isOpen: boolean;
+  onClose: () => void;
   onSubmit: (data: ParkingLot) => Promise<void>;
-  title: string;
-  description?: string;
   initialValues?: Partial<ParkingLot>;
+  title?: string;
 }
 
-export const ParkingFormDialog = forwardRef<HTMLDivElement, ParkingFormDialogProps>(
-  ({ children, onSubmit, title, description, initialValues }, ref) => {
+export const ParkingFormDialog = forwardRef<HTMLFormElement, ParkingFormDialogProps>(
+  ({ isOpen, onClose, onSubmit, initialValues, title = 'Registrar parqueadero' }, ref) => {
     return (
-      <Dialog>
-        {children}
-        <DialogContent ref={ref}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            {description && <p className="text-sm text-gray-500">{description}</p>}
           </DialogHeader>
           <ParkingForm
+            ref={ref}
+            onSubmit={onSubmit}
             initialValues={initialValues}
-            onSubmit={async (place) => {
-              await onSubmit(place);
-            }}
+            inheritSubmit={true}
           />
         </DialogContent>
       </Dialog>
