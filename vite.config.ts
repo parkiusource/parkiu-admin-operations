@@ -10,6 +10,11 @@ const __dirname = dirname(__filename)
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5173,
+    strictPort: false, // Si 5173 está ocupado, usar el siguiente disponible
+    open: false, // No abrir browser automáticamente
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')

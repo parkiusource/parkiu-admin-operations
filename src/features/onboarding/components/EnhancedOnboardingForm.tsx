@@ -3,9 +3,7 @@ import { motion } from 'framer-motion';
 import { User, ShieldCheck } from 'lucide-react';
 import { CircleParking } from 'lucide-react';
 import { FirstStep, SecondStep, ThirdStep } from '@/components/Onboarding';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth0 } from '@auth0/auth0-react';
-import { getAdminProfile } from '@/services/profile';
+import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
 
 interface StepFormRef {
   submitForm: () => Promise<void>;
@@ -26,15 +24,7 @@ const statusToStep: Record<string, number> = {
 };
 
 export default function EnhancedOnboardingForm() {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
-  const { data: profile, isLoading: isProfileLoading } = useQuery({
-    queryKey: ['adminProfile'],
-    queryFn: async () => {
-      const token = await getAccessTokenSilently();
-      return getAdminProfile(token);
-    },
-    enabled: isAuthenticated,
-  });
+  const { profile, status, isLoading: isProfileLoading } = useAdminProfileStatus();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -43,10 +33,10 @@ export default function EnhancedOnboardingForm() {
 
   // Sincroniza el paso con el status del perfil
   useEffect(() => {
-    if (profile?.profile?.status) {
-      setCurrentStep(statusToStep[profile.profile.status] || 1);
+    if (status) {
+      setCurrentStep(statusToStep[status] || 1);
     }
-  }, [profile?.profile?.status]);
+  }, [status]);
 
   // Barra de progreso visual
   const ProgressBar = () => (
@@ -97,7 +87,7 @@ export default function EnhancedOnboardingForm() {
 
   // Renderizado de pasos
   const StepComponent = useMemo(() => {
-    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} profile={profile?.profile} />;
+    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} profile={profile} />;
     if (currentStep === 2) return <SecondStep ref={secondStepRef} onComplete={() => setCurrentStep(3)} />;
     if (currentStep === 3) return <ThirdStep />;
     return null;

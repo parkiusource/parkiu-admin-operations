@@ -12,6 +12,6 @@ export interface AuthState {
 }
 
 export interface AuthContextType extends AuthState {
-  loginWithRedirect: (options?: any) => Promise<void>;
+  loginWithRedirect: (options?: { returnTo?: string }) => Promise<void>;
   logout: () => void;
 }

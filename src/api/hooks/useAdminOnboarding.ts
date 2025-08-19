@@ -9,36 +9,19 @@ import {
   updateOnboardingStep,
 } from '../services/admin';
 import { ParkingLot, toParkingLotAPI, fromParkingLotAPI } from '@/types/parking';
+import { AdminProfile as BaseAdminProfile, AdminProfilePayload, ApiError } from '@/types/common';
 
-interface AdminProfile {
-  email: string;
-  name: string;
-  nit: string;
-  contact_phone: string;
-  photo_url: string | null;
+// Extend base interface for this specific use case
+interface AdminProfile extends BaseAdminProfile {
   parkingLots: ParkingLot[];
-}
-
-interface ApiError {
-  message: string;
-  status: number;
-}
-
-export interface AdminProfilePayload {
-  email: string;
-  name: string;
-  nit: string;
-  contact_phone: string;
-  role: string;
-  photo_url: string;
 }
 
 // Hook para obtener el perfil del administrador
 export const useAdminProfile = () => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
   return useQuery<AdminProfile | null, ApiError>({
-    queryKey: ['adminProfile'],
+    queryKey: ['adminProfile', 'hook'],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
       if (!token) {
@@ -47,6 +30,16 @@ export const useAdminProfile = () => {
       const profile = await getAdminProfile(token);
       return profile ? { ...profile, parkingLots: profile.parkingLots.map(fromParkingLotAPI) } : null;
     },
+    enabled: isAuthenticated,
+    retry: (failureCount, error) => {
+      // No retry para errores de conexión
+      if (error?.message?.includes('ERR_NETWORK') || error?.message?.includes('ERR_CONNECTION_REFUSED')) {
+        return false;
+      }
+      return failureCount < 1; // Solo 1 retry para otros errores
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -98,6 +91,7 @@ export const useCompleteProfile = () => {
       return { ...profile, parkingLots: profile.parkingLots.map(fromParkingLotAPI) };
     },
     onSuccess: () => {
+      // Invalidar todas las queries de adminProfile (incluye centralized)
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
     },
   });

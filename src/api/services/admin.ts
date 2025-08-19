@@ -1,13 +1,9 @@
 import axios from 'axios';
-import type { AdminProfilePayload } from '../hooks/useAdminOnboarding';
+import { AdminProfile as BaseAdminProfile, AdminProfilePayload } from '@/types/common';
 import { ParkingLotAPI } from '@/types/parking';
 
-interface AdminProfile {
-  email: string;
-  name: string;
-  nit: string;
-  contact_phone: string;
-  photo_url: string | null;
+// Extend for API response with parking lots
+interface AdminProfile extends BaseAdminProfile {
   parkingLots: ParkingLotAPI[];
 }
 
@@ -22,11 +18,6 @@ export const getAdminProfile = async (token: string): Promise<AdminProfile> => {
 
 // Completar perfil del administrador (Primer paso del onboarding)
 export const completeAdminProfile = async (token: string, payload: AdminProfilePayload): Promise<AdminProfile> => {
-  console.log('[completeAdminProfile] Payload:', payload);
-  console.log('[completeAdminProfile] Headers:', {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  });
   const response = await axios.post(`${API_URL}/admins/complete-profile`, payload, {
     headers: {
       Authorization: `Bearer ${token}`,

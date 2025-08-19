@@ -7,6 +7,7 @@ import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { OnboardingGuard } from './features/onboarding/components/OnboardingGuard';
 import { useConnectionStatus } from './hooks';
 import { ToastContainer } from './components/Toast';
+import { BackendStatus } from './components/common/BackendStatus';
 import './index.css';
 
 // Lazy load components
@@ -30,7 +31,17 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       gcTime: 1000 * 60 * 30, // 30 minutes
-      retry: 1,
+      retry: (failureCount, error: Error & { code?: string }) => {
+        // No retry para errores de red cuando el backend no está disponible
+        if (error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_REFUSED') {
+          return false;
+        }
+        // Solo reintentar hasta 2 veces para otros errores
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: false, // Evitar refetch automático
+      refetchOnMount: 'always', // Solo refetch al montar si es necesario
     },
   },
 });
@@ -72,6 +83,7 @@ function App() {
         </AuthProvider>
       </Router>
       <ToastContainer />
+      <BackendStatus />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

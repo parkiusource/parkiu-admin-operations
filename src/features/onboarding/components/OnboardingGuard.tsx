@@ -1,44 +1,18 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useQuery } from '@tanstack/react-query';
-import { getAdminProfile } from '@/services/profile';
+import { useAdminProfileCentralized } from '@/hooks/useAdminProfileCentralized';
 
 interface OnboardingGuardProps {
   children: React.ReactNode;
 }
 
-interface ProfileResponse {
-  profile: {
-    id: number;
-    auth0_uuid: string;
-    email: string;
-    name: string;
-    nit: string;
-    photo_url: string;
-    contact_phone: string;
-    role: string;
-    status: 'initial' | 'pending_profile' | 'pending_parking' | 'pending_verify' | 'active' | 'rejected' | 'suspended' | 'inactive';
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-  };
-}
-
 export const OnboardingGuard = ({ children }: OnboardingGuardProps) => {
-  const { isAuthenticated, isLoading: isAuthLoading, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth0();
   const navigate = useNavigate();
 
-  // Query para obtener el perfil del admin
-  const { data: profileData, isLoading: isProfileLoading, error } = useQuery<ProfileResponse>({
-    queryKey: ['adminProfile'],
-    queryFn: async () => {
-      const token = await getAccessTokenSilently();
-      return getAdminProfile(token);
-    },
-    enabled: isAuthenticated,
-    retry: 1,
-  });
+  // Query centralizada para obtener el perfil del admin
+  const { data: profileData, isLoading: isProfileLoading, error } = useAdminProfileCentralized();
 
   useEffect(() => {
     // Solo proceder si no está cargando
@@ -49,15 +23,19 @@ export const OnboardingGuard = ({ children }: OnboardingGuardProps) => {
         return;
       }
 
-      // Si hay un error al obtener el perfil, permitir onboarding
+      // Si hay un error al obtener el perfil
       if (error) {
-        console.log('Error al obtener perfil:', error);
+        // Si es error de conexión, mostrar mensaje específico
+        if ((error as Error & { code?: string })?.code === 'ERR_NETWORK' ||
+            (error as Error & { code?: string })?.code === 'ERR_CONNECTION_REFUSED') {
+          // Para errores de conexión, permitir onboarding offline
+          console.warn('Backend no disponible - continuando con onboarding offline');
+        }
         return;
       }
 
       // Si tenemos el perfil, validar su estado
       if (profileData?.profile) {
-        console.log('Estado del perfil:', profileData.profile.status);
 
         // Si el perfil está activo, ir al dashboard
         if (profileData.profile.status === 'active') {
@@ -66,7 +44,7 @@ export const OnboardingGuard = ({ children }: OnboardingGuardProps) => {
         }
 
         // Si el perfil está en un estado que requiere onboarding, permitirlo
-        if (['initial', 'pending_profile', 'pending_parking', 'pending_verify'].includes(profileData.profile.status)) {
+        if (profileData.profile.status && ['initial', 'pending_profile', 'pending_parking', 'pending_verify'].includes(profileData.profile.status)) {
           return;
         }
 

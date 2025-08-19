@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/common/Card';
+import { Card, CardContent, CardHeader } from '../../../components/common/Card';
 
 export const DashboardChart = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Estadísticas de Uso</CardTitle>
+        <h3 className="text-lg font-semibold">Estadísticas de Uso</h3>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] flex items-center justify-center text-gray-500">

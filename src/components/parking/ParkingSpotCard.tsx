@@ -1,5 +1,5 @@
 import { forwardRef, useCallback } from 'react';
-import { Badge } from '@/components/ui/Badge';
+import { Badge } from '@/components/common/Badge';
 
 interface ParkingSpot {
   id: string;

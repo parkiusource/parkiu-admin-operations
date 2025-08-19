@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:clean": "pkill -f vite || true && npm run dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf node_modules package-lock.json && npm install",
+    "ports": "echo 'Puerto 5173:' && lsof -i :5173 && echo 'Puerto 5174:' && lsof -i :5174"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",

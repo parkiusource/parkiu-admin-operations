@@ -56,7 +56,7 @@ export const useSearchPlaces = (
   const normalizedText = normalizeText(textQuery);
   const debouncedTextQuery = useDebounce(normalizedText, DEFAULT_TEXT_DEBOUNCE);
 
-  console.log('[useSearchPlaces] debouncedTextQuery:', debouncedTextQuery);
+
 
   const cacheKey = `${debouncedTextQuery}-${JSON.stringify(options)}`;
 
@@ -88,10 +88,9 @@ export const useSearchPlaces = (
 
   const fetchPlaces = async (): Promise<Place[]> => {
     if (!debouncedTextQuery) {
-      console.log('[useSearchPlaces] fetchPlaces: debouncedTextQuery vacío');
       return [];
     }
-    console.log('[useSearchPlaces] fetchPlaces: haciendo fetch con', debouncedTextQuery, requestBody, headers);
+
     const response = await fetch(
       `https://places.googleapis.com/v1/places:searchText?${params.toString()}`,
       {
@@ -100,13 +99,13 @@ export const useSearchPlaces = (
         body: JSON.stringify(requestBody),
       }
     );
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[useSearchPlaces] fetchPlaces: error response', response.status, errorText);
-      throw new Error('Error fetching places');
+      throw new Error(`Places API error: ${response.status} - ${errorText}`);
     }
+
     const data = await response.json();
-    console.log('[useSearchPlaces] fetchPlaces: data', data);
     return Array.isArray(data?.places) ? data.places : [];
   };
 
@@ -136,8 +135,7 @@ export const useSearchPlaces = (
     initialData: () => localCache.get(cacheKey) || [],
   });
 
-  // Log para depuración
-  console.log('[useSearchPlaces] debouncedTextQuery:', debouncedTextQuery, 'enabled:', !!debouncedTextQuery);
+
 
   // Map the places to the format expected by SearchBox
   const results: SearchResult[] = (query.data || []).map((place) => ({
@@ -148,7 +146,7 @@ export const useSearchPlaces = (
     },
   }));
 
-  console.log('[useSearchPlaces] results:', results);
+
 
   return { ...query, results, places: results };
 };
