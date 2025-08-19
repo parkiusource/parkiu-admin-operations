@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 
 import { ParkingForm } from '@/components/admin/ParkingForm/ParkingForm';
 import { Card } from '@/components/common/Card/Card';
-import { useCreateParking } from '@/api/hooks/useCreateParking';
-import { ParkingLot, ParkingLotAPI, toParkingLotAPI, fromParkingLotAPI } from '@/types/parking';
+import { useRegisterParkingLot } from '@/hooks/parking';
+import { ParkingLot } from '@/services/parking/types';
 
 interface SecondStepProps {
   onComplete: (data: ParkingLot) => void;
@@ -31,10 +31,10 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
   ({ onComplete }, ref) => {
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { mutateAsync: createParking, isPending } = useCreateParking({
-      onSuccess: (data: ParkingLotAPI) => {
+    const { mutateAsync: createParking, isPending } = useRegisterParkingLot({
+      onSuccess: (data: ParkingLot) => {
         formStorage.clear();
-        onComplete(fromParkingLotAPI(data));
+        onComplete(data);
       },
     });
 
@@ -102,7 +102,7 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
         if (data.price_per_hour <= 0) {
           throw new Error('El precio por hora debe ser mayor a 0');
         }
-        await createParking(toParkingLotAPI(data));
+        await createParking(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al crear el parqueadero');
         throw err;

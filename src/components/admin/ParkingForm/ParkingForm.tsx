@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { SearchBox } from '@/components/parking/SearchBox';
 import { usePlaceDetails } from '@/api/hooks/usePlaceDetails';
-import { ParkingLot } from '@/types/parking';
+import { ParkingLot } from '@/services/parking/types';
 
 interface ParkingFormProps {
   onSubmit: (data: ParkingLot) => Promise<void>;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useVehicles, useParkingSpots, useTransactions } from '../../hooks';
+import { useVehicles, useTransactions } from '../../hooks';
+import { useAvailableParkingSpots } from '../../hooks/parking';
 import { Vehicle, ParkingSpot } from '../../db/schema';
 
 interface VehicleEntryForm {
@@ -16,7 +17,7 @@ export default function VehicleEntry() {
   });
 
   const { registerVehicle, isLoading: isRegistering } = useVehicles();
-  const { availableSpots, isLoading: isLoadingSpots } = useParkingSpots(form.type);
+  const { availableSpots, isLoading: isLoadingSpots } = useAvailableParkingSpots({ type: form.type });
   const { createTransaction } = useTransactions();
 
   const handleSubmit = async (e: React.FormEvent) => {
