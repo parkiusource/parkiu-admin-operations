@@ -33,7 +33,12 @@ export const ParkingForm = forwardRef<HTMLFormElement, ParkingFormProps>(
     };
 
     return (
-      <form ref={ref} onSubmit={handleSubmit(onSubmit)} className={className}>
+      <form
+        id="parking-form"
+        ref={ref}
+        onSubmit={handleSubmit(onSubmit)}
+        className={className}
+      >
         <div className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">

@@ -14,7 +14,11 @@ export type {
   // Core interfaces
   ParkingLot,
   ParkingLotAPI,
+  CreateParkingLotPayload, // ✅ Nuevo tipo para crear parking lots
   ParkingSpot,
+  ParkingSpaceAPI, // ✅ Nuevo tipo para espacios del backend
+  ParkingSpacesResponse, // ✅ Respuesta del backend para espacios
+  CreateParkingSpacePayload, // ✅ Nuevo tipo para crear espacios
 
   // Response types
   ParkingApiResponse,
@@ -33,8 +37,17 @@ export type {
 // UTILIDADES Y ADAPTADORES
 // ===============================
 export {
+  // Parking Lot adapters
   toParkingLotAPI,
+  toParkingLotCreatePayload, // ✅ Nueva función para crear payload de creación
   fromParkingLotAPI,
+
+  // Parking Space adapters
+  fromParkingSpaceAPI, // ✅ Adaptador para espacios del backend
+  toParkingSpaceAPI, // ✅ Adaptador para enviar al backend
+  toParkingSpaceCreatePayload, // ✅ Adaptador para crear espacios
+
+  // Utilities
   calculateOccupancyRate,
   formatParkingLotStatus,
   formatSpotStatus

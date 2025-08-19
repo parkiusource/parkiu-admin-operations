@@ -14,9 +14,10 @@ export interface Vehicle {
 export interface ParkingSpot {
   id?: number;
   number: string;
-  type: 'car' | 'motorcycle' | 'truck';
+  type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
   status: 'available' | 'occupied' | 'maintenance';
   floor: number;
+  parking_lot_id?: string | number; // ✅ Agregado para asociar con parqueadero
   syncStatus: 'synced' | 'pending' | 'error';
 }
 

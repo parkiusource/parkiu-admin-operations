@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth0 } from '@auth0/auth0-react'; // ✅ Agregar para espacios reales
 import { ParkingSpot } from '@/db/schema';
+import { ParkingSpot as BackendParkingSpot } from '@/services/parking/types'; // ✅ Usar tipos del backend para espacios reales
 import { parkingSpotService, ParkingSpotFilters } from '@/services/parking/parkingSpotService';
+import { parkingLotService } from '@/services/parking/parkingLotService'; // ✅ Agregar para espacios reales
 
 // ===============================
 // QUERY HOOKS
@@ -393,6 +396,137 @@ export const useSyncParkingSpots = (options?: {
     },
     onError: (error) => {
       console.error('Error syncing parking spots:', error);
+      options?.onError?.(error);
+    }
+  });
+};
+
+// ===============================
+// HOOKS PARA ESPACIOS REALES DEL BACKEND
+// ===============================
+
+/**
+ * ✅ Hook para obtener espacios REALES de un parking lot específico desde el backend
+ * Endpoint: GET /parking-spaces/lot/{id}
+ */
+export const useRealParkingSpaces = (
+  parkingLotId: string | undefined,
+  options?: {
+    enabled?: boolean;
+    staleTime?: number;
+    refetchInterval?: number;
+  }
+) => {
+  const { getAccessTokenSilently } = useAuth0();
+
+  return useQuery({
+    queryKey: ['realParkingSpaces', parkingLotId],
+    queryFn: async () => {
+      if (!parkingLotId) {
+        throw new Error('Parking lot ID is required');
+      }
+
+      const token = await getAccessTokenSilently();
+      const response = await parkingLotService.getParkingSpaces(token, parkingLotId);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      return response.data;
+    },
+    enabled: (options?.enabled ?? true) && !!parkingLotId,
+    staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto - espacios cambian frecuentemente
+    refetchInterval: options?.refetchInterval ?? 1000 * 30, // Refrescar cada 30 segundos
+    retry: (failureCount, error: Error & { code?: string }) => {
+      // No retry en errores de autenticación o conexión
+      if (error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_REFUSED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
+};
+
+/**
+ * ✅ Hook para actualizar el estado de un espacio real del backend
+ * Endpoint: PUT /parking-spaces/{spaceId}
+ */
+export const useUpdateRealParkingSpaceStatus = (options?: {
+  onSuccess?: (updatedSpace: BackendParkingSpot) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const { getAccessTokenSilently } = useAuth0();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      spaceId,
+      status
+    }: {
+      spaceId: number;
+      status: 'available' | 'occupied' | 'maintenance' | 'reserved'
+    }) => {
+      const token = await getAccessTokenSilently();
+      const response = await parkingLotService.updateParkingSpaceStatus(token, spaceId, status);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      return response.data;
+    },
+    onSuccess: (updatedSpace) => {
+      // Invalidar las queries de espacios reales para refrescar los datos
+      queryClient.invalidateQueries({ queryKey: ['realParkingSpaces'] });
+
+      console.log(`✅ Espacio ${updatedSpace.number} actualizado a ${updatedSpace.status}`);
+      options?.onSuccess?.(updatedSpace);
+    },
+    onError: (error) => {
+      console.error('Error updating real parking space:', error);
+      options?.onError?.(error);
+    }
+  });
+};
+
+/**
+ * ✅ Hook para crear un nuevo espacio real en el backend
+ * Endpoint: POST /parking-spaces/
+ */
+export const useCreateRealParkingSpace = (options?: {
+  onSuccess?: (createdSpace: BackendParkingSpot) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const { getAccessTokenSilently } = useAuth0();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      spaceData,
+      parkingLotId
+    }: {
+      spaceData: Omit<BackendParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>;
+      parkingLotId: number;
+    }) => {
+      const token = await getAccessTokenSilently();
+      const response = await parkingLotService.createParkingSpace(token, spaceData, parkingLotId);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      return response.data;
+    },
+    onSuccess: (createdSpace) => {
+      // Invalidar las queries de espacios reales para refrescar los datos
+      queryClient.invalidateQueries({ queryKey: ['realParkingSpaces'] });
+
+      console.log(`✅ Espacio ${createdSpace.number} creado exitosamente`);
+      options?.onSuccess?.(createdSpace);
+    },
+    onError: (error) => {
+      console.error('Error creating real parking space:', error);
       options?.onError?.(error);
     }
   });

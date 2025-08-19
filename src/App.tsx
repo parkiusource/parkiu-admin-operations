@@ -16,6 +16,9 @@ const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
 const VehicleEntry = lazy(() => import('./features/vehicles/VehicleEntry'));
 const VehicleExit = lazy(() => import('./features/vehicles/VehicleExit'));
 const ParkingView = lazy(() => import('./features/parking/ParkingView'));
+const ParkingViewEnhanced = lazy(() => import('./features/parking/ParkingViewEnhanced'));
+const ParkingTestView = lazy(() => import('./features/parking/ParkingTestView'));
+const AdminParkingDashboard = lazy(() => import('./features/parking/AdminParkingDashboard'));
 const LoginForm = lazy(() => import('./features/auth/components/LoginForm').then(module => ({ default: module.LoginForm })));
 const EnhancedOnboardingForm = lazy(() => import('./features/onboarding/components/EnhancedOnboardingForm'));
 
@@ -73,7 +76,16 @@ function App() {
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/parking" element={<ParkingView />} />
+
+                  {/* ✅ NUEVA ESTRUCTURA DE RUTAS PROFESIONAL */}
+                  <Route path="/parking" element={<AdminParkingDashboard />} />
+                  <Route path="/parking/:id" element={<AdminParkingDashboard />} />
+
+                  {/* Rutas de desarrollo y testing */}
+                  <Route path="/parking-legacy" element={<ParkingView />} />
+                  <Route path="/parking-enhanced" element={<ParkingViewEnhanced />} />
+                  <Route path="/parking-test" element={<ParkingTestView />} />
+
                   <Route path="/vehicles/entry" element={<VehicleEntry />} />
                   <Route path="/vehicles/exit" element={<VehicleExit />} />
                 </Route>

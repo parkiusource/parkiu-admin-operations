@@ -49,7 +49,12 @@ export {
   useDeleteParkingSpot,
 
   // Utilities
-  useSyncParkingSpots
+  useSyncParkingSpots,
+
+  // ✅ Real Backend Hooks
+  useRealParkingSpaces,
+  useUpdateRealParkingSpaceStatus,
+  useCreateRealParkingSpace
 } from './useParkingSpots';
 
 // ===============================

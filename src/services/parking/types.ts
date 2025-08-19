@@ -29,30 +29,81 @@ export interface ParkingLot {
   updated_at?: string;
 }
 
-// Estructura que espera el backend API
+// ✅ Estructura EXACTA que devuelve tu backend real
 export interface ParkingLotAPI {
-  id?: string;
+  id?: number; // Puede ser undefined al crear
+  name?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+  opening_time?: string;
+  closing_time?: string;
+  hourly_rate?: number;
+  contact_name?: string;
+  contact_phone?: string;
+  admin_id?: number; // Puede ser undefined al crear
+  total_spaces?: number;
+  available_spaces?: number;
+  created_at?: string;
+  updated_at?: string;
+  available_car_spaces?: number;
+  available_motorcycle_spaces?: number;
+  available_bicycle_spaces?: number;
+  distance?: number;
+  is_active?: boolean;
+}
+
+// ✅ Payload para CREAR parking lots (lo que enviamos al POST)
+export interface CreateParkingLotPayload {
   name: string;
   address: string;
   latitude: number;
   longitude: number;
-  total_spots: number;
-  hourly_rate: number;
   admin_uuid?: string;
   description?: string;
   opening_time?: string;
   closing_time?: string;
+  hourly_rate?: number;
   daily_rate?: number;
   monthly_rate?: number;
   contact_name?: string;
   contact_phone?: string;
-  status?: 'active' | 'inactive' | 'pending' | 'maintenance';
-  created_at?: string;
-  updated_at?: string;
 }
 
 // ===============================
-// PARKING SPOTS (Espacios individuales)
+// PARKING SPACES - BACKEND API REAL
+// ===============================
+
+export interface ParkingSpaceAPI {
+  id: number;
+  space_number: string;
+  parking_lot_id: number;
+  status: 'available' | 'occupied' | 'maintenance' | 'reserved';
+  vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
+  is_reserved: boolean;
+  reserved_for?: string; // ✅ Campo para reservas
+  last_status_change: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface ParkingSpacesResponse {
+  parking_spaces: ParkingSpaceAPI[];
+}
+
+// ✅ Payload para CREAR espacios (lo que enviamos al POST)
+export interface CreateParkingSpacePayload {
+  space_number: string;
+  parking_lot_id: number;
+  vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
+  is_reserved: boolean;
+  reserved_for?: string;
+}
+
+// ===============================
+// PARKING SPOTS (Espacios individuales) - FRONTEND COMPATIBLE
 // ===============================
 
 export interface ParkingSpot {
@@ -61,10 +112,13 @@ export interface ParkingSpot {
   number?: string;
   name?: string;
   address?: string;
-  type?: 'car' | 'motorcycle' | 'truck' | 'disabled' | 'electric';
+  type?: 'car' | 'motorcycle' | 'truck' | 'bicycle';
   status: 'available' | 'occupied' | 'maintenance' | 'reserved';
   floor?: number;
   location?: Location;
+  is_reserved?: boolean; // ✅ Agregar para compatibilidad con backend
+  reserved_for?: string; // ✅ Para quien está reservado
+  last_status_change?: string; // ✅ Agregar para compatibilidad con backend
 
   // Pricing (puede heredar del parking lot o tener precio específico)
   price_per_hour?: number;
@@ -165,53 +219,143 @@ export interface ParkingSystemStats {
 // ADAPTADORES (Frontend ↔ Backend)
 // ===============================
 
-// Adaptador: Frontend ParkingLot -> Backend ParkingLotAPI
-export function toParkingLotAPI(parking: ParkingLot): ParkingLotAPI {
+// ✅ Adaptador: Frontend ParkingLot -> Payload para CREAR (POST)
+export function toParkingLotCreatePayload(parking: ParkingLot): CreateParkingLotPayload {
   return {
-    id: parking.id,
     name: parking.name,
     address: parking.address,
     latitude: parking.location.latitude,
     longitude: parking.location.longitude,
-    total_spots: parking.total_spots,
-    hourly_rate: parking.price_per_hour,
     admin_uuid: parking.admin_uuid,
-    description: parking.description,
-    opening_time: parking.opening_time,
-    closing_time: parking.closing_time,
-    daily_rate: parking.daily_rate,
-    monthly_rate: parking.monthly_rate,
-    contact_name: parking.contact_name,
-    contact_phone: parking.contact_phone,
-    status: parking.status,
-    created_at: parking.created_at,
-    updated_at: parking.updated_at,
+    description: parking.description || '',
+    opening_time: parking.opening_time || '08:00',
+    closing_time: parking.closing_time || '20:00',
+    hourly_rate: parking.price_per_hour || 0,
+    daily_rate: parking.daily_rate || 0,
+    monthly_rate: parking.monthly_rate || 0,
+    contact_name: parking.contact_name || '',
+    contact_phone: parking.contact_phone || '',
   };
 }
 
-// Adaptador: Backend ParkingLotAPI -> Frontend ParkingLot
+// ✅ Adaptador: Backend ParkingLotAPI -> Frontend ParkingLot
 export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
+  // Guard against null/undefined api object
+  if (!api) {
+    console.error('❌ fromParkingLotAPI: api object is null or undefined');
+    throw new Error('Invalid API response: parking lot data is missing');
+  }
+
+  console.log('🔄 Converting API response to frontend format:', api);
+
   return {
-    id: api.id,
-    name: api.name,
-    address: api.address,
+    id: api.id != null ? api.id.toString() : '', // Safely convert number to string
+    name: api.name || '',
+    address: api.address || '',
     location: {
-      latitude: api.latitude,
-      longitude: api.longitude,
+      latitude: api.latitude || 0,
+      longitude: api.longitude || 0,
     },
-    total_spots: api.total_spots,
-    price_per_hour: api.hourly_rate,
-    admin_uuid: api.admin_uuid,
-    description: api.description,
-    opening_time: api.opening_time,
-    closing_time: api.closing_time,
-    daily_rate: api.daily_rate,
-    monthly_rate: api.monthly_rate,
-    contact_name: api.contact_name,
-    contact_phone: api.contact_phone,
-    status: api.status,
-    created_at: api.created_at,
-    updated_at: api.updated_at,
+    total_spots: api.total_spaces || 0, // ⚠️ total_spaces -> total_spots
+    price_per_hour: api.hourly_rate || 0,
+    admin_uuid: api.admin_id != null ? api.admin_id.toString() : '', // Safely convert admin_id
+    description: api.description || '',
+    opening_time: api.opening_time || '08:00',
+    closing_time: api.closing_time || '20:00',
+    contact_name: api.contact_name || '',
+    contact_phone: api.contact_phone || '',
+    status: api.is_active ? 'active' : 'inactive', // ⚠️ is_active -> status
+    created_at: api.created_at || '',
+    updated_at: api.updated_at || '',
+  };
+}
+
+// ✅ Adaptador: Frontend ParkingLot -> Backend ParkingLotAPI (para compatibilidad)
+export function toParkingLotAPI(parking: ParkingLot): Partial<ParkingLotAPI> {
+  return {
+    id: parking.id && parking.id !== '' ? parseInt(parking.id) : undefined,
+    name: parking.name || '',
+    address: parking.address || '',
+    latitude: parking.location?.latitude || 0,
+    longitude: parking.location?.longitude || 0,
+    description: parking.description || '',
+    opening_time: parking.opening_time || '08:00',
+    closing_time: parking.closing_time || '20:00',
+    hourly_rate: parking.price_per_hour || 0,
+    contact_name: parking.contact_name || '',
+    contact_phone: parking.contact_phone || '',
+    admin_id: parking.admin_uuid && parking.admin_uuid !== '' ? parseInt(parking.admin_uuid) : undefined,
+    total_spaces: parking.total_spots || 0,
+    is_active: parking.status === 'active',
+    // Los campos de espacios disponibles los maneja el backend
+    available_spaces: 0,
+    available_car_spaces: 0,
+    available_motorcycle_spaces: 0,
+    available_bicycle_spaces: 0,
+    distance: 0,
+    created_at: parking.created_at || new Date().toISOString(),
+    updated_at: parking.updated_at || new Date().toISOString(),
+  };
+}
+
+// ===============================
+// ADAPTADORES PARKING SPACES
+// ===============================
+
+// ✅ Adaptador: Backend ParkingSpaceAPI -> Frontend ParkingSpot
+export function fromParkingSpaceAPI(apiSpace: ParkingSpaceAPI): ParkingSpot {
+  return {
+    id: apiSpace.id,
+    number: apiSpace.space_number,
+    parking_lot_id: apiSpace.parking_lot_id.toString(),
+    type: apiSpace.vehicle_type,
+    status: apiSpace.status,
+    is_reserved: apiSpace.is_reserved,
+    reserved_for: apiSpace.reserved_for,
+    last_status_change: apiSpace.last_status_change,
+    created_at: apiSpace.created_at,
+    updated_at: apiSpace.updated_at,
+    syncStatus: 'synced' as const,
+    floor: 1 // Default, puede venir del backend en el futuro
+  };
+}
+
+// ✅ Adaptador: Frontend ParkingSpot -> Backend para actualizaciones
+export function toParkingSpaceAPI(spot: ParkingSpot): Partial<ParkingSpaceAPI> {
+  // Mapear tipos del frontend al backend (solo tipos soportados por el backend)
+  const validBackendTypes = ['car', 'motorcycle', 'truck', 'bicycle'] as const;
+  const backendType = spot.type && validBackendTypes.includes(spot.type as typeof validBackendTypes[number])
+    ? (spot.type as 'car' | 'motorcycle' | 'truck' | 'bicycle')
+    : 'car';
+
+  return {
+    id: typeof spot.id === 'string' ? parseInt(spot.id) : spot.id,
+    space_number: spot.number || '',
+    parking_lot_id: typeof spot.parking_lot_id === 'string' ? parseInt(spot.parking_lot_id) : spot.parking_lot_id || 1,
+    status: spot.status,
+    vehicle_type: backendType,
+    is_reserved: spot.is_reserved || false,
+    reserved_for: spot.reserved_for,
+  };
+}
+
+// ✅ Adaptador: Frontend ParkingSpot -> Backend CreateParkingSpacePayload para crear
+export function toParkingSpaceCreatePayload(
+  spot: Omit<ParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>,
+  parkingLotId: number
+): CreateParkingSpacePayload {
+  // Mapear tipos del frontend al backend (solo tipos soportados por el backend)
+  const validBackendTypes = ['car', 'motorcycle', 'truck', 'bicycle'] as const;
+  const backendType = spot.type && validBackendTypes.includes(spot.type as typeof validBackendTypes[number])
+    ? (spot.type as 'car' | 'motorcycle' | 'truck' | 'bicycle')
+    : 'car';
+
+  return {
+    space_number: spot.number || '',
+    parking_lot_id: parkingLotId,
+    vehicle_type: backendType,
+    is_reserved: spot.is_reserved || false,
+    reserved_for: spot.reserved_for || '',
   };
 }
 
