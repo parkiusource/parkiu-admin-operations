@@ -417,7 +417,11 @@ export class ParkingLotService {
 
   /**
    * ✅ Actualiza el estado de un espacio específico
-   * Endpoint: PUT /parking-spaces/{spaceId}
+   * Endpoint: PUT /parking-spaces/{spaceId}/status
+   * Body: { "status": "available|occupied|out_of_service" }
+   *
+   * ✅ SECURITY: El backend valida que el espacio pertenece al admin autenticado.
+   * Solo admins con permisos sobre el parking lot pueden actualizar sus espacios.
    */
   async updateParkingSpaceStatus(
     token: string,
@@ -425,22 +429,56 @@ export class ParkingLotService {
     status: 'available' | 'occupied' | 'maintenance' | 'reserved'
   ): Promise<ParkingApiResponse<ParkingSpot>> {
     try {
-      const url = buildApiUrl(`/parking-spaces/${spaceId}`);
+      const url = buildApiUrl(`/parking-spaces/${spaceId}/status`);
       console.log('🌐 PUT UpdateParkingSpaceStatus:', url);
 
-      const response = await axios.put(url, { status }, {
+      // ✅ Mapear nuestro status al formato esperado por el backend Go
+      const backendStatus = status === 'maintenance' ? 'out_of_service' : status;
+      const requestBody = {
+        status: backendStatus
+      };
+
+      console.log('📤 Request body:', requestBody);
+
+      const response = await axios.put(url, requestBody, {
         headers: this.createAuthHeaders(token),
-        timeout: API_CONFIG.TIMEOUT
+        timeout: 5000 // ✅ Timeout optimizado para updates (5s vs 10s)
       });
 
-      const updatedSpace = fromParkingSpaceAPI(response.data);
-      console.log(`✅ Updated parking space ${spaceId} to ${status}`);
+      console.log('🔍 Update response from backend:', response.data);
 
-      return {
-        data: updatedSpace,
-        status: 'success',
-        message: `Espacio actualizado a ${status}`
-      };
+      // ✅ El endpoint /status solo devuelve {status: 'success'}, no el objeto completo
+      if (response.data.status === 'success') {
+        console.log(`✅ Updated parking space ${spaceId} to ${status}`);
+
+        // No tenemos el objeto actualizado, así que devolvemos un objeto mínimo
+        // React Query invalidará las queries y volverá a fetch los datos actualizados
+        const minimalSpace: ParkingSpot = {
+          id: spaceId,
+          status: status,
+          number: `Space-${spaceId}`, // Placeholder
+          parking_lot_id: '', // Placeholder - será actualizado por React Query
+          type: 'car' as const, // Placeholder
+          syncStatus: 'synced' as const
+        };
+
+        return {
+          data: minimalSpace,
+          status: 'success',
+          message: `Espacio actualizado a ${status}`
+        };
+      } else {
+        // Fallback por si el backend cambia y devuelve el objeto completo
+        const responseSpaceData = response.data.parking_space || response.data;
+        const updatedSpace = fromParkingSpaceAPI(responseSpaceData);
+        console.log(`✅ Updated parking space ${spaceId} to ${status}`);
+
+        return {
+          data: updatedSpace,
+          status: 'success',
+          message: `Espacio actualizado a ${status}`
+        };
+      }
     } catch (error) {
       const apiError = this.handleError(error, 'updateParkingSpaceStatus');
       return {
@@ -471,7 +509,11 @@ export class ParkingLotService {
         timeout: API_CONFIG.TIMEOUT
       });
 
-      const createdSpace = fromParkingSpaceAPI(response.data);
+      console.log('🔍 Create response from backend:', response.data);
+
+      // ✅ Backend devuelve { parking_space: {...} }, extraer el objeto anidado
+      const responseSpaceData = response.data.parking_space || response.data;
+      const createdSpace = fromParkingSpaceAPI(responseSpaceData);
       console.log(`✅ Created parking space ${createdSpace.number}`);
 
       return {

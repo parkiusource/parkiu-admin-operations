@@ -465,7 +465,7 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
       status
     }: {
       spaceId: number;
-      status: 'available' | 'occupied' | 'maintenance' | 'reserved'
+      status: 'available' | 'occupied' | 'maintenance' | 'reserved';
     }) => {
       const token = await getAccessTokenSilently();
       const response = await parkingLotService.updateParkingSpaceStatus(token, spaceId, status);
@@ -477,8 +477,10 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
       return response.data;
     },
     onSuccess: (updatedSpace) => {
-      // Invalidar las queries de espacios reales para refrescar los datos
-      queryClient.invalidateQueries({ queryKey: ['realParkingSpaces'] });
+      // ✅ Invalidación específica y eficiente por queryKey pattern
+      queryClient.invalidateQueries({
+        queryKey: ['realParkingSpaces'] // Invalida todas las queries que empiecen con esta clave
+      });
 
       console.log(`✅ Espacio ${updatedSpace.number} actualizado a ${updatedSpace.status}`);
       options?.onSuccess?.(updatedSpace);
