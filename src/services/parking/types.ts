@@ -79,7 +79,7 @@ export interface ParkingSpaceAPI {
   id: number;
   space_number: string;
   parking_lot_id: number;
-  status: 'available' | 'occupied' | 'maintenance' | 'reserved';
+  status: 'available' | 'occupied' | 'out_of_service' | 'reserved'; // ✅ Backend usa out_of_service
   vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
   is_reserved: boolean;
   reserved_for?: string; // ✅ Campo para reservas
@@ -304,17 +304,52 @@ export function toParkingLotAPI(parking: ParkingLot): Partial<ParkingLotAPI> {
 
 // ✅ Adaptador: Backend ParkingSpaceAPI -> Frontend ParkingSpot
 export function fromParkingSpaceAPI(apiSpace: ParkingSpaceAPI): ParkingSpot {
+  // Guard against null/undefined apiSpace object
+  if (!apiSpace) {
+    console.error('❌ fromParkingSpaceAPI: apiSpace object is null or undefined');
+    throw new Error('Invalid API response: parking space data is missing');
+  }
+
+  // Validar que parking_lot_id tenga un valor válido
+  if (apiSpace.parking_lot_id == null) {
+    console.error('❌ fromParkingSpaceAPI: parking_lot_id is null or undefined', apiSpace);
+    throw new Error('Invalid API response: parking_lot_id is required');
+  }
+
+  // Validar que id tenga un valor válido
+  if (apiSpace.id == null) {
+    console.error('❌ fromParkingSpaceAPI: id is null or undefined', apiSpace);
+    throw new Error('Invalid API response: space id is required');
+  }
+
+  // Validar que status sea un valor válido (backend format)
+  const validBackendStatuses = ['available', 'occupied', 'out_of_service', 'reserved'];
+  if (!validBackendStatuses.includes(apiSpace.status)) {
+    console.error('❌ fromParkingSpaceAPI: invalid status', apiSpace.status, apiSpace);
+    throw new Error(`Invalid API response: status '${apiSpace.status}' is not valid`);
+  }
+
+  // Validar que vehicle_type sea un valor válido
+  const validVehicleTypes = ['car', 'motorcycle', 'truck', 'bicycle'];
+  if (!validVehicleTypes.includes(apiSpace.vehicle_type)) {
+    console.error('❌ fromParkingSpaceAPI: invalid vehicle_type', apiSpace.vehicle_type, apiSpace);
+    throw new Error(`Invalid API response: vehicle_type '${apiSpace.vehicle_type}' is not valid`);
+  }
+
+  // ✅ Mapear status del backend al frontend (out_of_service -> maintenance)
+  const frontendStatus = apiSpace.status === 'out_of_service' ? 'maintenance' : apiSpace.status;
+
   return {
     id: apiSpace.id,
-    number: apiSpace.space_number,
+    number: apiSpace.space_number || '',
     parking_lot_id: apiSpace.parking_lot_id.toString(),
     type: apiSpace.vehicle_type,
-    status: apiSpace.status,
-    is_reserved: apiSpace.is_reserved,
-    reserved_for: apiSpace.reserved_for,
-    last_status_change: apiSpace.last_status_change,
-    created_at: apiSpace.created_at,
-    updated_at: apiSpace.updated_at,
+    status: frontendStatus as 'available' | 'occupied' | 'maintenance' | 'reserved',
+    is_reserved: apiSpace.is_reserved || false,
+    reserved_for: apiSpace.reserved_for || undefined,
+    last_status_change: apiSpace.last_status_change || '',
+    created_at: apiSpace.created_at || '',
+    updated_at: apiSpace.updated_at || '',
     syncStatus: 'synced' as const,
     floor: 1 // Default, puede venir del backend en el futuro
   };
@@ -328,11 +363,14 @@ export function toParkingSpaceAPI(spot: ParkingSpot): Partial<ParkingSpaceAPI> {
     ? (spot.type as 'car' | 'motorcycle' | 'truck' | 'bicycle')
     : 'car';
 
+  // ✅ Mapear status del frontend al backend (maintenance -> out_of_service)
+  const backendStatus = spot.status === 'maintenance' ? 'out_of_service' : spot.status;
+
   return {
     id: typeof spot.id === 'string' ? parseInt(spot.id) : spot.id,
     space_number: spot.number || '',
     parking_lot_id: typeof spot.parking_lot_id === 'string' ? parseInt(spot.parking_lot_id) : spot.parking_lot_id || 1,
-    status: spot.status,
+    status: backendStatus as 'available' | 'occupied' | 'out_of_service' | 'reserved',
     vehicle_type: backendType,
     is_reserved: spot.is_reserved || false,
     reserved_for: spot.reserved_for,
