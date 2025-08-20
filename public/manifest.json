@@ -1,0 +1,22 @@
+{
+  "name": "Parkiu Admin - Administración de Parqueaderos",
+  "short_name": "Parkiu Admin",
+  "description": "Sistema de administración de parqueaderos inteligentes",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0ea5e9",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "es",
+  "dir": "ltr"
+}
