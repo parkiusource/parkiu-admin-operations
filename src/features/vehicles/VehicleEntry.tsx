@@ -1,4 +1,7 @@
 import { useState } from 'react';
+// TODO: Integrar estos hooks cuando estén listos los endpoints reales
+// import { useRegisterVehicleEntry, useParkingLots } from '@/api/hooks';
+// import { VehicleEntry as VehicleEntryType } from '@/types/parking';
 import { useVehicles, useTransactions } from '../../hooks';
 import { useAvailableParkingSpots } from '../../hooks/parking';
 import { Vehicle, ParkingSpot } from '../../db/schema';

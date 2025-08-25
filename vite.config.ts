@@ -32,6 +32,14 @@ export default defineConfig({
           'query-vendor': ['@tanstack/react-query'],
           'utils-vendor': ['date-fns', 'axios']
         }
+      },
+      // ✅ Suprimir warning de eval en lottie-web (dependencia de lottie-react)
+      onwarn(warning, warn) {
+        // Ignorar warnings de eval en lottie-web
+        if (warning.code === 'EVAL' && warning.id?.includes('lottie')) {
+          return;
+        }
+        warn(warning);
       }
     },
     chunkSizeWarningLimit: 1000,

@@ -17,4 +17,4 @@ export * from './parking';
 // ===============================
 // Mantener export del hook original para compatibilidad
 // @deprecated - Use hooks from './parking' instead
-export { useParkingSpots } from './useParkingSpots';
+export { useAvailableParkingSpots } from './useParkingSpots';

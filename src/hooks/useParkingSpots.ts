@@ -4,7 +4,7 @@ import { Vehicle } from '../db/schema';
 
 const parkingSpotService = new ParkingSpotService();
 
-export const useParkingSpots = (type?: Vehicle['type']) => {
+export const useAvailableParkingSpots = (type?: Vehicle['type']) => {
   const { data: availableSpots, isLoading, error } = useQuery({
     queryKey: ['parkingSpots', 'available', type],
     queryFn: async () => {

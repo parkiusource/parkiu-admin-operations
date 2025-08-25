@@ -215,7 +215,8 @@ export const useUpdateParkingSpot = (options?: {
 };
 
 /**
- * Hook para actualizar solo el estado de un espacio
+ * 🚀 Hook OPTIMIZADO para actualizar solo el estado de un espacio (IndexedDB)
+ * NOTA: Este hook es para datos locales, evitar usar junto con useUpdateRealParkingSpaceStatus
  */
 export const useUpdateSpotStatus = (options?: {
   onSuccess?: (data: ParkingSpot) => void;
@@ -234,13 +235,39 @@ export const useUpdateSpotStatus = (options?: {
       return response.data;
     },
     onSuccess: (data, variables) => {
-      // Actualizar cache específico
+      // 🚀 OPTIMIZACIÓN: Actualizar múltiples queries en el cache directamente
       queryClient.setQueryData(['parkingSpot', variables.id], data);
 
-      // Invalidar queries que dependen del estado
-      queryClient.invalidateQueries({ queryKey: ['parkingSpots', 'available'] });
-      queryClient.invalidateQueries({ queryKey: ['parkingOccupancy'] });
+      // Actualizar lista de espacios disponibles directamente en cache
+      queryClient.setQueryData(['parkingSpots', 'available'], (oldData: ParkingSpot[] | undefined) => {
+        if (!oldData) return oldData;
 
+        if (variables.status === 'available') {
+          // Agregar a disponibles si no existe
+          const exists = oldData.some(spot => spot.id === data.id);
+          return exists ? oldData.map(spot => spot.id === data.id ? data : spot) : [...oldData, data];
+        } else {
+          // Remover de disponibles si cambió a otro status
+          return oldData.filter(spot => spot.id !== data.id);
+        }
+      });
+
+      // Invalidar solo stats con debounce para evitar calls innecesarios
+      const debounceKey = 'local-occupancy';
+      const globalDebounce = globalThis as unknown as Record<string, NodeJS.Timeout>;
+      const timeoutId = globalDebounce[debounceKey];
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      globalDebounce[debounceKey] = setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ['parkingOccupancy'],
+          refetchType: 'none'
+        });
+        delete globalDebounce[debounceKey];
+      }, 300);
+
+      console.log(`⚡ Espacio local ${data.id} actualizado OPTIMIZADO a ${data.status}`);
       options?.onSuccess?.(data);
     },
     onError: (error) => {
@@ -449,8 +476,9 @@ export const useRealParkingSpaces = (
 };
 
 /**
- * ✅ Hook para actualizar el estado de un espacio real del backend
+ * ✅ Hook OPTIMIZADO para actualizar el estado de un espacio real del backend
  * Endpoint: PUT /parking-spaces/{spaceId}
+ * 🚀 OPTIMIZACIÓN: Usa setQueryData + invalidación selectiva para evitar llamadas duplicadas
  */
 export const useUpdateRealParkingSpaceStatus = (options?: {
   onSuccess?: (updatedSpace: BackendParkingSpot) => void;
@@ -476,14 +504,72 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
 
       return response.data;
     },
-    onSuccess: (updatedSpace) => {
-      // ✅ Invalidación específica y eficiente por queryKey pattern
-      queryClient.invalidateQueries({
-        queryKey: ['realParkingSpaces'] // Invalida todas las queries que empiecen con esta clave
+    onSuccess: (_backendResponse, variables) => {
+      // 🚀 OPTIMIZACIÓN CORREGIDA: Solo usar los datos de 'variables' (lo que enviamos)
+      // porque el backend solo retorna "success", no el objeto completo
+
+      // Buscar en TODAS las queries de realParkingSpaces para actualizar la correcta
+      let updatedParkingLotId: string | undefined;
+
+      queryClient.getQueriesData({ queryKey: ['realParkingSpaces'] }).forEach(([queryKey, data]) => {
+        if (data && Array.isArray(data)) {
+          const spaces = data as BackendParkingSpot[];
+          const spaceExists = spaces.some(space => space.id === variables.spaceId);
+
+          if (spaceExists) {
+            updatedParkingLotId = queryKey[1] as string; // Extraer parkingLotId del queryKey
+
+            // 🚀 ACTUALIZAR CACHE DIRECTAMENTE usando solo los variables (datos enviados)
+            queryClient.setQueryData(queryKey,
+              spaces.map(space =>
+                space.id === variables.spaceId
+                  ? {
+                      ...space,
+                      status: variables.status,
+                      last_status_change: new Date().toISOString()
+                    }
+                  : space
+              )
+            );
+          }
+        }
       });
 
-      console.log(`✅ Espacio ${updatedSpace.number} actualizado a ${updatedSpace.status}`);
-      options?.onSuccess?.(updatedSpace);
+      // Si encontramos el parking lot, invalidar queries secundarias
+      if (updatedParkingLotId) {
+        // 🚀 OPTIMIZACIÓN 2: Solo invalidar queries específicas que NO actualizamos directamente
+        queryClient.invalidateQueries({
+          queryKey: ['parkingLotStats', updatedParkingLotId],
+          refetchType: 'none'
+        });
+
+        // 🚀 OPTIMIZACIÓN 3: Debounce invalidaciones de ocupancy
+        const debounceKey = `occupancy-${updatedParkingLotId}`;
+        const globalDebounce = globalThis as unknown as Record<string, NodeJS.Timeout>;
+        const timeoutId = globalDebounce[debounceKey];
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        globalDebounce[debounceKey] = setTimeout(() => {
+          queryClient.invalidateQueries({
+            queryKey: ['parkingOccupancy', updatedParkingLotId],
+            refetchType: 'none'
+          });
+          delete globalDebounce[debounceKey];
+        }, 500);
+
+        console.log(`⚡ Espacio ${variables.spaceId} actualizado OPTIMIZADO a ${variables.status} (backend: success)`);
+      } else {
+        console.warn(`⚠️ No se pudo encontrar el espacio ${variables.spaceId} en el cache`);
+      }
+
+      // Pasar los variables al callback del usuario, no el backendResponse con placeholders
+      options?.onSuccess?.({
+        id: variables.spaceId,
+        status: variables.status,
+        number: `${variables.spaceId}`, // Mostrar el ID real
+        last_status_change: new Date().toISOString()
+      } as BackendParkingSpot);
     },
     onError: (error) => {
       console.error('Error updating real parking space:', error);

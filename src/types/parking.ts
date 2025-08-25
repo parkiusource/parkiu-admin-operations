@@ -1,6 +1,8 @@
-// Tipos centralizados para parqueaderos
+// ===============================
+// TIPOS CENTRALIZADOS PARA PARQUEADEROS
+// ===============================
 
-// Estructura que usa el frontend
+// ✅ Estructura estándar que usa el frontend
 export interface ParkingLot {
   id?: string;
   name: string;
@@ -21,7 +23,14 @@ export interface ParkingLot {
   contact_phone?: string;
 }
 
-// Estructura que espera el backend
+// ✅ Interfaz para mostrar en listas con datos calculados
+export interface ParkingLotWithAvailability extends ParkingLot {
+  available_spots: number;
+  occupied_spots: number;
+  occupancy_percentage: number;
+}
+
+// ✅ Estructura que espera el backend (snake_case y campos específicos)
 export interface ParkingLotAPI {
   id?: string;
   name: string;
@@ -40,7 +49,11 @@ export interface ParkingLotAPI {
   contact_phone?: string;
 }
 
-// Adaptador: Frontend -> Backend
+// ===============================
+// ADAPTADORES DE TIPOS
+// ===============================
+
+// ✅ Adaptador: Frontend -> Backend
 export function toParkingLotAPI(parking: ParkingLot): ParkingLotAPI {
   return {
     id: parking.id,
@@ -61,7 +74,7 @@ export function toParkingLotAPI(parking: ParkingLot): ParkingLotAPI {
   };
 }
 
-// Adaptador: Backend -> Frontend
+// ✅ Adaptador: Backend -> Frontend
 export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
   return {
     id: api.id,
@@ -82,4 +95,41 @@ export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
     contact_name: api.contact_name,
     contact_phone: api.contact_phone,
   };
+}
+
+// ===============================
+// TIPOS PARA REGISTRO DE VEHÍCULOS
+// ===============================
+
+// ✅ Tipos para el nuevo sistema de registro/salida de vehículos
+export interface VehicleEntry {
+  plate: string;
+  vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
+  parking_lot_id: string;
+  parking_space_id?: string;
+  entry_time: string; // ISO 8601
+  admin_uuid?: string;
+}
+
+export interface VehicleExit {
+  plate: string;
+  parking_lot_id: string;
+  exit_time: string; // ISO 8601
+  admin_uuid?: string;
+}
+
+export interface VehicleTransaction {
+  id?: string;
+  plate: string;
+  vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
+  parking_lot_id: string;
+  parking_space_id?: string;
+  entry_time: string;
+  exit_time?: string;
+  duration_minutes?: number;
+  amount_charged?: number;
+  status: 'active' | 'completed' | 'cancelled';
+  admin_uuid?: string;
+  created_at?: string;
+  updated_at?: string;
 }

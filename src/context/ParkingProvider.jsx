@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { ParkingContext } from './parkingContextUtils';
-import { useParkingSpots } from '@/api/hooks/useParkingSpots';
+import { useParkingLots } from '@/api/hooks/useParkingLots';
 import { useQueryClient } from '@/context/queryClientUtils';
 import { MAP_CONSTANTS } from '@/constants/map';
 import { useParkingSearch } from '@/hooks/useParkingSearch';
@@ -30,7 +30,7 @@ export function ParkingProvider({ children }) {
   const lastSearchTimestampRef = useRef(0);
 
   const queryClient = useQueryClient();
-  const { parkingSpots: dbParkingSpots, invalidate, refetch } = useParkingSpots({
+  const { parkingLots: dbParkingLots, invalidate, refetch } = useParkingLots({
     queryClient,
   });
 
