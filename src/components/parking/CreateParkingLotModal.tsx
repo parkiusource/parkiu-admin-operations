@@ -145,7 +145,7 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
         throw new Error('El número de espacios debe ser mayor a 0');
       }
 
-      if (sanitizedData.price_per_hour <= 0) {
+      if ((sanitizedData.price_per_hour || sanitizedData.car_rate_per_minute * 60) <= 0) {
         throw new Error('El precio por hora debe ser mayor a 0');
       }
 

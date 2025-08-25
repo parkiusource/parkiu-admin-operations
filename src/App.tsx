@@ -6,6 +6,7 @@ import { AuthProvider } from './features/auth/components/AuthProvider';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
 import { OnboardingGuard } from './features/onboarding/components/OnboardingGuard';
 import { useConnectionStatus } from './hooks';
+import { ToastProvider } from './context/ToastProvider';
 import { ToastContainer } from './components/Toast';
 import { BackendStatus } from './components/common/BackendStatus';
 import './index.css';
@@ -55,9 +56,10 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <Suspense fallback={<LoadingSpinner />}>
+      <ToastProvider>
+        <Router>
+          <AuthProvider>
+            <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               {/* Rutas públicas */}
               <Route path="/login" element={<LoginForm />} />
@@ -91,10 +93,11 @@ function App() {
                 </Route>
               </Route>
             </Routes>
-          </Suspense>
-        </AuthProvider>
-      </Router>
-      <ToastContainer />
+            </Suspense>
+          </AuthProvider>
+        </Router>
+        <ToastContainer />
+      </ToastProvider>
       <BackendStatus />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

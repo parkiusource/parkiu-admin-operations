@@ -13,16 +13,25 @@ const createClient = () => {
 
   client.interceptors.request.use(async (config) => {
     try {
+      // If the caller already set an Authorization header, do not override or fetch a new token
+      const existingAuthHeader = (config.headers as Record<string, unknown> | undefined)?.Authorization
+        || (config.headers as Record<string, unknown> | undefined)?.authorization;
+      if (existingAuthHeader) {
+        return config;
+      }
+
+      // If Auth0 client is not ready, just continue without modifying headers
+      if (!auth0Client) {
+        return config;
+      }
+
       const token = await getToken();
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Error getting token:', error);
-      // If token acquisition fails, redirect to login
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      console.error('Error getting token in request interceptor:', error);
+      // Do not redirect here. Let route guards handle authentication state.
     }
     return config;
   });
@@ -59,11 +68,7 @@ const createClient = () => {
         return getToken(retryCount + 1);
       }
 
-      // If we're not on the login page, redirect there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-
+      // Do not redirect here. Caller decides how to handle a missing token.
       return null;
     }
   };
@@ -80,10 +85,7 @@ const createClient = () => {
           url,
           message: error?.response?.data?.message || 'No hay mensaje de error',
         });
-        // Redirect to login on 401
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+        // Do not redirect here; let route guards/UI decide how to handle auth state
       } else if (status === 403) {
         console.error('Error 403: Acceso prohibido', {
           url,

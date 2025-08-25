@@ -2,8 +2,8 @@ import { Fragment } from 'react';
 import { Transition } from '@headlessui/react';
 import { CheckCircleIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useToast } from '../hooks';
-
-export type ToastType = 'success' | 'error';
+import type { ToastType } from '@/types/toast';
+export type { ToastType } from '@/types/toast';
 
 interface ToastProps {
   message: string;

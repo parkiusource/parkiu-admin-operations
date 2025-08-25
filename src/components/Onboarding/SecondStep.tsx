@@ -99,7 +99,7 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
         if (data.total_spots <= 0) {
           throw new Error('El número de espacios debe ser mayor a 0');
         }
-        if (data.price_per_hour <= 0) {
+        if ((data.price_per_hour || data.car_rate_per_minute * 60) <= 0) {
           throw new Error('El precio por hora debe ser mayor a 0');
         }
         await createParking(data);

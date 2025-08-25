@@ -54,11 +54,57 @@ export const useVehicles = () => {
     }
   });
 
+  const registerVehicleEntry = useMutation({
+    mutationFn: async (entryData: { plate: string; vehicle_type: string; space_number: string }) => {
+      // Simular registro de entrada usando el servicio local
+      const vehicle = {
+        plate: entryData.plate,
+        type: entryData.vehicle_type as 'car' | 'motorcycle' | 'truck',
+        status: 'parked' as const,
+        entryTime: new Date(),
+        parkingSpotId: 1 // ID genérico para el espacio
+      };
+
+      const response = await vehicleService.registerVehicle(vehicle);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Invalidar queries aquí para asegurar que se actualicen los datos
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+
+      return {
+        spot_number: entryData.space_number,
+        entry_time: new Date().toISOString(),
+        plate: entryData.plate
+      };
+    }
+  });
+
+  const registerVehicleExit = useMutation({
+    mutationFn: async (exitData: { plate: string }) => {
+      // Simular registro de salida
+      const cost = Math.floor(Math.random() * 15000) + 5000; // Costo aleatorio entre $5,000 y $20,000
+
+      // Invalidar queries aquí para asegurar que se actualicen los datos
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+
+      // Aquí podrías actualizar el vehículo a status 'exited' si necesitas
+      return {
+        total_cost: cost,
+        exit_time: new Date().toISOString(),
+        plate: exitData.plate
+      };
+    }
+  });
+
   return {
     vehicles,
     isLoading,
     error,
     registerVehicle,
-    updateVehicle
+    updateVehicle,
+    registerVehicleEntry,
+    registerVehicleExit
   };
 };

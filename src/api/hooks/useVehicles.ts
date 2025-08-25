@@ -1,67 +1,88 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
 import { VehicleService } from '../services/vehicleService';
-import { VehicleEntry, VehicleExit, VehicleTransaction } from '@/types/parking';
+import {
+  VehicleEntry,
+  VehicleExit,
+  VehicleEntryResponse,
+  VehicleExitResponse,
+  ActiveVehicle,
+  CostCalculation,
+  VehicleType,
+  ParkingLot
+} from '@/types/parking';
 
 // ===============================
 // QUERY HOOKS
 // ===============================
 
 /**
- * ✅ Hook para obtener vehículos activos (estacionados)
+ * 📋 Hook para obtener vehículos activos en un parqueadero específico
  */
-export const useActiveVehicles = (parkingLotId?: string, options?: {
+export const useActiveVehicles = (parkingLotId: string, options?: {
   enabled?: boolean;
   staleTime?: number;
   refetchInterval?: number;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
   return useQuery({
     queryKey: ['vehicles', 'active', parkingLotId],
     queryFn: async () => {
-      const token = await getAccessTokenSilently();
-      const response = await VehicleService.getActiveVehicles(token, parkingLotId);
+      try {
+        if (!isAuthenticated) {
+          console.log('🔓 Usuario no autenticado en useActiveVehicles');
+          return []; // Retornar array vacío en lugar de fallar
+        }
 
-      if (response.error) {
-        throw new Error(response.error);
+        const token = await getAccessTokenSilently({
+          timeoutInSeconds: 10,
+        });
+
+        const response = await VehicleService.getActiveVehicles(token, parkingLotId);
+
+        if (response.error) {
+          console.warn('⚠️ Error del servicio de vehículos:', response.error);
+          return []; // Retornar array vacío en lugar de fallar
+        }
+
+        return response.data || [];
+      } catch (error) {
+        console.error('🚨 Error en useActiveVehicles:', error);
+        return []; // Siempre retornar array vacío para no romper la UI
       }
-
-      return response.data || [];
     },
-    enabled: options?.enabled ?? true,
-    staleTime: options?.staleTime ?? 1000 * 60 * 2, // 2 minutos
+    enabled: (options?.enabled ?? true) && !!parkingLotId,
+    staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto - datos en tiempo real
     refetchInterval: options?.refetchInterval ?? 1000 * 30, // 30 segundos
-    retry: (failureCount, error: Error & { code?: string }) => {
-      if (error?.code === 'ERR_NETWORK') {
-        return false;
-      }
-      return failureCount < 2;
-    }
+    retry: 1, // Solo 1 reintento
   });
 };
 
 /**
- * ✅ Hook para obtener historial de transacciones
+ * 📊 Hook para obtener historial de transacciones de un parqueadero
  */
-export const useTransactionHistory = (filters?: {
-  parking_lot_id?: string;
-  plate?: string;
-  start_date?: string;
-  end_date?: string;
-  limit?: number;
-  offset?: number;
-}, options?: {
-  enabled?: boolean;
-  staleTime?: number;
-}) => {
+export const useTransactionHistory = (
+  parkingLotId: string,
+  filters?: {
+    plate?: string;
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+    offset?: number;
+  },
+  options?: {
+    enabled?: boolean;
+    staleTime?: number;
+  }
+) => {
   const { getAccessTokenSilently } = useAuth0();
 
   return useQuery({
-    queryKey: ['vehicles', 'transactions', filters],
+    queryKey: ['vehicles', 'transactions', parkingLotId, filters],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
-      const response = await VehicleService.getTransactionHistory(token, filters);
+      const response = await VehicleService.getTransactionHistory(token, parkingLotId, filters);
 
       if (response.error) {
         throw new Error(response.error);
@@ -69,7 +90,7 @@ export const useTransactionHistory = (filters?: {
 
       return response.data || [];
     },
-    enabled: options?.enabled ?? true,
+    enabled: (options?.enabled ?? true) && !!parkingLotId,
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutos
     retry: (failureCount, error: Error & { code?: string }) => {
       if (error?.code === 'ERR_NETWORK') {
@@ -81,19 +102,24 @@ export const useTransactionHistory = (filters?: {
 };
 
 /**
- * ✅ Hook para buscar un vehículo específico
+ * 🔍 Hook para buscar un vehículo específico por placa
  */
-export const useSearchVehicle = (plate: string, parkingLotId?: string, options?: {
-  enabled?: boolean;
-  staleTime?: number;
-}) => {
+export const useSearchVehicle = (
+  parkingLotId: string,
+  plate: string,
+  options?: {
+    enabled?: boolean;
+    staleTime?: number;
+  }
+) => {
   const { getAccessTokenSilently } = useAuth0();
+  const normalizedPlate = (plate || '').trim().toUpperCase();
 
   return useQuery({
-    queryKey: ['vehicles', 'search', plate, parkingLotId],
+    queryKey: ['vehicles', 'search', parkingLotId, normalizedPlate],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
-      const response = await VehicleService.searchVehicle(token, plate, parkingLotId);
+      const response = await VehicleService.searchVehicle(token, parkingLotId, normalizedPlate);
 
       if (response.error) {
         throw new Error(response.error);
@@ -101,7 +127,7 @@ export const useSearchVehicle = (plate: string, parkingLotId?: string, options?:
 
       return response.data;
     },
-    enabled: (options?.enabled ?? true) && !!plate && plate.length >= 3,
+    enabled: (options?.enabled ?? true) && !!parkingLotId && !!normalizedPlate && normalizedPlate.length >= 3,
     staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto para búsquedas
     retry: false
   });
@@ -112,34 +138,70 @@ export const useSearchVehicle = (plate: string, parkingLotId?: string, options?:
 // ===============================
 
 /**
- * ✅ Hook para registrar entrada de vehículo
+ * 🚗 Hook para registrar entrada de vehículo
  */
 export const useRegisterVehicleEntry = (options?: {
-  onSuccess?: (data: VehicleTransaction) => void;
+  onSuccess?: (data: VehicleEntryResponse, entryData: { parkingLotId: string; vehicleData: VehicleEntry }) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (entryData: VehicleEntry) => {
-      const token = await getAccessTokenSilently();
-      const response = await VehicleService.registerEntry(token, entryData);
+    mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleEntry }) => {
+      console.log('🔍 useRegisterVehicleEntry - Iniciando mutación:', {
+        parkingLotId,
+        vehicleData,
+        isAuthenticated
+      });
 
-      if (response.error) {
-        throw new Error(response.error);
+      if (!isAuthenticated) {
+        console.error('❌ useRegisterVehicleEntry - Usuario NO autenticado');
+        throw new Error('Usuario no autenticado');
       }
 
-      return response.data!;
+      console.log('✅ useRegisterVehicleEntry - Usuario autenticado, obteniendo token...');
+
+      try {
+        const token = await getAccessTokenSilently({
+          timeoutInSeconds: 10
+        });
+
+        console.log('✅ useRegisterVehicleEntry - Token obtenido, llamando servicio...');
+
+        const response = await VehicleService.registerEntry(token, parkingLotId, vehicleData);
+
+        console.log('📦 useRegisterVehicleEntry - Respuesta del servicio:', response);
+
+        if (response.error) {
+          console.error('❌ useRegisterVehicleEntry - Error del servicio:', response.error);
+          throw new Error(response.error);
+        }
+
+        console.log('✅ useRegisterVehicleEntry - Registro exitoso');
+        return response.data!;
+      } catch (error) {
+        console.error('🚨 useRegisterVehicleEntry - Error completo:', error);
+        throw error as Error;
+      }
     },
     onSuccess: (data, variables) => {
       // 🚀 OPTIMIZACIÓN: Actualizar cache de vehículos activos directamente
-      queryClient.setQueryData(['vehicles', 'active', variables.parking_lot_id], (oldData: VehicleTransaction[] | undefined) => {
-        return oldData ? [...oldData, data] : [data];
+      const newActiveVehicle: ActiveVehicle = {
+        plate: variables.vehicleData.plate,
+        vehicle_type: variables.vehicleData.vehicle_type,
+        spot_number: data.spot_number,
+        entry_time: data.entry_time,
+        duration_minutes: 0,
+        current_cost: 0
+      };
+
+      queryClient.setQueryData(['vehicles', 'active', variables.parkingLotId], (oldData: ActiveVehicle[] | undefined) => {
+        return oldData ? [...oldData, newActiveVehicle] : [newActiveVehicle];
       });
 
       // Solo invalidar queries que realmente necesitan refetch con debounce
-      const debounceKey = `vehicle-entry-${variables.parking_lot_id}`;
+      const debounceKey = `vehicle-entry-${variables.parkingLotId}`;
       const globalDebounce = globalThis as unknown as Record<string, NodeJS.Timeout>;
       const timeoutId = globalDebounce[debounceKey];
 
@@ -148,57 +210,74 @@ export const useRegisterVehicleEntry = (options?: {
       globalDebounce[debounceKey] = setTimeout(() => {
         // Invalidar transacciones y stats con refetchType: 'none' para evitar calls innecesarios
         queryClient.invalidateQueries({
-          queryKey: ['vehicles', 'transactions'],
+          queryKey: ['vehicles', 'transactions', variables.parkingLotId],
           refetchType: 'none'
         });
         queryClient.invalidateQueries({
-          queryKey: ['parkingLotStats', variables.parking_lot_id],
+          queryKey: ['parkingLotStats', variables.parkingLotId],
           refetchType: 'none'
         });
 
-        // IMPORTANTE: NO invalidar realParkingSpaces aquí ya que se actualiza desde otro hook
+        // Invalidar espacios disponibles para actualizar disponibilidad
+        queryClient.invalidateQueries({
+          queryKey: ['realParkingSpaces', variables.parkingLotId],
+          refetchType: 'none'
+        });
+
         delete globalDebounce[debounceKey];
       }, 200);
 
-      console.log(`⚡ Entrada de vehículo ${data.plate} OPTIMIZADA`);
-      options?.onSuccess?.(data);
+      console.log(`⚡ Entrada de vehículo ${variables.vehicleData.plate} OPTIMIZADA en espacio ${data.spot_number}`);
+      options?.onSuccess?.(data as VehicleEntryResponse, variables);
     },
     onError: (error) => {
-      console.error('Error registering vehicle entry:', error);
+      console.error('🚨 useRegisterVehicleEntry - onError ejecutado:', error);
       options?.onError?.(error);
     }
   });
 };
 
 /**
- * ✅ Hook para registrar salida de vehículo
+ * 🚪 Hook para registrar salida de vehículo
  */
 export const useRegisterVehicleExit = (options?: {
-  onSuccess?: (data: VehicleTransaction) => void;
+  onSuccess?: (data: VehicleExitResponse, exitData: { parkingLotId: string; vehicleData: VehicleExit }) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (exitData: VehicleExit) => {
-      const token = await getAccessTokenSilently();
-      const response = await VehicleService.registerExit(token, exitData);
-
-      if (response.error) {
-        throw new Error(response.error);
+    mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleExit }) => {
+      if (!isAuthenticated) {
+        throw new Error('Usuario no autenticado');
       }
 
-      return response.data!;
+      try {
+        const token = await getAccessTokenSilently({
+          timeoutInSeconds: 10,
+        });
+
+        const response = await VehicleService.registerExit(token, parkingLotId, vehicleData);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        return response.data!;
+      } catch (error) {
+        console.error('🚨 Error en registro de salida:', error);
+        throw error;
+      }
     },
     onSuccess: (data, variables) => {
       // 🚀 OPTIMIZACIÓN: Remover vehículo del cache de activos directamente
-      queryClient.setQueryData(['vehicles', 'active', variables.parking_lot_id], (oldData: VehicleTransaction[] | undefined) => {
-        return oldData ? oldData.filter(vehicle => vehicle.plate !== data.plate) : [];
+      queryClient.setQueryData(['vehicles', 'active', variables.parkingLotId], (oldData: ActiveVehicle[] | undefined) => {
+        return oldData ? oldData.filter(vehicle => vehicle.plate !== variables.vehicleData.plate) : [];
       });
 
       // Debounce para invalidaciones secundarias
-      const debounceKey = `vehicle-exit-${variables.parking_lot_id}`;
+      const debounceKey = `vehicle-exit-${variables.parkingLotId}`;
       const globalDebounce = globalThis as unknown as Record<string, NodeJS.Timeout>;
       const timeoutId = globalDebounce[debounceKey];
 
@@ -206,19 +285,25 @@ export const useRegisterVehicleExit = (options?: {
 
       globalDebounce[debounceKey] = setTimeout(() => {
         queryClient.invalidateQueries({
-          queryKey: ['vehicles', 'transactions'],
+          queryKey: ['vehicles', 'transactions', variables.parkingLotId],
           refetchType: 'none'
         });
         queryClient.invalidateQueries({
-          queryKey: ['parkingLotStats', variables.parking_lot_id],
+          queryKey: ['parkingLotStats', variables.parkingLotId],
+          refetchType: 'none'
+        });
+
+        // Invalidar espacios para liberar el espacio ocupado
+        queryClient.invalidateQueries({
+          queryKey: ['realParkingSpaces', variables.parkingLotId],
           refetchType: 'none'
         });
 
         delete globalDebounce[debounceKey];
       }, 200);
 
-      console.log(`⚡ Salida de vehículo ${data.plate} OPTIMIZADA`);
-      options?.onSuccess?.(data);
+      console.log(`⚡ Salida de vehículo ${variables.vehicleData.plate} OPTIMIZADA - Costo: $${data.total_cost.toLocaleString()}`);
+      options?.onSuccess?.(data, variables);
     },
     onError: (error) => {
       console.error('Error registering vehicle exit:', error);
@@ -228,13 +313,13 @@ export const useRegisterVehicleExit = (options?: {
 };
 
 // ===============================
-// UTILIDADES Y HELPERS
+// UTILIDADES Y HOOKS COMPUESTOS
 // ===============================
 
 /**
- * ✅ Hook compuesto para obtener estadísticas de vehículos
+ * 📊 Hook compuesto para obtener estadísticas de vehículos
  */
-export const useVehicleStats = (parkingLotId?: string, options?: {
+export const useVehicleStats = (parkingLotId: string, options?: {
   enabled?: boolean;
   refetchInterval?: number;
 }) => {
@@ -251,15 +336,12 @@ export const useVehicleStats = (parkingLotId?: string, options?: {
     byType: activeVehicles.reduce((acc, vehicle) => {
       acc[vehicle.vehicle_type] = (acc[vehicle.vehicle_type] || 0) + 1;
       return acc;
-    }, {} as Record<string, number>),
+    }, {} as Record<VehicleType, number>),
+    totalRevenue: activeVehicles.reduce((sum, vehicle) => sum + vehicle.current_cost, 0),
     averageDuration: activeVehicles.length > 0
       ? Math.round(
           activeVehicles
-            .map(v => {
-              const entryTime = new Date(v.entry_time).getTime();
-              const now = Date.now();
-              return (now - entryTime) / (1000 * 60); // minutos
-            })
+            .map(v => v.duration_minutes)
             .reduce((sum, duration) => sum + duration, 0) / activeVehicles.length
         )
       : 0,
@@ -269,5 +351,24 @@ export const useVehicleStats = (parkingLotId?: string, options?: {
     ...activeQuery,
     activeVehicles,
     stats,
+  };
+};
+
+/**
+ * 🧮 Hook para calculadora de costos en tiempo real
+ * Útil para mostrar estimaciones y costos actuales
+ */
+export const useCostCalculator = (parkingLot: ParkingLot) => {
+  const calculateCost = (entryTime: string, vehicleType: VehicleType): CostCalculation => {
+    return VehicleService.calculateCurrentCost(entryTime, vehicleType, parkingLot);
+  };
+
+  const estimateCost = (durationMinutes: number, vehicleType: VehicleType): CostCalculation => {
+    return VehicleService.estimateCost(durationMinutes, vehicleType, parkingLot);
+  };
+
+  return {
+    calculateCost,
+    estimateCost,
   };
 };

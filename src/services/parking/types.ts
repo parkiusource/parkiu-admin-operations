@@ -7,26 +7,52 @@ import { Location } from '@/types/common';
 // PARKING LOTS (Parqueaderos)
 // ===============================
 
-// Estructura que usa el frontend
+// ✅ Estructura que usa el frontend - ACTUALIZADA para compatibilidad con tarifas colombianas
 export interface ParkingLot {
   id?: string;
   name: string;
   address: string;
   location: Location;
   total_spots: number;
-  price_per_hour: number;
   admin_uuid?: string;
   description?: string;
   opening_time?: string;
   closing_time?: string;
-  daily_rate?: number;
-  monthly_rate?: number;
   contact_name?: string;
   contact_phone?: string;
+
+  // 🇨🇴 TARIFAS COLOMBIANAS POR MINUTO
+  car_rate_per_minute: number;
+  motorcycle_rate_per_minute: number;
+  bicycle_rate_per_minute: number;
+  truck_rate_per_minute: number;
+
+  // 🎯 TARIFAS FIJAS
+  fixed_rate_car: number;
+  fixed_rate_motorcycle: number;
+  fixed_rate_bicycle: number;
+  fixed_rate_truck: number;
+
+  // ⏰ CONFIGURACIÓN
+  fixed_rate_threshold_minutes: number;
+
+  // 📊 CAMPOS LEGACY (compatibilidad)
+  price_per_hour?: number;
+  hourly_rate?: number;
+  daily_rate?: number;
+  monthly_rate?: number;
+
   // Estados y metadatos
   status?: 'active' | 'inactive' | 'pending' | 'maintenance';
   created_at?: string;
   updated_at?: string;
+
+  // 📈 ESTADÍSTICAS (solo en responses)
+  available_spaces?: number;
+  available_car_spaces?: number;
+  available_motorcycle_spaces?: number;
+  available_bicycle_spaces?: number;
+  is_active?: boolean;
 }
 
 // ✅ Estructura EXACTA que devuelve tu backend real
@@ -257,16 +283,42 @@ export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
       longitude: api.longitude || 0,
     },
     total_spots: api.total_spaces || 0, // ⚠️ total_spaces -> total_spots
-    price_per_hour: api.hourly_rate || 0,
     admin_uuid: api.admin_id != null ? api.admin_id.toString() : '', // Safely convert admin_id
     description: api.description || '',
     opening_time: api.opening_time || '08:00',
     closing_time: api.closing_time || '20:00',
     contact_name: api.contact_name || '',
     contact_phone: api.contact_phone || '',
+
+    // 🇨🇴 TARIFAS COLOMBIANAS (valores por defecto desde hourly_rate)
+    car_rate_per_minute: (api.hourly_rate || 5000) / 60,
+    motorcycle_rate_per_minute: ((api.hourly_rate || 5000) / 60) * 0.3,
+    bicycle_rate_per_minute: ((api.hourly_rate || 5000) / 60) * 0.06,
+    truck_rate_per_minute: ((api.hourly_rate || 5000) / 60) * 1.5,
+
+    fixed_rate_car: (api.hourly_rate || 5000) * 10,
+    fixed_rate_motorcycle: ((api.hourly_rate || 5000) * 10) * 0.4,
+    fixed_rate_bicycle: ((api.hourly_rate || 5000) * 10) * 0.2,
+    fixed_rate_truck: ((api.hourly_rate || 5000) * 10) * 1.4,
+
+    fixed_rate_threshold_minutes: 720, // 12 horas
+
+    // 📊 CAMPOS LEGACY
+    price_per_hour: api.hourly_rate || 0,
+    hourly_rate: api.hourly_rate || 0,
+    daily_rate: undefined,
+    monthly_rate: undefined,
+
     status: api.is_active ? 'active' : 'inactive', // ⚠️ is_active -> status
     created_at: api.created_at || '',
     updated_at: api.updated_at || '',
+
+    // 📈 ESTADÍSTICAS
+    available_spaces: api.available_spaces,
+    available_car_spaces: api.available_car_spaces,
+    available_motorcycle_spaces: api.available_motorcycle_spaces,
+    available_bicycle_spaces: api.available_bicycle_spaces,
+    is_active: api.is_active,
   };
 }
 

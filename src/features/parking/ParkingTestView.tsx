@@ -90,12 +90,28 @@ export default function ParkingTestView() {
         address: 'Calle de Prueba 123',
         location: { latitude: 4.6097, longitude: -74.0817 },
         total_spots: 10,
-        price_per_hour: 3000,
         description: 'Parking de prueba creado automáticamente',
         opening_time: '06:00',
         closing_time: '22:00',
         contact_name: 'Admin Test',
-        contact_phone: '+57 300 123 4567'
+        contact_phone: '+57 300 123 4567',
+
+        // 🇨🇴 TARIFAS COLOMBIANAS DE PRUEBA
+        car_rate_per_minute: 50,      // $50/min ≈ $3000/hora
+        motorcycle_rate_per_minute: 15,  // $15/min ≈ $900/hora
+        bicycle_rate_per_minute: 3,   // $3/min ≈ $180/hora
+        truck_rate_per_minute: 75,    // $75/min ≈ $4500/hora
+
+        fixed_rate_car: 25000,        // $25,000 día completo
+        fixed_rate_motorcycle: 10000,
+        fixed_rate_bicycle: 5000,
+        fixed_rate_truck: 35000,
+
+        fixed_rate_threshold_minutes: 480, // 8 horas
+
+        // Campos legacy para compatibilidad
+        price_per_hour: 3000,
+        admin_uuid: undefined
       };
 
       await createParkingLot(testParkingData);

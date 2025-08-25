@@ -1,0 +1,28 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import { ToastContext, type Toast } from './toastContext';
+import type { ToastType } from '@/types/toast';
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  const addToast = useCallback((message: string, type: ToastType = 'success', duration = 3000) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+
+    window.setTimeout(() => {
+      removeToast(id);
+    }, duration);
+  }, [removeToast]);
+
+  const value = useMemo(() => ({ toasts, addToast, removeToast }), [toasts, addToast, removeToast]);
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+    </ToastContext.Provider>
+  );
+}

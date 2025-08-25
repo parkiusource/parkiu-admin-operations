@@ -18,6 +18,7 @@ export const useParkingLots = ({ queryClient, ...options }: UseParkingLotsOption
       if (!isAuthenticated) {
         return [];
       }
+
       const token = await getAccessTokenSilently();
       const response = await client.get('/parking-lots/', {
         headers: {
@@ -66,6 +67,7 @@ export const useParkingLots = ({ queryClient, ...options }: UseParkingLotsOption
     },
     enabled: isAuthenticated && (options?.enabled ?? true),
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutos
+    retry: 2,
     ...options,
   });
 
