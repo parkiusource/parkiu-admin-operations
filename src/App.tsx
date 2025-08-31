@@ -46,6 +46,14 @@ const queryClient = new QueryClient({
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       refetchOnWindowFocus: false, // Evitar refetch automático
       refetchOnMount: 'always', // Solo refetch al montar si es necesario
+      // ✅ OPTIMIZACIÓN: Configuración mejorada para performance
+      networkMode: 'offlineFirst', // Priorizar cache offline
+      refetchOnReconnect: 'always', // Refetch cuando se reconecte
+    },
+    mutations: {
+      // ✅ OPTIMIZACIÓN: Configuración para mutaciones
+      networkMode: 'offlineFirst',
+      retry: 1, // Solo 1 reintento para mutaciones
     },
   },
 });

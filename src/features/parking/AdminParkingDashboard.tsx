@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuBike, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding } from 'react-icons/lu';
 import { CircleParking } from 'lucide-react';
@@ -40,6 +40,17 @@ export default function AdminParkingDashboard() {
     error: lotsError
   } = useParkingLots();
 
+  // ✅ OPTIMIZACIÓN: Memoizar filtros costosos
+  const filteredParkingLots = useMemo(() => {
+    if (!searchTerm) return parkingLots;
+
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return parkingLots.filter(parking =>
+      parking.name.toLowerCase().includes(lowerSearchTerm) ||
+      parking.address.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [parkingLots, searchTerm]);
+
   // ✅ DETERMINAR QUE MOSTRAR SEGÚN LA RUTA
   const isListView = !parkingId; // Si no hay ID, mostrar lista
   const currentParking = parkingId
@@ -56,18 +67,20 @@ export default function AdminParkingDashboard() {
     enabled: !!currentParking?.id,
     refetchInterval: 1000 * 30 // Refrescar cada 30 segundos
   });
-  const availableSpots = parkingSpots.filter(spot => spot.status === 'available');
-  const occupiedSpots = parkingSpots.filter(spot => spot.status === 'occupied');
-  const maintenanceSpots = parkingSpots.filter(spot => spot.status === 'maintenance');
+  // ✅ OPTIMIZACIÓN: Memoizar cálculos costosos para evitar re-renders innecesarios
+  const occupancyStats = useMemo(() => {
+    const available = parkingSpots.filter(spot => spot.status === 'available');
+    const occupied = parkingSpots.filter(spot => spot.status === 'occupied');
+    const maintenance = parkingSpots.filter(spot => spot.status === 'maintenance');
 
-  // ✅ ESTADÍSTICAS CALCULADAS EN TIEMPO REAL
-  const occupancyStats = {
-    total: parkingSpots.length,
-    available: availableSpots.length,
-    occupied: occupiedSpots.length,
-    maintenance: maintenanceSpots.length,
-    occupancyRate: parkingSpots.length > 0 ? (occupiedSpots.length / parkingSpots.length) * 100 : 0
-  };
+    return {
+      total: parkingSpots.length,
+      available: available.length,
+      occupied: occupied.length,
+      maintenance: maintenance.length,
+      occupancyRate: parkingSpots.length > 0 ? (occupied.length / parkingSpots.length) * 100 : 0
+    };
+  }, [parkingSpots]);
 
   // ✅ HOOKS DE MUTACIÓN REALES DEL BACKEND
   const updateSpotStatus = useUpdateRealParkingSpaceStatus({
@@ -366,11 +379,7 @@ export default function AdminParkingDashboard() {
             ) : (
               /* Cards de parqueaderos mejoradas */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {parkingLots
-                  .filter(parking =>
-                    parking.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    parking.address.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
+                {filteredParkingLots
                   .map((parking) => (
                   <div
                     key={parking.id}

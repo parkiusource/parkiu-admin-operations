@@ -30,7 +30,13 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
           'query-vendor': ['@tanstack/react-query'],
-          'utils-vendor': ['date-fns', 'axios']
+          'utils-vendor': ['date-fns', 'axios'],
+          // ✅ OPTIMIZACIÓN: Separar dependencias pesadas
+          'auth-vendor': ['@auth0/auth0-react'],
+          'animation-vendor': ['framer-motion', 'lottie-react'],
+          'icons-vendor': ['lucide-react', 'react-icons', '@heroicons/react'],
+          'forms-vendor': ['react-hook-form'],
+          'db-vendor': ['dexie']
         }
       },
       // ✅ Suprimir warning de eval en lottie-web (dependencia de lottie-react)
