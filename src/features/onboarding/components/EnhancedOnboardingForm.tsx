@@ -50,21 +50,21 @@ export default function EnhancedOnboardingForm() {
             <div key={step.id} className="flex flex-col items-center flex-1">
               <div
                 className={`w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300
-                  ${isCompleted ? 'bg-blue-500 border-blue-500 text-white' :
-                    isActive ? 'bg-white border-blue-500 text-blue-500 ring-4 ring-blue-100' :
+                  ${isCompleted ? 'bg-parkiu-500 border-parkiu-500 text-white' :
+                    isActive ? 'bg-white border-parkiu-500 text-parkiu-500 ring-4 ring-parkiu-100' :
                     'bg-white border-gray-200 text-gray-400'}
                 `}
               >
                 <Icon className="w-6 h-6" />
               </div>
-              <span className={`mt-2 text-xs font-medium ${isActive || isCompleted ? 'text-blue-600' : 'text-gray-400'}`}>{step.title}</span>
+              <span className={`mt-2 text-xs font-medium ${isActive || isCompleted ? 'text-parkiu-600' : 'text-gray-400'}`}>{step.title}</span>
             </div>
           );
         })}
       </div>
       <div className="relative h-1 bg-gray-200 rounded-full">
         <div
-          className="absolute h-1 bg-blue-500 rounded-full transition-all duration-500"
+          className="absolute h-1 bg-parkiu-500 rounded-full transition-all duration-500"
           style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
         />
       </div>
@@ -102,7 +102,7 @@ export default function EnhancedOnboardingForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50 to-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-parkiu-50 to-white">
       <motion.div
         className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl shadow-primary/10 p-4 sm:p-6 border-t-4 border-primary"
         initial={{ opacity: 0, y: 20 }}

@@ -4,7 +4,7 @@
   "description": "Sistema de administración de parqueaderos inteligentes",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#0ea5e9",
+  "theme_color": "#1693e3",
   "background_color": "#ffffff",
   "orientation": "portrait-primary",
   "scope": "/",

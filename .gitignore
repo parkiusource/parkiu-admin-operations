@@ -38,3 +38,15 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+
+# Documentation files (generated during development)
+BACKEND_REQUIREMENTS.md
+CARD_ALIGNMENT_FIX.md
+CLEANUP_REPORT.md
+dev-scripts.md
+ENDPOINTS_ANALYSIS.md
+HEADER_STATS_FIX.md
+OPTIMIZATION_REPORT.md
+PARKING_IMPROVEMENTS.md
+PARKIU_COLOR_PALETTE.md
+REAL_DATA_FIX.md

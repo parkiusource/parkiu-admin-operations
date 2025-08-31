@@ -23,7 +23,34 @@ export default {
         neutral: colors.neutral,
         gray: colors.gray,
         slate: colors.slate,
-        primary: { ...colors.sky, DEFAULT: colors.sky[500] },
+        // Paleta personalizada de ParkiU basada en RGB(22, 147, 227)
+        parkiu: {
+          50: '#f0f8ff',   // Muy claro
+          100: '#e0f2fe',  // Claro
+          200: '#bae6fd',  // Claro medio
+          300: '#7dd3fc',  // Medio claro
+          400: '#38bdf8',  // Medio
+          500: '#1693e3',  // Base RGB(22, 147, 227)
+          600: '#0284c7',  // Medio oscuro
+          700: '#0369a1',  // Oscuro
+          800: '#075985',  // Muy oscuro
+          900: '#0c4a6e',  // Más oscuro
+          950: '#082f49',  // Más oscuro aún
+        },
+        primary: {
+          50: '#f0f8ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#1693e3',  // Color base de ParkiU
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#0c4a6e',
+          950: '#082f49',
+          DEFAULT: '#1693e3'
+        },
         secondary: { ...colors.gray, DEFAULT: colors.gray[800] },
         background: { ...colors.gray, DEFAULT: colors.gray[50] },
         'dark-green': {

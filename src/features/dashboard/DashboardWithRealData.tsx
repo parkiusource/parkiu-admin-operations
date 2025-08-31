@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   LuBuilding2,
   LuMapPin,
@@ -14,148 +14,91 @@ import {
   LuRefreshCw
 } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
+import {
+  useDashboardStats,
+  useRealtimeStats,
+  calculateKPIs,
+  generateAlerts,
+  formatCurrency,
+  formatDuration
+} from './hooks/useRealDashboardData';
+import { useParkingLots } from '../../hooks/parking/useParkingLots';
 
-interface SystemStats {
-  totalParkings: number;
-  activeParkings: number;
-  totalSpaces: number;
-  occupiedSpaces: number;
-  todayRevenue: number;
-  todayTransactions: number;
-  activeUsers: number;
-  systemHealth: 'excellent' | 'good' | 'warning' | 'critical';
-}
+// ===================================
+// CONFIGURACIÓN
+// ===================================
 
-interface RecentActivity {
-  id: string;
-  type: 'parking_created' | 'user_registered' | 'transaction' | 'system_alert';
-  message: string;
-  timestamp: Date;
-  status: 'success' | 'warning' | 'error';
-}
-
-interface ParkingOverview {
-  id: string;
-  name: string;
-  location: string;
-  totalSpaces: number;
-  occupiedSpaces: number;
-  revenue: number;
-  status: 'active' | 'maintenance' | 'inactive';
-}
-
-// Datos simulados (en producción vendrían de la API)
-const mockStats: SystemStats = {
-  totalParkings: 12,
-  activeParkings: 10,
-  totalSpaces: 450,
-  occupiedSpaces: 287,
-  todayRevenue: 2850000,
-  todayTransactions: 156,
-  activeUsers: 1247,
-  systemHealth: 'good'
-};
-
-const mockRecentActivity: RecentActivity[] = [
+// Datos mock para actividad reciente (hasta implementar endpoint)
+const mockRecentActivity = [
   {
     id: '1',
-    type: 'parking_created',
-    message: 'Nuevo parqueadero "Centro Comercial Norte" creado',
+    type: 'high_occupancy',
+    message: 'Ocupación alta detectada en Centro Comercial Plaza',
     timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    status: 'success'
+    status: 'warning' as const
   },
   {
     id: '2',
-    type: 'transaction',
-    message: 'Pico de transacciones detectado en Zona Rosa',
+    type: 'revenue_milestone',
+    message: 'Meta de ingresos diarios alcanzada',
     timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    status: 'success'
+    status: 'success' as const
   },
   {
     id: '3',
-    type: 'system_alert',
-    message: 'Sensor desconectado en Parqueadero Central - Espacio A15',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45),
-    status: 'warning'
-  },
-  {
-    id: '4',
-    type: 'user_registered',
-    message: '23 nuevos usuarios registrados hoy',
+    type: 'system_info',
+    message: '45 nuevos vehículos registrados hoy',
     timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    status: 'success'
+    status: 'info' as const
   }
 ];
 
-const mockParkingOverview: ParkingOverview[] = [
-  {
-    id: '1',
-    name: 'Centro Comercial Plaza',
-    location: 'Zona Rosa',
-    totalSpaces: 120,
-    occupiedSpaces: 95,
-    revenue: 850000,
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Edificio Corporativo Norte',
-    location: 'Chapinero',
-    totalSpaces: 80,
-    occupiedSpaces: 62,
-    revenue: 420000,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Hospital San José',
-    location: 'Centro',
-    totalSpaces: 150,
-    occupiedSpaces: 130,
-    revenue: 980000,
-    status: 'active'
-  }
-];
+// ===================================
+// COMPONENTE PRINCIPAL
+// ===================================
 
-export default function Dashboard() {
-  const [stats] = useState<SystemStats>(mockStats);
-  const [recentActivity] = useState<RecentActivity[]>(mockRecentActivity);
-  const [parkingOverview] = useState<ParkingOverview[]>(mockParkingOverview);
-  const [isLoading, setIsLoading] = useState(false);
+export default function DashboardWithRealData() {
+  // Estados locales primero (orden consistente)
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true);
+  const [selectedParkingLot, setSelectedParkingLot] = useState<string>('');
+  const [alerts, setAlerts] = useState<Array<{
+    type: 'warning' | 'danger' | 'success' | 'info';
+    message: string;
+    priority: 'high' | 'medium' | 'low';
+  }>>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
+  // ✅ Obtener parqueaderos reales usando el hook existente
+  const { parkingLots, isLoading: isLoadingParkingLots, error: parkingLotsError } = useParkingLots();
+
+  // Extraer IDs de parqueaderos (memoizado para evitar re-renders)
+  const parkingLotIds = useMemo(() =>
+    parkingLots.map(lot => lot.id).filter((id): id is string => Boolean(id)),
+    [parkingLots]
+  );
+
+  // Establecer el primer parqueadero como seleccionado por defecto
   useEffect(() => {
-    // En producción, aquí cargarías los datos reales de la API
-    const loadDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        // Simular carga de datos
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Aquí harías las llamadas reales a la API
-        // const [statsData, activityData, parkingsData] = await Promise.all([
-        //   fetchSystemStats(),
-        //   fetchRecentActivity(),
-        //   fetchParkingOverview()
-        // ]);
-        // setStats(statsData);
-        // setRecentActivity(activityData);
-        // setParkingOverview(parkingsData);
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (parkingLotIds.length > 0 && !selectedParkingLot) {
+      setSelectedParkingLot(parkingLotIds[0]);
+    }
+  }, [parkingLotIds, selectedParkingLot]);
 
-    loadDashboardData();
-  }, []);
+  // Hooks para datos reales (siempre en el mismo orden)
+  const dashboardStats = useDashboardStats(parkingLotIds);
+  const realtimeStats = useRealtimeStats(selectedParkingLot, realtimeEnabled ? 30000 : 0);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
+  // Generar alertas cuando cambien las estadísticas
+  useEffect(() => {
+    if (realtimeStats.stats) {
+      const newAlerts = generateAlerts(realtimeStats.stats);
+      setAlerts(newAlerts);
+      setLastUpdate(new Date());
+    }
+  }, [realtimeStats.stats]);
+
+  // Calcular KPIs adicionales
+  const kpis = realtimeStats.stats ? calculateKPIs(realtimeStats.stats) : null;
 
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
@@ -167,7 +110,7 @@ export default function Dashboard() {
     return `Hace ${Math.floor(diffInMinutes / 1440)} días`;
   };
 
-  const getHealthColor = (health: SystemStats['systemHealth']) => {
+  const getHealthColor = (health: string) => {
     switch (health) {
       case 'excellent': return 'text-green-600 bg-green-100';
       case 'good': return 'text-parkiu-600 bg-parkiu-100';
@@ -177,7 +120,7 @@ export default function Dashboard() {
     }
   };
 
-  const getHealthIcon = (health: SystemStats['systemHealth']) => {
+  const getHealthIcon = (health: string) => {
     switch (health) {
       case 'excellent': return <LuCheck className="w-5 h-5" />;
       case 'good': return <LuActivity className="w-5 h-5" />;
@@ -187,27 +130,63 @@ export default function Dashboard() {
     }
   };
 
-  const occupancyRate = Math.round((stats.occupiedSpaces / stats.totalSpaces) * 100);
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard General</h1>
-          <p className="text-gray-600">Resumen del sistema ParkiU</p>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard ParkiU</h1>
+          <p className="text-gray-600">
+            Sistema en tiempo real • Última actualización: {lastUpdate.toLocaleTimeString('es-CO')}
+          </p>
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            disabled={isLoading}
+            onClick={() => setRealtimeEnabled(!realtimeEnabled)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              realtimeEnabled
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
           >
-            <LuRefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <div className={`w-2 h-2 rounded-full ${realtimeEnabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+            {realtimeEnabled ? 'Tiempo Real ON' : 'Tiempo Real OFF'}
+          </button>
+          <button
+            onClick={() => {
+              dashboardStats.refetchAll();
+              realtimeStats.refetch();
+            }}
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={dashboardStats.isLoading || isLoadingParkingLots}
+          >
+            <LuRefreshCw className={`w-4 h-4 ${(dashboardStats.isLoading || isLoadingParkingLots) ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
         </div>
       </div>
+
+      {/* Alertas */}
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.slice(0, 3).map((alert, index) => (
+            <div
+              key={index}
+              className={`p-4 rounded-lg border-l-4 ${
+                alert.type === 'warning' ? 'bg-yellow-50 border-yellow-400 text-yellow-800' :
+                alert.type === 'danger' ? 'bg-red-50 border-red-400 text-red-800' :
+                alert.type === 'success' ? 'bg-green-50 border-green-400 text-green-800' :
+                'bg-parkiu-50 border-parkiu-400 text-parkiu-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <LuTriangle className="w-5 h-5" />
+                <span className="font-medium">{alert.message}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -226,10 +205,10 @@ export default function Dashboard() {
                     Total Parqueaderos
                   </dt>
                   <dd className="text-2xl font-bold text-gray-900">
-                    {stats.totalParkings}
+                    {dashboardStats.isLoading ? '...' : dashboardStats.aggregatedStats.totalParkings}
                   </dd>
                   <dd className="text-sm text-green-600">
-                    {stats.activeParkings} activos
+                    {dashboardStats.aggregatedStats.activeParkings} activos
                   </dd>
                 </dl>
               </div>
@@ -252,10 +231,10 @@ export default function Dashboard() {
                     Ocupación General
                   </dt>
                   <dd className="text-2xl font-bold text-gray-900">
-                    {occupancyRate}%
+                    {dashboardStats.isLoading ? '...' : `${dashboardStats.aggregatedStats.occupancyRate}%`}
                   </dd>
                   <dd className="text-sm text-gray-600">
-                    {stats.occupiedSpaces} de {stats.totalSpaces} espacios
+                    {dashboardStats.aggregatedStats.occupiedSpaces} de {dashboardStats.aggregatedStats.totalSpaces} espacios
                   </dd>
                 </dl>
               </div>
@@ -278,10 +257,10 @@ export default function Dashboard() {
                     Ingresos Hoy
                   </dt>
                   <dd className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(stats.todayRevenue)}
+                    {dashboardStats.isLoading ? '...' : formatCurrency(dashboardStats.aggregatedStats.todayRevenue)}
                   </dd>
                   <dd className="text-sm text-gray-600">
-                    {stats.todayTransactions} transacciones
+                    {dashboardStats.aggregatedStats.activeVehicles} vehículos activos
                   </dd>
                 </dl>
               </div>
@@ -294,8 +273,8 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getHealthColor(stats.systemHealth)}`}>
-                  {getHealthIcon(stats.systemHealth)}
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getHealthColor('good')}`}>
+                  {getHealthIcon('good')}
                 </div>
               </div>
               <div className="ml-4 flex-1">
@@ -303,13 +282,11 @@ export default function Dashboard() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Estado del Sistema
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900 capitalize">
-                    {stats.systemHealth === 'excellent' ? 'Excelente' :
-                     stats.systemHealth === 'good' ? 'Bueno' :
-                     stats.systemHealth === 'warning' ? 'Advertencia' : 'Crítico'}
+                  <dd className="text-2xl font-bold text-gray-900">
+                    Operativo
                   </dd>
                   <dd className="text-sm text-gray-600">
-                    {stats.activeUsers} usuarios activos
+                    {realtimeEnabled ? 'Tiempo real activo' : 'Modo manual'}
                   </dd>
                 </dl>
               </div>
@@ -324,7 +301,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Parqueaderos Principales</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Parqueaderos en Tiempo Real</h3>
               <Link
                 to="/parking"
                 className="text-parkiu-600 hover:text-parkiu-700 text-sm font-medium flex items-center gap-1"
@@ -332,36 +309,83 @@ export default function Dashboard() {
                 Ver todos <LuEye className="w-4 h-4" />
               </Link>
             </div>
-            <div className="space-y-4">
-              {parkingOverview.map((parking) => (
-                <div key={parking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-medium text-gray-900">{parking.name}</h4>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        parking.status === 'active' ? 'bg-green-100 text-green-800' :
-                        parking.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {parking.status === 'active' ? 'Activo' :
-                         parking.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
-                      </span>
+
+            {/* Selector de parqueadero para vista detallada */}
+            <div className="mb-4">
+              <select
+                value={selectedParkingLot}
+                onChange={(e) => setSelectedParkingLot(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-parkiu-500 focus:border-parkiu-500"
+                disabled={isLoadingParkingLots}
+              >
+                {isLoadingParkingLots ? (
+                  <option>Cargando parqueaderos...</option>
+                ) : parkingLotsError ? (
+                  <option>Error cargando parqueaderos</option>
+                ) : parkingLots.length === 0 ? (
+                  <option>No hay parqueaderos disponibles</option>
+                ) : (
+                  parkingLots.map(lot => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.name} - {lot.address}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Estadísticas del parqueadero seleccionado */}
+            {realtimeStats.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <LuRefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                <span className="ml-2 text-gray-500">Cargando estadísticas...</span>
+              </div>
+            ) : realtimeStats.error ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800">Error: {realtimeStats.error}</p>
+              </div>
+            ) : realtimeStats.stats ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600">Ocupación</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {realtimeStats.stats.occupancy_rate.toFixed(1)}%
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{parking.location}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span>{parking.occupiedSpaces}/{parking.totalSpaces} espacios</span>
-                      <span>{formatCurrency(parking.revenue)} hoy</span>
+                    <div className="text-sm text-gray-500">
+                      {realtimeStats.stats.occupied_spots}/{realtimeStats.stats.total_spots} espacios
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold text-gray-900">
-                      {Math.round((parking.occupiedSpaces / parking.totalSpaces) * 100)}%
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600">Ingresos Hoy</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(realtimeStats.stats.revenue_today)}
                     </div>
-                    <div className="text-sm text-gray-500">ocupación</div>
+                    <div className="text-sm text-gray-500">
+                      Mes: {formatCurrency(realtimeStats.stats.revenue_month)}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* KPIs adicionales */}
+                {kpis && (
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                      <div className="text-sm text-gray-600">Estadía Promedio</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {formatDuration(realtimeStats.stats.avg_stay_duration)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Ingresos/Espacio</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(kpis.revenuePerSpace)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -370,11 +394,12 @@ export default function Dashboard() {
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Actividad Reciente</h3>
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
+              {mockRecentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3">
                   <div className={`w-2 h-2 rounded-full mt-2 ${
                     activity.status === 'success' ? 'bg-green-500' :
-                    activity.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                    activity.status === 'warning' ? 'bg-yellow-500' :
+                    'bg-parkiu-500'
                   }`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-900">{activity.message}</p>

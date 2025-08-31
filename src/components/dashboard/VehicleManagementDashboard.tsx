@@ -80,8 +80,8 @@ export const VehicleManagementDashboard: React.FC<VehicleManagementDashboardProp
       icon: Users,
       label: 'Vehículos Activos',
       value: stats.totalActive,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      color: 'text-parkiu-600',
+      bgColor: 'bg-parkiu-50',
     },
     {
       icon: DollarSign,
@@ -250,13 +250,13 @@ export const VehicleManagementDashboard: React.FC<VehicleManagementDashboardProp
         </Tabs>
 
         {/* Tips y Ayuda */}
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-parkiu-200 bg-parkiu-50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <Zap className="w-5 h-5 text-blue-600 mt-0.5" />
+              <Zap className="w-5 h-5 text-parkiu-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-blue-900 mb-2">💡 Tips del Sistema</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                <h4 className="font-semibold text-parkiu-900 mb-2">💡 Tips del Sistema</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-parkiu-700">
                   <div>
                     <p className="font-medium">✨ Funcionalidades:</p>
                     <ul className="text-xs mt-1 space-y-1">

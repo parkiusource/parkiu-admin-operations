@@ -18,12 +18,13 @@ import {
 // ✅ IMPORTAR TIPOS DEL BACKEND
 import { ParkingSpot } from '@/services/parking/types';
 
-// Función para formatear títulos a Title Case
-const toTitleCase = (str: string) => {
-  return str.replace(/\w\S*/g, (txt) =>
-    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
-  );
-};
+// ✅ IMPORTAR COMPONENTE DE CARD CON DATOS REALES
+import { ParkingLotCard } from './components/ParkingLotCard';
+
+// ✅ IMPORTAR HOOK PARA ESTADÍSTICAS REALES DEL OVERVIEW
+import { useRealParkingOverview } from './hooks/useRealParkingOverview';
+
+// Función movida a ParkingLotCard.tsx
 
 export default function AdminParkingDashboard() {
   const { id: parkingId } = useParams<{ id: string }>();
@@ -39,6 +40,9 @@ export default function AdminParkingDashboard() {
     isLoading: isLoadingLots,
     error: lotsError
   } = useParkingLots();
+
+  // ✅ OBTENER ESTADÍSTICAS REALES DEL OVERVIEW
+  const overviewStats = useRealParkingOverview(parkingLots);
 
   // ✅ OPTIMIZACIÓN: Memoizar filtros costosos
   const filteredParkingLots = useMemo(() => {
@@ -150,7 +154,7 @@ export default function AdminParkingDashboard() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="flex flex-col items-center gap-4">
-          <LuLoader className="h-12 w-12 animate-spin text-blue-600" />
+          <LuLoader className="h-12 w-12 animate-spin text-parkiu-600" />
           <p className="text-sm text-gray-600">
             {isLoadingLots ? 'Cargando parqueaderos...' : 'Cargando espacios...'}
           </p>
@@ -190,15 +194,15 @@ export default function AdminParkingDashboard() {
       return (
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <CircleParking className="mx-auto h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-lg font-medium text-blue-800 mb-2">No tienes parqueaderos registrados</h3>
-              <p className="text-blue-600 mb-4">
+            <div className="bg-parkiu-50 border border-parkiu-200 rounded-lg p-6">
+              <CircleParking className="mx-auto h-12 w-12 text-parkiu-600 mb-4" />
+              <h3 className="text-lg font-medium text-parkiu-800 mb-2">No tienes parqueaderos registrados</h3>
+              <p className="text-parkiu-600 mb-4">
                 Debes registrar al menos un parqueadero para comenzar
               </p>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                className="bg-parkiu-600 text-white px-4 py-2 rounded-lg hover:bg-parkiu-700"
               >
                 Crear parqueadero
               </button>
@@ -218,7 +222,7 @@ export default function AdminParkingDashboard() {
               <div className="flex flex-col gap-6">
                 {/* Título y descripción */}
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-xl shadow-sm">
+                  <div className="p-3 bg-parkiu-600 rounded-xl shadow-sm">
                     <LuBuilding className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -234,7 +238,7 @@ export default function AdminParkingDashboard() {
                 {/* Estadísticas y acciones en layout separado */}
                 <div className="flex flex-col xl:flex-row gap-6">
                   <div className="flex-1">
-                    {/* Estadísticas compactas */}
+                    {/* Estadísticas reales */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
                     <div className="bg-white rounded-lg p-3 lg:p-4 border border-slate-200 shadow-sm min-w-0">
                       <div className="flex items-center gap-2 lg:gap-3">
@@ -243,7 +247,7 @@ export default function AdminParkingDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs lg:text-sm text-slate-600 truncate">Total</p>
-                          <p className="text-lg lg:text-xl font-bold text-slate-900">{parkingLots.length}</p>
+                          <p className="text-lg lg:text-xl font-bold text-slate-900">{overviewStats.totalParkingLots}</p>
                         </div>
                       </div>
                     </div>
@@ -256,7 +260,7 @@ export default function AdminParkingDashboard() {
                         <div className="min-w-0 flex-1">
                           <p className="text-xs lg:text-sm text-slate-600 truncate">Activos</p>
                           <p className="text-lg lg:text-xl font-bold text-slate-900">
-                            {parkingLots.filter(p => p.status === 'active').length}
+                            {overviewStats.activeParkingLots}
                           </p>
                         </div>
                       </div>
@@ -268,9 +272,17 @@ export default function AdminParkingDashboard() {
                           <LuMapPin className="w-4 h-4 lg:w-5 lg:h-5 text-slate-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs lg:text-sm text-slate-600 truncate">Espacios</p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs lg:text-sm text-slate-600 truncate">Espacios</p>
+                            {overviewStats.loadingSpaces && (
+                              <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
+                            )}
+                            {!overviewStats.loadingSpaces && overviewStats.hasRealSpaceData && (
+                              <div className="w-2 h-2 bg-emerald-500 rounded-full" title="Datos reales"></div>
+                            )}
+                          </div>
                           <p className="text-lg lg:text-xl font-bold text-slate-900">
-                            {parkingLots.reduce((total, p) => total + (p.total_spots || 0), 0)}
+                            {overviewStats.totalSpaces}
                           </p>
                         </div>
                       </div>
@@ -284,9 +296,7 @@ export default function AdminParkingDashboard() {
                         <div className="min-w-0 flex-1">
                           <p className="text-xs lg:text-sm text-slate-600 truncate">Promedio</p>
                           <p className="text-lg lg:text-xl font-bold text-slate-900">
-                            ${parkingLots.length > 0
-                              ? Math.round(parkingLots.reduce((total, p) => total + (p.price_per_hour || 0), 0) / parkingLots.length)
-                              : 0}
+                            ${overviewStats.averagePrice}
                           </p>
                         </div>
                       </div>
@@ -303,12 +313,12 @@ export default function AdminParkingDashboard() {
                         placeholder="Buscar parqueaderos..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-72"
+                        className="pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:border-parkiu-500 w-full sm:w-72"
                       />
                     </div>
                     <button
                       onClick={() => setIsCreateModalOpen(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors shadow-sm whitespace-nowrap"
+                      className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors shadow-sm whitespace-nowrap"
                     >
                       <LuPlus className="w-5 h-5" />
                       Nuevo Parqueadero
@@ -353,7 +363,7 @@ export default function AdminParkingDashboard() {
                 <p className="text-gray-600 mb-6">Hubo un problema al obtener tus parqueaderos.</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                  className="bg-parkiu-600 text-white px-6 py-2 rounded-lg hover:bg-parkiu-700"
                 >
                   Reintentar
                 </button>
@@ -361,8 +371,8 @@ export default function AdminParkingDashboard() {
             ) : parkingLots.length === 0 ? (
               /* Empty state mejorado */
               <div className="text-center py-16">
-                <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                  <LuBuilding className="w-12 h-12 text-blue-600" />
+                <div className="mx-auto w-24 h-24 bg-parkiu-100 rounded-full flex items-center justify-center mb-6">
+                  <LuBuilding className="w-12 h-12 text-parkiu-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">¡Comienza creando tu primer parqueadero!</h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
@@ -370,105 +380,17 @@ export default function AdminParkingDashboard() {
                 </p>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto font-medium transition-colors shadow-sm"
+                  className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto font-medium transition-colors shadow-sm"
                 >
                   <LuPlus className="w-5 h-5" />
                   Crear mi primer parqueadero
                 </button>
               </div>
             ) : (
-              /* Cards de parqueaderos mejoradas */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredParkingLots
-                  .map((parking) => (
-                  <div
-                    key={parking.id}
-                    className="group bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-200 cursor-pointer"
-                    onClick={() => navigate(`/parking/${parking.id}`)}
-                  >
-                    {/* Header limpio */}
-                    <div className="p-6 border-b border-slate-100">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-slate-900 mb-2 line-clamp-1">
-                            {toTitleCase(parking.name)}
-                          </h3>
-                          <p className="text-slate-600 text-sm flex items-center">
-                            <LuMapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                            <span className="line-clamp-1">{parking.address}</span>
-                          </p>
-                        </div>
-                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          parking.status === 'active'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          <div className={`w-2 h-2 rounded-full mr-2 ${
-                            parking.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'
-                          }`}></div>
-                          {parking.status === 'active' ? 'Activo' : 'Pendiente'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Contenido limpio */}
-                    <div className="p-6">
-                      {/* Métricas elegantes */}
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-slate-50 rounded-lg p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg shadow-sm">
-                              <LuMapPin className="w-4 h-4 text-slate-600" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-500 font-medium">ESPACIOS</p>
-                              <p className="text-xl font-bold text-slate-900">{parking.total_spots || 0}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-50 rounded-lg p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg shadow-sm">
-                              <span className="text-slate-600 text-sm font-bold">$</span>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-500 font-medium">TARIFA/HORA</p>
-                              <p className="text-xl font-bold text-slate-900">${parking.price_per_hour || 0}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Información adicional */}
-                      <div className="space-y-4 mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-slate-100 rounded-lg">
-                            <LuSettings className="w-4 h-4 text-slate-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm text-slate-600">Horario</p>
-                            <p className="font-semibold text-slate-900">
-                              {parking.opening_time} - {parking.closing_time}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Botón de acción elegante */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/parking/${parking.id}`);
-                        }}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
-                      >
-                        <LuSettings className="w-4 h-4" />
-                        Administrar Parqueadero
-                        <LuArrowRight className="w-4 h-4 ml-auto group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
+              /* Cards de parqueaderos con datos reales */
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredParkingLots.map((parking) => (
+                  <ParkingLotCard key={parking.id} parking={parking} />
                 ))}
               </div>
             )}
@@ -561,8 +483,8 @@ export default function AdminParkingDashboard() {
                 >
                   <LuChevronLeft className="w-5 h-5 text-gray-600" />
                 </button>
-                <div className="flex-shrink-0 p-2 bg-indigo-50 rounded-lg">
-                  <CircleParking className="w-6 h-6 text-indigo-600" />
+                <div className="flex-shrink-0 p-2 bg-parkiu-50 rounded-lg">
+                  <CircleParking className="w-6 h-6 text-parkiu-600" />
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-xl font-semibold text-slate-900 truncate">
@@ -680,19 +602,19 @@ export default function AdminParkingDashboard() {
                   </div>
 
                   {/* Tarifa con mejor diseño */}
-                  <div className="bg-white rounded-xl p-4 border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-xl p-4 border border-parkiu-100 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <p className="text-sm font-medium text-slate-600 mb-1">Tarifa/Hora</p>
                         <div className="flex items-center gap-1">
-                          <span className="text-lg font-semibold text-blue-600">$</span>
-                          <span className="text-2xl font-bold text-blue-600">
+                          <span className="text-lg font-semibold text-parkiu-600">$</span>
+                          <span className="text-2xl font-bold text-parkiu-600">
                             {currentParking.price_per_hour || 0}
                           </span>
                         </div>
                       </div>
-                      <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl">
-                        <span className="text-blue-600 text-xl">💰</span>
+                      <div className="p-3 bg-gradient-to-br from-parkiu-100 to-parkiu-200 rounded-xl">
+                        <span className="text-parkiu-600 text-xl">💰</span>
                       </div>
                     </div>
                   </div>
@@ -1104,7 +1026,7 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
       {isUpdating && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-2xl">
           <div className="flex flex-col items-center gap-3">
-            <LuLoader className="h-8 w-8 animate-spin text-blue-600" />
+            <LuLoader className="h-8 w-8 animate-spin text-parkiu-600" />
             <span className="text-sm font-medium text-slate-700">Actualizando...</span>
           </div>
         </div>

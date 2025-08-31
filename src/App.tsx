@@ -13,7 +13,7 @@ import './index.css';
 
 // Lazy load components
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
-const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
+const Dashboard = lazy(() => import('./features/dashboard/DashboardWithRealData'));
 const VehicleEntry = lazy(() => import('./features/vehicles/VehicleEntry'));
 const VehicleExit = lazy(() => import('./features/vehicles/VehicleExit'));
 const ParkingView = lazy(() => import('./features/parking/ParkingView'));
@@ -21,6 +21,7 @@ const ParkingViewEnhanced = lazy(() => import('./features/parking/ParkingViewEnh
 const ParkingTestView = lazy(() => import('./features/parking/ParkingTestView'));
 const AdminParkingDashboard = lazy(() => import('./features/parking/AdminParkingDashboard'));
 const LoginForm = lazy(() => import('./features/auth/components/LoginForm').then(module => ({ default: module.LoginForm })));
+const CallbackPage = lazy(() => import('./features/auth/components/CallbackPage').then(module => ({ default: module.CallbackPage })));
 const EnhancedOnboardingForm = lazy(() => import('./features/onboarding/components/EnhancedOnboardingForm'));
 
 // Loading component
@@ -79,7 +80,7 @@ function App() {
                   </OnboardingGuard>
                 }
               />
-              <Route path="/callback" element={<LoadingSpinner />} />
+              <Route path="/callback" element={<CallbackPage />} />
 
               {/* Rutas protegidas */}
               <Route element={<ProtectedRoute />}>

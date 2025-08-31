@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #0064d2;
+  --color-primary: #1693e3;
   --color-secondary: #333333;
   scroll-behavior: smooth;
 }
