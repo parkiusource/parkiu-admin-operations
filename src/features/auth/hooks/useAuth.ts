@@ -13,7 +13,7 @@ export const useAuth = () => {
   const logout = useCallback(() => {
     auth0Logout({
       logoutParams: {
-        returnTo: window.location.origin,
+        returnTo: window.location.origin + '/login',
       },
     });
   }, [auth0Logout]);

@@ -82,10 +82,12 @@ function App() {
               />
               <Route path="/callback" element={<CallbackPage />} />
 
+              {/* Ruta raíz - redirige según estado de autenticación */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
               {/* Rutas protegidas */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
 
                   {/* ✅ NUEVA ESTRUCTURA DE RUTAS PROFESIONAL */}
