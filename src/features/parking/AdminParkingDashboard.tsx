@@ -59,16 +59,16 @@ export default function AdminParkingDashboard() {
   const isListView = !parkingId; // Si no hay ID, mostrar lista
   const currentParking = parkingId
     ? parkingLots?.find(lot => lot.id === parkingId)
-    : parkingLots?.[0]; // Fallback al primero si no hay ID específico
+    : null; // No necesitamos fallback para vista de lista
 
-  // ✅ OBTENER ESPACIOS REALES DEL BACKEND
+  // ✅ OBTENER ESPACIOS REALES DEL BACKEND - SOLO para vista individual
   const {
     data: parkingSpots = [],
     isLoading: isLoadingSpaces,
     error: spacesError,
     refetch: refetchSpaces
   } = useRealParkingSpaces(currentParking?.id, {
-    enabled: !!currentParking?.id,
+    enabled: !isListView && !!currentParking?.id, // Solo cuando NO estamos en vista de lista
     refetchInterval: 1000 * 30 // Refrescar cada 30 segundos
   });
   // ✅ OPTIMIZACIÓN: Memoizar cálculos costosos para evitar re-renders innecesarios
@@ -150,7 +150,7 @@ export default function AdminParkingDashboard() {
   };
 
   // ✅ LOADING STATE
-  if (isLoadingLots || (currentParking && isLoadingSpaces)) {
+  if (isLoadingLots || (!isListView && currentParking && isLoadingSpaces)) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="flex flex-col items-center gap-4">
@@ -164,7 +164,7 @@ export default function AdminParkingDashboard() {
   }
 
   // ✅ ERROR STATE
-  if (lotsError || spacesError) {
+  if (lotsError || (!isListView && spacesError)) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
