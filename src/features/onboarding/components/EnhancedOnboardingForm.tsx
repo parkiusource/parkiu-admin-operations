@@ -1,9 +1,10 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { User, ShieldCheck } from 'lucide-react';
 import { CircleParking } from 'lucide-react';
 import { FirstStep, SecondStep, ThirdStep } from '@/components/Onboarding';
 import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
+import { useNavigate } from 'react-router-dom';
 
 interface StepFormRef {
   submitForm: () => Promise<void>;
@@ -25,11 +26,17 @@ const statusToStep: Record<string, number> = {
 
 export default function EnhancedOnboardingForm() {
   const { profile, status, isLoading: isProfileLoading } = useAdminProfileStatus();
+  const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const firstStepRef = useRef<StepFormRef>(null);
   const secondStepRef = useRef<StepFormRef>(null);
+
+  // Función para ir al dashboard
+  const handleGoToDashboard = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
 
   // Sincroniza el paso con el status del perfil
   useEffect(() => {
@@ -38,35 +45,89 @@ export default function EnhancedOnboardingForm() {
     }
   }, [status]);
 
-  // Barra de progreso visual
+  // Barra de progreso visual mejorada
   const ProgressBar = () => (
-    <div className="mb-10">
-      <div className="relative flex justify-between items-center mb-2">
-        {steps.map((step) => {
+    <div className="relative">
+      {/* Progress line background */}
+      <div className="absolute top-6 left-0 right-0 h-0.5 bg-gray-200 rounded-full"></div>
+
+      {/* Animated progress line */}
+      <motion.div
+        className="absolute top-6 left-0 h-0.5 bg-gradient-to-r from-parkiu-500 to-parkiu-600 rounded-full"
+        initial={{ width: 0 }}
+        animate={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      />
+
+      {/* Steps */}
+      <div className="relative flex justify-between">
+        {steps.map((step, index) => {
           const Icon = step.icon;
           const isActive = currentStep === step.id;
           const isCompleted = currentStep > step.id;
+
           return (
-            <div key={step.id} className="flex flex-col items-center flex-1">
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300
-                  ${isCompleted ? 'bg-parkiu-500 border-parkiu-500 text-white' :
-                    isActive ? 'bg-white border-parkiu-500 text-parkiu-500 ring-4 ring-parkiu-100' :
-                    'bg-white border-gray-200 text-gray-400'}
-                `}
+            <motion.div
+              key={step.id}
+              className="flex flex-col items-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+            >
+              {/* Step circle */}
+              <motion.div
+                className={`relative w-12 h-12 flex items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                  isCompleted
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 border-green-500 text-white shadow-lg'
+                    : isActive
+                    ? 'bg-gradient-to-r from-parkiu-500 to-parkiu-600 border-parkiu-500 text-white shadow-lg shadow-parkiu-500/25'
+                    : 'bg-white border-gray-300 text-gray-400 shadow-sm'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                animate={isActive ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
               >
-                <Icon className="w-6 h-6" />
-              </div>
-              <span className={`mt-2 text-xs font-medium ${isActive || isCompleted ? 'text-parkiu-600' : 'text-gray-400'}`}>{step.title}</span>
-            </div>
+                {isCompleted ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, duration: 0.3 }}
+                  >
+                    <ShieldCheck className="w-5 h-5" />
+                  </motion.div>
+                ) : (
+                  <Icon className="w-5 h-5" />
+                )}
+
+                {/* Active pulse effect */}
+                {isActive && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-parkiu-500/20"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                )}
+              </motion.div>
+
+              {/* Step title */}
+              <motion.span
+                className={`mt-3 text-sm font-medium text-center transition-colors duration-300 ${
+                  isActive || isCompleted ? 'text-gray-900' : 'text-gray-500'
+                }`}
+                animate={{ opacity: isActive || isCompleted ? 1 : 0.7 }}
+              >
+                {step.title}
+              </motion.span>
+
+              {/* Step number */}
+              <span className={`text-xs mt-1 transition-colors duration-300 ${
+                isActive || isCompleted ? 'text-parkiu-600' : 'text-gray-400'
+              }`}>
+                Paso {step.id}
+              </span>
+            </motion.div>
           );
         })}
-      </div>
-      <div className="relative h-1 bg-gray-200 rounded-full">
-        <div
-          className="absolute h-1 bg-parkiu-500 rounded-full transition-all duration-500"
-          style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-        />
       </div>
     </div>
   );
@@ -87,11 +148,11 @@ export default function EnhancedOnboardingForm() {
 
   // Renderizado de pasos
   const StepComponent = useMemo(() => {
-    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} profile={profile} />;
+    if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} profile={profile} status={status} />;
     if (currentStep === 2) return <SecondStep ref={secondStepRef} onComplete={() => setCurrentStep(3)} />;
-    if (currentStep === 3) return <ThirdStep />;
+    if (currentStep === 3) return <ThirdStep onGoToDashboard={handleGoToDashboard} status={status} profile={profile} />;
     return null;
-  }, [currentStep, profile]);
+  }, [currentStep, profile, status, handleGoToDashboard]);
 
   if (isProfileLoading) {
     return (
@@ -102,41 +163,95 @@ export default function EnhancedOnboardingForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-parkiu-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-parkiu-50 via-sky-50 to-blue-50 flex items-center justify-center p-4">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-parkiu-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-parkiu-400/20 rounded-full blur-3xl"></div>
+      </div>
+
       <motion.div
-        className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl shadow-primary/10 p-4 sm:p-6 border-t-4 border-primary"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        className="relative w-full max-w-2xl bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden"
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <div className="flex flex-col items-center mb-3">
-          <img src="/logo-parkiu.svg" alt="ParkiÜ" className="w-20 h-20 drop-shadow-md mb-2" />
-          <h1 className="text-2xl font-extrabold text-primary text-center mb-1">¡Bienvenido a ParkiÜ!</h1>
-          <p className="text-sm text-secondary text-center max-w-xs">Configura tu cuenta para aprovechar todos los beneficios de la plataforma y gestiona tu parqueadero de manera inteligente.</p>
+        {/* Header with gradient background */}
+        <div className="relative bg-gradient-to-r from-parkiu-600 via-parkiu-500 to-blue-600 px-8 py-12 text-center">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <motion.div
+            className="relative z-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <img src="/logo-parkiu.svg" alt="ParkiÜ" className="w-12 h-12" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-3">¡Bienvenido a ParkiÜ!</h1>
+            <p className="text-parkiu-100 text-lg max-w-md mx-auto leading-relaxed">
+              Configura tu cuenta en pocos pasos y comienza a gestionar tu parqueadero de manera inteligente
+            </p>
+          </motion.div>
         </div>
-        <div className="mb-4">
+
+        {/* Progress section */}
+        <div className="px-8 py-8 bg-gray-50/50">
           <ProgressBar />
         </div>
-        <div className="space-y-3">
-          <div className="bg-white rounded-xl p-4 border border-background">
+
+        {/* Content section */}
+        <div className="px-8 pb-8">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
             {StepComponent}
-          </div>
-          <div className="flex justify-between mt-4">
-            <button
+          </motion.div>
+
+          {/* Navigation buttons */}
+          <div className="flex justify-between items-center mt-8 gap-4">
+            <motion.button
               onClick={handleBack}
               disabled={currentStep === 1 || loading}
-              className="btn-secondary"
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                currentStep === 1 || loading
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
+              }`}
+              whileHover={currentStep > 1 && !loading ? { scale: 1.02 } : {}}
+              whileTap={currentStep > 1 && !loading ? { scale: 0.98 } : {}}
             >
               Atrás
-            </button>
+            </motion.button>
+
             {currentStep < 3 && (
-              <button
+              <motion.button
                 onClick={handleNext}
                 disabled={loading}
-                className="btn text-lg font-bold shadow-lg"
+                className={`px-8 py-3 rounded-xl font-semibold text-white transition-all duration-200 ${
+                  loading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-parkiu-600 to-parkiu-700 hover:from-parkiu-700 hover:to-parkiu-800 shadow-lg hover:shadow-xl'
+                }`}
+                whileHover={!loading ? { scale: 1.02 } : {}}
+                whileTap={!loading ? { scale: 0.98 } : {}}
               >
-                {loading ? 'Cargando...' : '¡Comenzar ahora!'}
-              </button>
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Procesando...
+                  </div>
+                ) : currentStep === 1 ? (
+                  'Continuar'
+                ) : (
+                  '¡Comenzar ahora!'
+                )}
+              </motion.button>
             )}
           </div>
         </div>

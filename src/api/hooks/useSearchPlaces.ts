@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/api/base';
-import { CACHE_CONFIG } from '@/context/queryClientUtils';
+
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const DEFAULT_TEXT_DEBOUNCE = 500;
@@ -35,11 +35,11 @@ type SearchResult = {
   location: { lat: number; lng: number };
 };
 
-type CacheConfig = {
-  [key: string]: { staleTime: number }
+// Simple cache configuration inline
+const CACHE_CONFIG = {
+  SearchPlaces: { staleTime: 60 * 1000 }, // 1 minute
+  default: { staleTime: 60 * 1000 }
 };
-
-const config: CacheConfig = CACHE_CONFIG as CacheConfig;
 
 const normalizeText = (text: string): string => {
   if (!text) return '';
@@ -109,10 +109,7 @@ export const useSearchPlaces = (
     return Array.isArray(data?.places) ? data.places : [];
   };
 
-  const staleTime =
-    config.SearchPlaces?.staleTime ??
-    config.default?.staleTime ??
-    60 * 1000;
+  const staleTime = CACHE_CONFIG.SearchPlaces.staleTime;
 
   const query = useQuery<Place[]>({
     queryKey: ['SearchPlaces', debouncedTextQuery, options],

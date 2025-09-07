@@ -16,9 +16,9 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
     console.log('Auth0 redirect callback triggered:', { appState });
-    // Si hay un returnTo en el appState, usarlo
-    // Si no hay returnTo, ir a onboarding por defecto para nuevos usuarios
-    const destination = appState?.returnTo || '/onboarding';
+    // Si hay un returnTo en el appState, usarlo; si no, ir a la raíz
+    // para que RootRedirect determine el destino correcto
+    const destination = appState?.returnTo || '/';
     console.log('Redirecting to:', destination);
     navigate(destination, { replace: true });
   };

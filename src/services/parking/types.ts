@@ -80,7 +80,7 @@ export interface ParkingLotAPI {
   is_active?: boolean;
 }
 
-// ✅ Payload para CREAR parking lots (lo que enviamos al POST)
+// ✅ Payload para CREAR parking lots (lo que enviamos al POST) - Actualizado según backend
 export interface CreateParkingLotPayload {
   name: string;
   address: string;
@@ -90,11 +90,28 @@ export interface CreateParkingLotPayload {
   description?: string;
   opening_time?: string;
   closing_time?: string;
+  contact_name?: string;
+  contact_phone?: string;
+
+  // TARIFAS COLOMBIANAS POR MINUTO
+  car_rate_per_minute: number;
+  motorcycle_rate_per_minute?: number;
+  bicycle_rate_per_minute?: number;
+  truck_rate_per_minute?: number;
+
+  // TARIFAS FIJAS
+  fixed_rate_car?: number;
+  fixed_rate_motorcycle?: number;
+  fixed_rate_bicycle?: number;
+  fixed_rate_truck?: number;
+
+  // CONFIGURACIÓN TARIFA FIJA
+  fixed_rate_threshold_minutes?: number;
+
+  // CAMPOS LEGACY (mantener compatibilidad)
   hourly_rate?: number;
   daily_rate?: number;
   monthly_rate?: number;
-  contact_name?: string;
-  contact_phone?: string;
 }
 
 // ===============================
@@ -247,6 +264,9 @@ export interface ParkingSystemStats {
 
 // ✅ Adaptador: Frontend ParkingLot -> Payload para CREAR (POST)
 export function toParkingLotCreatePayload(parking: ParkingLot): CreateParkingLotPayload {
+  // Usar la tarifa por minuto de carros como base, o calcular desde price_per_hour si no existe
+  const carRatePerMinute = parking.car_rate_per_minute || (parking.price_per_hour || 5000) / 60;
+
   return {
     name: parking.name,
     address: parking.address,
@@ -256,11 +276,28 @@ export function toParkingLotCreatePayload(parking: ParkingLot): CreateParkingLot
     description: parking.description || '',
     opening_time: parking.opening_time || '08:00',
     closing_time: parking.closing_time || '20:00',
-    hourly_rate: parking.price_per_hour || 0,
-    daily_rate: parking.daily_rate || 0,
-    monthly_rate: parking.monthly_rate || 0,
     contact_name: parking.contact_name || '',
     contact_phone: parking.contact_phone || '',
+
+    // TARIFAS COLOMBIANAS POR MINUTO - Calcular automáticamente basándose en carros
+    car_rate_per_minute: carRatePerMinute,
+    motorcycle_rate_per_minute: parking.motorcycle_rate_per_minute || carRatePerMinute * 0.3,
+    bicycle_rate_per_minute: parking.bicycle_rate_per_minute || carRatePerMinute * 0.06,
+    truck_rate_per_minute: parking.truck_rate_per_minute || carRatePerMinute * 1.5,
+
+    // TARIFAS FIJAS - Calcular automáticamente (10 horas como base)
+    fixed_rate_car: parking.fixed_rate_car || carRatePerMinute * 600, // 10 horas
+    fixed_rate_motorcycle: parking.fixed_rate_motorcycle || (carRatePerMinute * 600) * 0.4,
+    fixed_rate_bicycle: parking.fixed_rate_bicycle || (carRatePerMinute * 600) * 0.2,
+    fixed_rate_truck: parking.fixed_rate_truck || (carRatePerMinute * 600) * 1.4,
+
+    // CONFIGURACIÓN TARIFA FIJA - 12 horas por defecto
+    fixed_rate_threshold_minutes: parking.fixed_rate_threshold_minutes || 720,
+
+    // CAMPOS LEGACY (mantener compatibilidad)
+    hourly_rate: parking.price_per_hour || carRatePerMinute * 60,
+    daily_rate: parking.daily_rate || 0,
+    monthly_rate: parking.monthly_rate || 0,
   };
 }
 

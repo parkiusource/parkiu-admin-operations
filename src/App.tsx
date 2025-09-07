@@ -1,14 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AuthProvider } from './features/auth/components/AuthProvider';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
-import { OnboardingGuard } from './features/onboarding/components/OnboardingGuard';
 import { useConnectionStatus } from './hooks';
 import { ToastProvider } from './context/ToastProvider';
 import { ToastContainer } from './components/Toast';
 import { BackendStatus } from './components/common/BackendStatus';
+import { RootRedirect } from './components/common/RootRedirect';
 import './index.css';
 
 // Lazy load components
@@ -74,16 +74,12 @@ function App() {
               <Route path="/login" element={<LoginForm />} />
               <Route
                 path="/onboarding"
-                element={
-                  <OnboardingGuard>
-                    <EnhancedOnboardingForm />
-                  </OnboardingGuard>
-                }
+                element={<EnhancedOnboardingForm />}
               />
               <Route path="/callback" element={<CallbackPage />} />
 
-              {/* Ruta raíz - redirige según estado de autenticación */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Ruta raíz - redirección inteligente basada en estado del usuario */}
+              <Route path="/" element={<RootRedirect />} />
 
               {/* Rutas protegidas */}
               <Route element={<ProtectedRoute />}>

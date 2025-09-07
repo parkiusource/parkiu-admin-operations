@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, User, CreditCard, Phone } from 'lucide-react';
 
 import { itemVariants } from './utils';
 import { Label } from '@/components/common/Label';
@@ -17,6 +17,7 @@ interface FirstStepProps {
     contact_phone: string;
     photo_url?: string | null;
   };
+  status?: string;
   setLoading: (loading: boolean) => void;
 }
 
@@ -56,7 +57,7 @@ const formStorage = {
   }
 };
 
-const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps>(({ profile, setLoading }, ref) => {
+const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps>(({ profile, status, setLoading }, ref) => {
   const { mutateAsync: completeProfile } = useCompleteProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -99,6 +100,13 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
     setIsSubmitting(true);
     setLoading(true);
     try {
+      // Si el perfil ya está completo (no está en pending_profile), no hacer la llamada al API
+      if (status && status !== 'pending_profile' && status !== 'initial') {
+        console.log('Profile already completed, skipping API call. Status:', status);
+        formStorage.clear();
+        return data;
+      }
+
       const payload = {
         email: data.email,
         name: data.name,
@@ -165,131 +173,261 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
   }, [watch]);
 
   return (
-    <div className="px-2 py-4 relative">
+    <div className="relative p-8">
+      {/* Loading overlay */}
       {isSubmitting && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-2xl">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <p className="text-blue-600 font-medium">Guardando información...</p>
+          </div>
         </div>
       )}
+
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <User className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Información básica</h2>
+        <p className="text-gray-600">Completa tu perfil para personalizar tu experiencia</p>
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <Label htmlFor="email" className="text-blue-100">
+        <motion.div variants={itemVariants} className="space-y-3">
+          <Label htmlFor="email" className="text-gray-800 font-semibold text-sm flex items-center gap-2">
+            <div className="w-5 h-5 bg-parkiu-100 rounded-lg flex items-center justify-center">
+              <span className="text-parkiu-600 text-xs">@</span>
+            </div>
             Correo Electrónico
           </Label>
-          <Input
-            id="email"
-            {...register('email', {
-              required: 'Email es requerido',
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Email inválido'
-              }
-            })}
-            placeholder="Ingresa tu correo electrónico"
-            disabled={!!profile?.email}
-            aria-invalid={errors.email ? "true" : "false"}
-          />
+          <div className="relative group">
+            <Input
+              id="email"
+              {...register('email', {
+                required: 'Email es requerido',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Email inválido'
+                }
+              })}
+              placeholder="tu@email.com"
+              disabled={!!profile?.email}
+              className={`w-full px-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-gradient-to-r from-gray-50 to-white shadow-sm hover:shadow-md focus:shadow-lg ${
+                errors.email
+                  ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                  : 'border-gray-200 hover:border-parkiu-300 focus:border-parkiu-500 focus:ring-4 focus:ring-parkiu-500/10'
+              } ${
+                profile?.email
+                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                  : 'group-hover:border-parkiu-400'
+              }`}
+              aria-invalid={errors.email ? "true" : "false"}
+            />
+            {!errors.email && !profile?.email && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-parkiu-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <span className="text-sm">✓</span>
+              </div>
+            )}
+          </div>
           {errors.email && (
-            <p className="text-red-400 text-sm mt-1" role="alert">{errors.email.message}</p>
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-500 text-sm flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
+              role="alert"
+            >
+              <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">!</span>
+              </span>
+              {errors.email.message}
+            </motion.p>
           )}
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <Label htmlFor="name" className="text-blue-100">
+        <motion.div variants={itemVariants} className="space-y-3">
+          <Label htmlFor="name" className="text-gray-800 font-semibold text-sm flex items-center gap-2">
+            <div className="w-5 h-5 bg-parkiu-100 rounded-lg flex items-center justify-center">
+              <User className="w-3 h-3 text-parkiu-600" />
+            </div>
             Nombre Completo
           </Label>
-          <Input
-            id="name"
-            {...register('name', {
-              required: 'Necesitamos tu nombre para continuar',
-              validate: (value) => {
-                if ((value ?? '').trim().split(' ').length <= 1) {
-                  return 'Por favor ingresa tu nombre completo';
+          <div className="relative group">
+            <Input
+              id="name"
+              {...register('name', {
+                required: 'Necesitamos tu nombre para continuar',
+                validate: (value) => {
+                  if ((value ?? '').trim().split(' ').length <= 1) {
+                    return 'Por favor ingresa tu nombre completo';
+                  }
+                  return true;
+                },
+                pattern: {
+                  value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
+                  message: 'El nombre solo debe contener letras y espacios'
                 }
-                return true;
-              },
-              pattern: {
-                value: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
-                message: 'El nombre solo debe contener letras y espacios'
-              }
-            })}
-            placeholder="Ingresa tu nombre completo"
-            aria-invalid={errors.name ? "true" : "false"}
-          />
+              })}
+              placeholder="Ingresa tu nombre completo"
+              className={`w-full px-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-gradient-to-r from-gray-50 to-white shadow-sm hover:shadow-md focus:shadow-lg ${
+                errors.name
+                  ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                  : 'border-gray-200 hover:border-parkiu-300 focus:border-parkiu-500 focus:ring-4 focus:ring-parkiu-500/10 group-hover:border-parkiu-400'
+              }`}
+              aria-invalid={errors.name ? "true" : "false"}
+            />
+            {!errors.name && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-parkiu-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <span className="text-sm">✓</span>
+              </div>
+            )}
+          </div>
           {errors.name && (
-            <p className="text-red-400 text-xs pl-4" role="alert">
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-500 text-sm flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
+              role="alert"
+            >
+              <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">!</span>
+              </span>
               {errors.name.message}
-            </p>
+            </motion.p>
           )}
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <Label htmlFor="nit" className="text-blue-100">
+        <motion.div variants={itemVariants} className="space-y-3">
+          <Label htmlFor="nit" className="text-gray-800 font-semibold text-sm flex items-center gap-2">
+            <div className="w-5 h-5 bg-parkiu-100 rounded-lg flex items-center justify-center">
+              <CreditCard className="w-3 h-3 text-parkiu-600" />
+            </div>
             NIT o Documento de Identidad
           </Label>
-          <Input
-            id="nit"
-            {...register('nit', {
-              required: 'El NIT o documento es requerido',
-              pattern: {
-                value: /^[0-9]{8,12}$/,
-                message: 'Ingresa un NIT o documento válido (8-12 dígitos)',
-              },
-            })}
-            placeholder="Ingresa tu NIT o documento"
-            aria-invalid={errors.nit ? "true" : "false"}
-          />
+          <div className="relative group">
+            <Input
+              id="nit"
+              {...register('nit', {
+                required: 'El NIT o documento es requerido',
+                pattern: {
+                  value: /^[0-9]{8,12}$/,
+                  message: 'Ingresa un NIT o documento válido (8-12 dígitos)',
+                },
+              })}
+              placeholder="Ingresa tu NIT o documento"
+              className={`w-full px-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-gradient-to-r from-gray-50 to-white shadow-sm hover:shadow-md focus:shadow-lg ${
+                errors.nit
+                  ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                  : 'border-gray-200 hover:border-parkiu-300 focus:border-parkiu-500 focus:ring-4 focus:ring-parkiu-500/10 group-hover:border-parkiu-400'
+              }`}
+              aria-invalid={errors.nit ? "true" : "false"}
+            />
+            {!errors.nit && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-parkiu-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <span className="text-sm">✓</span>
+              </div>
+            )}
+          </div>
           {errors.nit && (
-            <p className="text-red-400 text-xs pl-4" role="alert">{errors.nit.message}</p>
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-500 text-sm flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
+              role="alert"
+            >
+              <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">!</span>
+              </span>
+              {errors.nit.message}
+            </motion.p>
           )}
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <Label htmlFor="contact_phone" className="text-blue-100">
+        <motion.div variants={itemVariants} className="space-y-3">
+          <Label htmlFor="contact_phone" className="text-gray-800 font-semibold text-sm flex items-center gap-2">
+            <div className="w-5 h-5 bg-parkiu-100 rounded-lg flex items-center justify-center">
+              <Phone className="w-3 h-3 text-parkiu-600" />
+            </div>
             Teléfono de Contacto
           </Label>
-          <Input
-            id="contact_phone"
-            type="tel"
-            {...register('contact_phone', {
-              required: 'El teléfono es requerido',
-              pattern: {
-                value: /^[0-9]{10}$/,
-                message: 'Ingresa un número de teléfono válido (10 dígitos)',
-              },
-            })}
-            placeholder="Ingresa tu número de teléfono"
-            aria-invalid={errors.contact_phone ? "true" : "false"}
-          />
+          <div className="relative group">
+            <Input
+              id="contact_phone"
+              type="tel"
+              {...register('contact_phone', {
+                required: 'El teléfono es requerido',
+                pattern: {
+                  value: /^[0-9]{10}$/,
+                  message: 'Ingresa un número de teléfono válido (10 dígitos)',
+                },
+              })}
+              placeholder="Ingresa tu número de teléfono"
+              className={`w-full px-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-gradient-to-r from-gray-50 to-white shadow-sm hover:shadow-md focus:shadow-lg ${
+                errors.contact_phone
+                  ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                  : 'border-gray-200 hover:border-parkiu-300 focus:border-parkiu-500 focus:ring-4 focus:ring-parkiu-500/10 group-hover:border-parkiu-400'
+              }`}
+              aria-invalid={errors.contact_phone ? "true" : "false"}
+            />
+            {!errors.contact_phone && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-parkiu-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <span className="text-sm">✓</span>
+              </div>
+            )}
+          </div>
           {errors.contact_phone && (
-            <p className="text-red-400 text-xs pl-4" role="alert">{errors.contact_phone.message}</p>
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-500 text-sm flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
+              role="alert"
+            >
+              <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">!</span>
+              </span>
+              {errors.contact_phone.message}
+            </motion.p>
           )}
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <Label htmlFor="photo_url" className="text-blue-100">
-            Foto de Perfil
+        <motion.div variants={itemVariants} className="space-y-3">
+          <Label htmlFor="photo_url" className="text-gray-800 font-semibold text-sm flex items-center gap-2">
+            <div className="w-5 h-5 bg-parkiu-100 rounded-lg flex items-center justify-center">
+              <Camera className="w-3 h-3 text-parkiu-600" />
+            </div>
+            Foto de Perfil (Opcional)
           </Label>
-          <div className="flex items-center gap-4">
-            {watchProfileImage && watchProfileImage instanceof File && (
-              <div className="w-16 h-16 rounded-full overflow-hidden">
+          <div className="flex items-center gap-6 p-4 bg-gradient-to-r from-gray-50 to-white rounded-2xl border-2 border-gray-200 hover:border-parkiu-300 transition-all duration-300">
+            {watchProfileImage && watchProfileImage instanceof File ? (
+              <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg border-2 border-parkiu-200">
                 <img
                   src={URL.createObjectURL(watchProfileImage)}
                   alt="Profile preview"
                   className="w-full h-full object-cover"
                 />
               </div>
+            ) : (
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-parkiu-100 to-parkiu-200 flex items-center justify-center shadow-inner">
+                <User className="w-8 h-8 text-parkiu-500" />
+              </div>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => document.getElementById('photo_url')?.click()}
-              className="flex items-center gap-2"
-              aria-label={watchProfileImage ? 'Cambiar foto de perfil' : 'Subir foto de perfil'}
-            >
-              <Camera className="w-4 h-4" />
-              {watchProfileImage ? 'Cambiar foto' : 'Subir foto'}
-            </Button>
+            <div className="flex-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('photo_url')?.click()}
+                className="flex items-center gap-3 px-6 py-3 bg-white hover:bg-parkiu-50 border-2 border-parkiu-200 hover:border-parkiu-400 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                aria-label={watchProfileImage ? 'Cambiar foto de perfil' : 'Subir foto de perfil'}
+              >
+                <Camera className="w-5 h-5 text-parkiu-600" />
+                <span className="font-medium text-parkiu-700">
+                  {watchProfileImage ? 'Cambiar foto' : 'Subir foto'}
+                </span>
+              </Button>
+              <p className="text-xs text-gray-500 mt-2">
+                Formatos: JPG, PNG. Máximo 5MB
+              </p>
+            </div>
             <input
               id="photo_url"
               type="file"
@@ -300,7 +438,17 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
             />
           </div>
           {imageError && (
-            <p className="text-red-400 text-xs mt-1" role="alert">{imageError}</p>
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-500 text-sm flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
+              role="alert"
+            >
+              <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">!</span>
+              </span>
+              {imageError}
+            </motion.p>
           )}
         </motion.div>
       </form>

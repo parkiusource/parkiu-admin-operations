@@ -72,7 +72,10 @@ export const ParkingForm = forwardRef<HTMLFormElement, ParkingFormProps>(
             <input
               type="number"
               id="total_spots"
-              {...register('total_spots', { required: 'El número de espacios es requerido' })}
+              {...register('total_spots', {
+                required: 'El número de espacios es requerido',
+                valueAsNumber: true
+              })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
@@ -84,7 +87,10 @@ export const ParkingForm = forwardRef<HTMLFormElement, ParkingFormProps>(
             <input
               type="number"
               id="price_per_hour"
-              {...register('price_per_hour', { required: 'El precio por hora es requerido' })}
+              {...register('price_per_hour', {
+                required: 'El precio por hora es requerido',
+                valueAsNumber: true
+              })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>

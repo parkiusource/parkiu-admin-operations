@@ -1,8 +1,8 @@
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { CircleParking } from 'lucide-react';
 
-import { ParkingForm } from '@/components/admin/ParkingForm/ParkingForm';
-import { Card } from '@/components/common/Card/Card';
+import { OnboardingParkingForm } from './OnboardingParkingForm';
 import { useRegisterParkingLot } from '@/hooks/parking';
 import { ParkingLot } from '@/services/parking/types';
 
@@ -57,7 +57,7 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
         address: '',
         location: { latitude: 0, longitude: 0 },
         total_spots: 0,
-        price_per_hour: 0,
+        car_rate_per_minute: 0,
       },
       mode: 'onChange',
     });
@@ -99,8 +99,8 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
         if (data.total_spots <= 0) {
           throw new Error('El número de espacios debe ser mayor a 0');
         }
-        if ((data.price_per_hour || data.car_rate_per_minute * 60) <= 0) {
-          throw new Error('El precio por hora debe ser mayor a 0');
+        if (data.car_rate_per_minute <= 0) {
+          throw new Error('La tarifa por minuto debe ser mayor a 0');
         }
         await createParking(data);
       } catch (err) {
@@ -112,25 +112,44 @@ export const SecondStep = forwardRef<StepRef, SecondStepProps>(
     };
 
     return (
-      <Card className="w-full max-w-2xl mx-auto p-6 relative">
+      <div className="relative p-6">
+        {/* Loading overlay */}
         {isSubmitting && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-2xl">
+            <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-3 border-parkiu-200 border-t-parkiu-600 rounded-full animate-spin"></div>
+            <p className="text-parkiu-600 font-medium">Registrando parqueadero...</p>
+            </div>
           </div>
         )}
-        <h2 className="text-2xl font-bold mb-6">Registra tu parqueadero</h2>
+
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-gradient-to-r from-parkiu-500 to-parkiu-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <CircleParking className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Registra tu parqueadero</h2>
+          <p className="text-gray-600">Completa la información de tu parqueadero para comenzar a recibir clientes</p>
+        </div>
+
+        {/* Error message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 flex items-center gap-3" role="alert">
+            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">!</span>
+            </div>
+            <span className="font-medium">{error}</span>
           </div>
         )}
-        <ParkingForm
+
+        {/* Form */}
+        <OnboardingParkingForm
           ref={formRef}
           onSubmit={onSubmit}
           isLoading={isPending}
           inheritSubmit={true}
         />
-      </Card>
+      </div>
     );
   }
 );
