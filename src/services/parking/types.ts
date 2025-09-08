@@ -20,6 +20,7 @@ export interface ParkingLot {
   closing_time?: string;
   contact_name?: string;
   contact_phone?: string;
+  tax_id?: string;
 
   // 🇨🇴 TARIFAS COLOMBIANAS POR MINUTO
   car_rate_per_minute: number;
@@ -68,6 +69,7 @@ export interface ParkingLotAPI {
   hourly_rate?: number;
   contact_name?: string;
   contact_phone?: string;
+  tax_id?: string;
   admin_id?: number; // Puede ser undefined al crear
   total_spaces?: number;
   available_spaces?: number;
@@ -92,6 +94,7 @@ export interface CreateParkingLotPayload {
   closing_time?: string;
   contact_name?: string;
   contact_phone?: string;
+  tax_id?: string;
 
   // TARIFAS COLOMBIANAS POR MINUTO
   car_rate_per_minute: number;
@@ -132,6 +135,19 @@ export interface ParkingSpaceAPI {
   deleted_at: string | null;
 }
 
+export interface ActiveVehicleAPI {
+  id?: number;
+  plate: string;
+  vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
+  entry_time: string;
+  duration_minutes: number;
+  entry_admin_uuid?: string;
+}
+
+export interface ParkingSpaceWithVehicleAPI extends ParkingSpaceAPI {
+  active_vehicle?: ActiveVehicleAPI | null;
+}
+
 export interface ParkingSpacesResponse {
   parking_spaces: ParkingSpaceAPI[];
 }
@@ -162,6 +178,12 @@ export interface ParkingSpot {
   is_reserved?: boolean; // ✅ Agregar para compatibilidad con backend
   reserved_for?: string; // ✅ Para quien está reservado
   last_status_change?: string; // ✅ Agregar para compatibilidad con backend
+  active_vehicle?: {
+    plate: string;
+    vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
+    entry_time: string;
+    duration_minutes: number;
+  } | null;
 
   // Pricing (puede heredar del parking lot o tener precio específico)
   price_per_hour?: number;
@@ -278,6 +300,8 @@ export function toParkingLotCreatePayload(parking: ParkingLot): CreateParkingLot
     closing_time: parking.closing_time || '20:00',
     contact_name: parking.contact_name || '',
     contact_phone: parking.contact_phone || '',
+    tax_id: parking.tax_id,
+    // tax_id del parqueadero aún no soportado en payload de creación del backend actual
 
     // TARIFAS COLOMBIANAS POR MINUTO - Calcular automáticamente basándose en carros
     car_rate_per_minute: carRatePerMinute,
@@ -326,6 +350,7 @@ export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
     closing_time: api.closing_time || '20:00',
     contact_name: api.contact_name || '',
     contact_phone: api.contact_phone || '',
+    tax_id: (api as unknown as { tax_id?: string })?.tax_id || '',
 
     // 🇨🇴 TARIFAS COLOMBIANAS (valores por defecto desde hourly_rate)
     car_rate_per_minute: (api.hourly_rate || 5000) / 60,
@@ -373,6 +398,7 @@ export function toParkingLotAPI(parking: ParkingLot): Partial<ParkingLotAPI> {
     hourly_rate: parking.price_per_hour || 0,
     contact_name: parking.contact_name || '',
     contact_phone: parking.contact_phone || '',
+    tax_id: parking.tax_id || undefined,
     admin_id: parking.admin_uuid && parking.admin_uuid !== '' ? parseInt(parking.admin_uuid) : undefined,
     total_spaces: parking.total_spots || 0,
     is_active: parking.status === 'active',
@@ -418,9 +444,11 @@ export function fromParkingSpaceAPI(apiSpace: ParkingSpaceAPI): ParkingSpot {
     throw new Error(`Invalid API response: status '${apiSpace.status}' is not valid`);
   }
 
-  // Validar que vehicle_type sea un valor válido
-  const validVehicleTypes = ['car', 'motorcycle', 'truck', 'bicycle'];
-  if (!validVehicleTypes.includes(apiSpace.vehicle_type)) {
+  // Validar que vehicle_type exista y sea válido (confiar en backend)
+  const validVehicleTypes = ['car', 'motorcycle', 'truck', 'bicycle'] as const;
+  type VehicleType = typeof validVehicleTypes[number];
+  const vehicleType = apiSpace.vehicle_type as VehicleType;
+  if (!vehicleType || !validVehicleTypes.includes(vehicleType)) {
     console.error('❌ fromParkingSpaceAPI: invalid vehicle_type', apiSpace.vehicle_type, apiSpace);
     throw new Error(`Invalid API response: vehicle_type '${apiSpace.vehicle_type}' is not valid`);
   }
@@ -432,7 +460,7 @@ export function fromParkingSpaceAPI(apiSpace: ParkingSpaceAPI): ParkingSpot {
     id: apiSpace.id,
     number: apiSpace.space_number || '',
     parking_lot_id: apiSpace.parking_lot_id.toString(),
-    type: apiSpace.vehicle_type,
+    type: vehicleType,
     status: frontendStatus as 'available' | 'occupied' | 'maintenance' | 'reserved',
     is_reserved: apiSpace.is_reserved || false,
     reserved_for: apiSpace.reserved_for || undefined,

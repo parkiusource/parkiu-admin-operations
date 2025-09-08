@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import TransactionsHistory from '@/features/parking/TransactionsHistory';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
@@ -92,6 +93,7 @@ function App() {
                   {/* ✅ NUEVA ESTRUCTURA DE RUTAS PROFESIONAL */}
                   <Route path="/parking" element={<AdminParkingDashboard />} />
                   <Route path="/parking/:id" element={<AdminParkingDashboard />} />
+                  <Route path="/parking/:id/history" element={<TransactionsHistory />} />
 
                   {/* Rutas de desarrollo y testing */}
                   <Route path="/parking-legacy" element={<ParkingView />} />

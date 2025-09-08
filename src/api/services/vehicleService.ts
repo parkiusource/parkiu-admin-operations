@@ -161,6 +161,9 @@ export class VehicleService {
       end_date?: string;
       limit?: number;
       offset?: number;
+      payment_method?: 'cash' | 'card' | 'digital';
+      min_total?: number;
+      max_total?: number;
     }
   ): Promise<{
     data?: VehicleTransaction[];

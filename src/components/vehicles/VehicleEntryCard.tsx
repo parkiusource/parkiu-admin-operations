@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Label } from '@/components/common/Label';
@@ -14,13 +14,19 @@ import {
   DollarSign,
   Check,
   AlertCircle,
-  Calculator
+  Calculator,
+  Receipt,
+  Printer
 } from 'lucide-react';
 import { VehicleType, ParkingLot } from '@/types/parking';
 import { useRegisterVehicleEntry, useSearchVehicle } from '@/api/hooks/useVehicles';
 import { useRealParkingSpaces } from '@/hooks/parking/useParkingSpots';
 import { useToast } from '@/hooks';
 import { validatePlate, normalizePlate } from '@/utils/plate';
+import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
+import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
+import type { VehicleEntryResponse } from '@/types/parking';
+import { PrinterSelector } from '@/components/common/PrinterSelector';
 
 interface VehicleEntryCardProps {
   parkingLots?: ParkingLot[];
@@ -72,6 +78,11 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   onSuccess,
   onError
 }) => {
+  const { profile } = useAdminProfileStatus();
+  const isOperatorAuthorized = useMemo(() => {
+    const role = profile?.role || '';
+    return role === 'local_admin' || role === 'operator';
+  }, [profile?.role]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
@@ -85,6 +96,10 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   const [plateError, setPlateError] = useState<string | null>(null);
   const [spaceError, setSpaceError] = useState<string | null>(null);
   const { addToast } = useToast();
+  const [showTicket, setShowTicket] = useState(false);
+  const [entryResponse, setEntryResponse] = useState<VehicleEntryResponse | null>(null);
+  const [entrySpot, setEntrySpot] = useState<string>('');
+  const [entryPlate, setEntryPlate] = useState<string>('');
 
   // Cargar espacios del parqueadero seleccionado desde el backend real
   const { data: parkingSpots = [], isLoading: spotsLoading } = useRealParkingSpaces(
@@ -112,12 +127,10 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
       const spot = response.spot_number || vehicleData.space_number || vehicleData.parking_space_number || vehicleData.spot_number || 'espacio asignado';
       onSuccess?.(vehicleData.plate, spot);
       addToast(`Entrada registrada: ${vehicleData.plate} en ${spot}`, 'success');
-      if (autoReset) {
-        setPlate('');
-        setSpaceNumber('');
-        setSelectedVehicleType(null);
-        setEstimatedCost(null);
-      }
+      setEntryResponse(response);
+      setEntrySpot(spot);
+      setEntryPlate(vehicleData.plate);
+      setShowTicket(true);
     },
     onError: (error) => {
       console.error('🚨 VehicleEntryCard - Error de registro:', error);
@@ -141,6 +154,16 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
       truck: selectedParkingLot.truck_rate_per_minute,
     }[vehicleType];
     return ratePerMinute ? Math.round(ratePerMinute * 60 * hours) : selectedParkingLot.price_per_hour || 0;
+  };
+
+  const getRatePerMinute = (vehicleType: VehicleType | null): number | null => {
+    if (!selectedParkingLot || !vehicleType) return null;
+    return {
+      car: selectedParkingLot.car_rate_per_minute,
+      motorcycle: selectedParkingLot.motorcycle_rate_per_minute,
+      bicycle: selectedParkingLot.bicycle_rate_per_minute,
+      truck: selectedParkingLot.truck_rate_per_minute,
+    }[vehicleType] ?? null;
   };
 
   const handleVehicleTypeSelect = (vehicleType: VehicleType) => {
@@ -213,6 +236,166 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
 
   const selectedVehicle = vehicleTypes.find(v => v.value === selectedVehicleType);
 
+  if (showTicket && entryResponse) {
+    return (
+      <Card className="w-full max-w-md mx-auto border-green-200">
+        <CardHeader className="text-center pb-4 bg-green-50">
+          <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <Check className="w-6 h-6 text-green-600" />
+          </div>
+          <CardTitle className="text-green-700">¡Entrada Registrada!</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-6">
+          <Receipt className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-600">
+            Vehículo <strong>{entryPlate.toUpperCase()}</strong> ingresó al parqueadero
+          </p>
+          <div className="mt-6 mx-auto max-w-sm text-left bg-white border rounded-lg p-4">
+            {/* Header aligned with printed ticket */}
+            <div className="text-center">
+              <h3 className="font-semibold text-gray-900">{selectedParkingLot ? selectedParkingLot.name : 'PARKIU S.A.S.'}</h3>
+              <p className="text-xs text-gray-500">{selectedParkingLot ? selectedParkingLot.address : 'Ticket de Entrada'}</p>
+              {selectedParkingLot?.contact_phone && (
+                <p className="text-xs text-gray-500">Tel: {selectedParkingLot.contact_phone}</p>
+              )}
+              {selectedParkingLot?.tax_id && (
+                <p className="text-xs font-medium text-gray-700">NIT: {selectedParkingLot.tax_id}</p>
+              )}
+            </div>
+            <div className="my-3 border-t border-dashed" />
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="text-gray-600">Ticket:</div>
+              <div className="text-right font-mono">T-{entryResponse.transaction_id}</div>
+              <div className="text-gray-600">Placa:</div>
+              <div className="text-right font-mono">{entryPlate.toUpperCase()}</div>
+              {selectedVehicle && (
+                <>
+                  <div className="text-gray-600">Tipo:</div>
+                  <div className="text-right">{selectedVehicle.label}</div>
+                </>
+              )}
+              {/* Tarifa por minuto */}
+              {selectedParkingLot && selectedVehicle && (
+                <>
+                  <div className="text-gray-600">Tarifa:</div>
+                  <div className="text-right font-mono">
+                    ${(
+                      selectedVehicle.value === 'car' ? selectedParkingLot.car_rate_per_minute :
+                      selectedVehicle.value === 'motorcycle' ? selectedParkingLot.motorcycle_rate_per_minute :
+                      selectedVehicle.value === 'bicycle' ? selectedParkingLot.bicycle_rate_per_minute :
+                      selectedParkingLot.truck_rate_per_minute
+                    ).toLocaleString('es-CO')}/min
+                  </div>
+                </>
+              )}
+              <div className="text-gray-600">Espacio:</div>
+              <div className="text-right font-mono">{entrySpot}</div>
+              <div className="text-gray-600">Entrada:</div>
+              <div className="text-right">{new Date(entryResponse.entry_time).toLocaleString('es-CO')}</div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                type="button"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => {
+                  (async () => {
+                    const ok = await tryPrintViaQZ({
+                      transactionId: entryResponse.transaction_id,
+                      plate: entryPlate.toUpperCase(),
+                      entryTime: new Date(entryResponse.entry_time).toLocaleString('es-CO'),
+                      exitTime: undefined,
+                      durationMinutes: 0,
+                      space: entrySpot,
+                      vehicleType: selectedVehicle?.label,
+                      ratePerMinute: selectedVehicle
+                        ? (
+                          selectedVehicle.value === 'car' ? selectedParkingLot?.car_rate_per_minute :
+                          selectedVehicle.value === 'motorcycle' ? selectedParkingLot?.motorcycle_rate_per_minute :
+                          selectedVehicle.value === 'bicycle' ? selectedParkingLot?.bicycle_rate_per_minute :
+                          selectedParkingLot?.truck_rate_per_minute
+                        )
+                        : undefined,
+                      baseAmount: 0,
+                      additionalAmount: 0,
+                      totalAmount: 0,
+                      company: selectedParkingLot ? {
+                        name: selectedParkingLot.name,
+                        address: selectedParkingLot.address,
+                        phone: selectedParkingLot.contact_phone,
+                        taxId: selectedParkingLot.tax_id,
+                      } : undefined,
+                    });
+                    if (ok) return;
+                    await selectQZPrinter();
+                    const rateForSelected = selectedVehicle
+                      ? (
+                        selectedVehicle.value === 'car' ? selectedParkingLot?.car_rate_per_minute :
+                        selectedVehicle.value === 'motorcycle' ? selectedParkingLot?.motorcycle_rate_per_minute :
+                        selectedVehicle.value === 'bicycle' ? selectedParkingLot?.bicycle_rate_per_minute :
+                        selectedParkingLot?.truck_rate_per_minute
+                      )
+                      : undefined;
+                    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Ticket ${entryPlate.toUpperCase()}</title><style>
+                      @page { size: 80mm auto; margin: 0; }
+                      body { width: 80mm; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px; }
+                      .ticket { padding: 6mm 4mm; }
+                      .center { text-align: center; }
+                      .mono { font-family: inherit; }
+                      .row { display: flex; justify-content: space-between; margin: 2px 0; }
+                      hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+                      h3 { margin: 0 0 2mm; }
+                    </style></head><body><div class="ticket">
+                      <div class="center">
+                        <h3>${selectedParkingLot ? selectedParkingLot.name : 'PARKIU S.A.S.'}</h3>
+                        <div>${selectedParkingLot ? selectedParkingLot.address : 'Ticket de Entrada'}</div>
+                        ${selectedParkingLot?.contact_phone ? `<div>Tel: ${selectedParkingLot.contact_phone}</div>` : ''}
+                        ${selectedParkingLot?.tax_id ? `<div><strong>NIT:</strong> ${selectedParkingLot.tax_id}</div>` : ''}
+                      </div>
+                      <hr />
+                      <div class="row"><div>Ticket:</div><div class="mono">T-${entryResponse.transaction_id}</div></div>
+                      <div class="row"><div>Placa:</div><div class="mono">${entryPlate.toUpperCase()}</div></div>
+                      ${selectedVehicle ? `<div class="row"><div>Tipo:</div><div>${selectedVehicle.label}</div></div>` : ''}
+                      ${selectedVehicle ? `<div class="row"><div>Tarifa:</div><div>$${(rateForSelected != null ? rateForSelected.toLocaleString('es-CO') : '0')}/min</div></div>` : ''}
+                      <div class="row"><div>Espacio:</div><div class="mono">${entrySpot}</div></div>
+                      <div class="row"><div>Entrada:</div><div>${new Date(entryResponse.entry_time).toLocaleString('es-CO')}</div></div>
+                      <hr />
+                      <div class="center">Conserve este ticket</div>
+                      <div class="center">Powered by ParkiU</div>
+                    </div></body></html>`;
+                    const win = window.open('', '_blank');
+                    if (win) {
+                      win.document.write(html);
+                      win.document.close();
+                      win.focus();
+                      win.print();
+                    }
+                  })();
+                }}
+              >
+                <Printer className="w-4 h-4 mr-2" /> Imprimir Ticket
+              </Button>
+              <Button
+                type="button"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+                onClick={() => {
+                  setShowTicket(false);
+                  if (autoReset) {
+                    setPlate('');
+                    setSpaceNumber('');
+                    setSelectedVehicleType(null);
+                    setEstimatedCost(null);
+                  }
+                }}
+              >
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="pb-4">
@@ -228,6 +411,17 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
       </CardHeader>
 
       <CardContent>
+        <div className="mb-4">
+          <PrinterSelector />
+        </div>
+        {!isOperatorAuthorized && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-700">
+              No tiene permisos para registrar entradas. Contacte al administrador.
+            </AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {lots.length > 1 && (
             <div>
@@ -262,7 +456,15 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
               <p className="text-sm text-blue-600 mt-1">{selectedParkingLot.address}</p>
               <div className="flex gap-4 mt-2 text-xs text-blue-600">
                 <span>Total espacios: {selectedParkingLot.total_spots}</span>
-                <span>Tarifa: ${selectedParkingLot.price_per_hour}/hora</span>
+                {selectedVehicleType ? (
+                  <span>
+                    Tarifa: ${getRatePerMinute(selectedVehicleType)?.toLocaleString('es-CO')}/min
+                  </span>
+                ) : (
+                  <span>
+                    Tarifa base carro: ${selectedParkingLot.car_rate_per_minute.toLocaleString('es-CO')}/min
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -318,7 +520,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                 <strong>Costo estimado:</strong> ${estimatedCost.toLocaleString()}/hora
                 <br />
                 <span className="text-xs">
-                  Tarifa: ${selectedParkingLot.price_per_hour}/hora
+                  Tarifa: ${getRatePerMinute(selectedVehicle.value)?.toLocaleString('es-CO')}/min
                 </span>
               </AlertDescription>
             </Alert>
@@ -485,7 +687,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
 
           <Button
             type="submit"
-            disabled={registerEntry.isPending || !selectedParkingLot || !selectedVehicleType || !plate || (!autoAssign && !spaceNumber)}
+            disabled={registerEntry.isPending || !selectedParkingLot || !selectedVehicleType || !plate || (!autoAssign && !spaceNumber) || !isOperatorAuthorized}
             className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
           >
             {registerEntry.isPending ? (

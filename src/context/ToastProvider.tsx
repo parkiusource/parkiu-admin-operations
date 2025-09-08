@@ -15,17 +15,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     // Use requestIdleCallback for better performance, fallback to setTimeout
     if ('requestIdleCallback' in window) {
-      const timeoutId = window.setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         window.requestIdleCallback(() => {
           removeToast(id);
         });
       }, duration);
-      return () => window.clearTimeout(timeoutId);
+      return () => clearTimeout(timeoutId);
     } else {
-      const timeoutId = window.setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         removeToast(id);
       }, duration);
-      return () => window.clearTimeout(timeoutId);
+      return () => clearTimeout(timeoutId);
     }
   }, [removeToast]);
 

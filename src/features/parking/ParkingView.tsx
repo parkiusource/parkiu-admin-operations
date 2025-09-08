@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ParkiuDB } from '../../db/schema';
 import { ParkingSpot, Vehicle } from '../../db/schema';
-import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuBike, LuArrowRight } from 'react-icons/lu';
+import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight } from 'react-icons/lu';
+import { FaMotorcycle } from 'react-icons/fa';
 import { CircleParking } from 'lucide-react';
 
 interface ParkingSpotWithVehicle extends ParkingSpot {
@@ -452,7 +453,7 @@ export default function ParkingView() {
                 <div className="p-5">
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                      <LuBike className="w-4 h-4 text-slate-500" />
+                      <FaMotorcycle className="w-4 h-4 text-slate-500" />
                       Motocicletas
                       <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
                         {motorcycleSpots.length} espacios
@@ -475,7 +476,7 @@ export default function ParkingView() {
                             <div className={`flex-shrink-0 p-2 rounded-lg ${
                               spot.type === 'car' ? 'bg-indigo-50' : 'bg-violet-50'
                             }`}>
-                              <LuBike className="w-5 h-5 text-indigo-600" />
+                              <FaMotorcycle className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div className="min-w-0">
                               <h4 className="text-base font-medium text-slate-900">

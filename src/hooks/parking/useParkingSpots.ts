@@ -476,6 +476,36 @@ export const useRealParkingSpaces = (
 };
 
 /**
+ * ✅ Hook para obtener espacios con vehículo activo incluido
+ * Endpoint: GET /parking-spaces/lot/{id}/with-vehicles (público)
+ */
+export const useRealParkingSpacesWithVehicles = (
+  parkingLotId: string | undefined,
+  options?: {
+    enabled?: boolean;
+    staleTime?: number;
+    refetchInterval?: number;
+  }
+) => {
+  const { getAccessTokenSilently } = useAuth0();
+
+  return useQuery({
+    queryKey: ['realParkingSpacesWithVehicles', parkingLotId],
+    queryFn: async () => {
+      if (!parkingLotId) throw new Error('Parking lot ID is required');
+      const token = await getAccessTokenSilently();
+      const response = await parkingLotService.getParkingSpacesWithVehicles(token, parkingLotId);
+      if (response.error) throw new Error(response.error);
+      return response.data;
+    },
+    enabled: (options?.enabled ?? true) && !!parkingLotId,
+    staleTime: options?.staleTime ?? 1000 * 30,
+    refetchInterval: options?.refetchInterval ?? 1000 * 30,
+    retry: false,
+  });
+};
+
+/**
  * ✅ Hook OPTIMIZADO para actualizar el estado de un espacio real del backend
  * Endpoint: PUT /parking-spaces/{spaceId}
  * 🚀 OPTIMIZACIÓN: Usa setQueryData + invalidación selectiva para evitar llamadas duplicadas
@@ -520,6 +550,33 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
             updatedParkingLotId = queryKey[1] as string; // Extraer parkingLotId del queryKey
 
             // 🚀 ACTUALIZAR CACHE DIRECTAMENTE usando solo los variables (datos enviados)
+            queryClient.setQueryData(queryKey,
+              spaces.map(space =>
+                space.id === variables.spaceId
+                  ? {
+                      ...space,
+                      status: variables.status,
+                      last_status_change: new Date().toISOString()
+                    }
+                  : space
+              )
+            );
+          }
+        }
+      });
+
+      // ✅ Actualizar también caches de with-vehicles para que el color cambie de inmediato
+      queryClient.getQueriesData({ queryKey: ['realParkingSpacesWithVehicles'] }).forEach(([queryKey, data]) => {
+        if (data && Array.isArray(data)) {
+          const spaces = data as BackendParkingSpot[];
+          const spaceExists = spaces.some(space => space.id === variables.spaceId);
+
+          if (spaceExists) {
+            const lotIdFromKey = queryKey[1] as string | undefined;
+            if (!updatedParkingLotId) {
+              updatedParkingLotId = lotIdFromKey;
+            }
+
             queryClient.setQueryData(queryKey,
               spaces.map(space =>
                 space.id === variables.spaceId

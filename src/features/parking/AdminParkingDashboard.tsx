@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuBike, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding } from 'react-icons/lu';
+import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding, LuTriangle } from 'react-icons/lu';
+import { FaMotorcycle } from 'react-icons/fa';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/common/Input';
 import { CircleParking } from 'lucide-react';
 
 // ✅ IMPORTAR MODALES PARA CREAR PARQUEADEROS Y ESPACIOS
@@ -11,7 +14,7 @@ import { ParkingLotMap } from '@/components/parking/ParkingLotMap';
 // ✅ IMPORTAR HOOKS PARA BACKEND REAL
 import {
   useParkingLots,
-  useRealParkingSpaces,
+  useRealParkingSpacesWithVehicles,
   useUpdateRealParkingSpaceStatus
 } from '@/hooks/parking';
 
@@ -67,9 +70,9 @@ export default function AdminParkingDashboard() {
     isLoading: isLoadingSpaces,
     error: spacesError,
     refetch: refetchSpaces
-  } = useRealParkingSpaces(currentParking?.id, {
-    enabled: !isListView && !!currentParking?.id, // Solo cuando NO estamos en vista de lista
-    refetchInterval: 1000 * 30 // Refrescar cada 30 segundos
+  } = useRealParkingSpacesWithVehicles(currentParking?.id, {
+    enabled: !isListView && !!currentParking?.id,
+    refetchInterval: 1000 * 60 // Refrescar cada minuto
   });
   // ✅ OPTIMIZACIÓN: Memoizar cálculos costosos para evitar re-renders innecesarios
   const occupancyStats = useMemo(() => {
@@ -512,6 +515,12 @@ export default function AdminParkingDashboard() {
                 Actualizar
               </button>
               <button
+                onClick={() => navigate(`/parking/${currentParking.id}/history`)}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors"
+              >
+                Historial
+              </button>
+              <button
                 onClick={() => setIsCreateSpaceModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors"
                 disabled={!currentParking?.id}
@@ -744,7 +753,7 @@ export default function AdminParkingDashboard() {
                   <div className="p-5">
                     <div className="mb-4">
                       <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <LuBike className="w-4 h-4 text-slate-500" />
+                        <FaMotorcycle className="w-4 h-4 text-slate-500" />
                         Motocicletas
                         <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
                           {motorcycleSpots.length} espacios
@@ -772,7 +781,7 @@ export default function AdminParkingDashboard() {
                   <div className="p-5">
                     <div className="mb-4">
                       <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <LuBike className="w-4 h-4 text-green-500" />
+                        <FaMotorcycle className="w-4 h-4 text-green-500" />
                         Bicicletas
                         <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
                           {bicycleSpots.length} espacios
@@ -903,7 +912,10 @@ interface SpotCardProps {
 }
 
 function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }: SpotCardProps) {
-  const IconComponent = spot.type === 'car' ? LuCar : LuBike;
+  const IconComponent = spot.type === 'car' ? LuCar : FaMotorcycle;
+  const [forceOpen, setForceOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const FORCE_PHRASE = 'QUIERO LIBERAR ESTE ESPACIO';
 
   // Configuración de estilos por estado
   const statusConfig = {
@@ -916,24 +928,27 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
       label: '✅ Disponible'
     },
     occupied: {
-      card: 'bg-gradient-to-br from-amber-50 to-white border-amber-200 hover:border-amber-300 hover:shadow-amber-100',
-      icon: 'bg-gradient-to-br from-amber-100 to-amber-200',
-      iconColor: 'text-amber-600',
-      badge: 'bg-amber-100 text-amber-700 border border-amber-200',
-      pulse: 'bg-amber-500',
-      label: '🚗 Ocupado'
-    },
-    maintenance: {
       card: 'bg-gradient-to-br from-red-50 to-white border-red-200 hover:border-red-300 hover:shadow-red-100',
       icon: 'bg-gradient-to-br from-red-100 to-red-200',
       iconColor: 'text-red-600',
       badge: 'bg-red-100 text-red-700 border border-red-200',
       pulse: 'bg-red-500',
+      label: '🚗 Ocupado'
+    },
+    maintenance: {
+      card: 'bg-gradient-to-br from-amber-50 to-white border-amber-200 hover:border-amber-300 hover:shadow-amber-100',
+      icon: 'bg-gradient-to-br from-amber-100 to-amber-200',
+      iconColor: 'text-amber-600',
+      badge: 'bg-amber-100 text-amber-700 border border-amber-200',
+      pulse: 'bg-amber-500',
       label: '🔧 Mantenimiento'
     }
   };
 
   const config = statusConfig[spot.status as keyof typeof statusConfig] || statusConfig.available;
+
+  const hasActiveVehicle = spot.status === 'occupied' && !!spot.active_vehicle?.plate;
+  const canReleaseDirectly = spot.status === 'occupied' ? !hasActiveVehicle : true;
 
   return (
     <div className={`group relative rounded-2xl border-2 p-5 transition-all duration-300 hover:shadow-lg ${
@@ -967,6 +982,11 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
         <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold ${config.badge} shadow-sm`}>
           {config.label}
         </span>
+        {hasActiveVehicle && (
+          <span className="inline-flex items-center gap-2 ml-2 px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            Placa: <span className="font-mono">{spot.active_vehicle!.plate.toUpperCase()}</span>
+          </span>
+        )}
       </div>
 
       {/* Información adicional */}
@@ -991,14 +1011,28 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
         )}
 
         {spot.status === 'occupied' && (
-          <button
-            onClick={() => onRelease(spot.id!)}
-            disabled={isUpdating}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
-          >
-            <LuArrowRight className="w-4 h-4" />
-            Liberar
-          </button>
+          <>
+            <button
+              onClick={() => onRelease(spot.id!)}
+              disabled={isUpdating || !canReleaseDirectly}
+              title={hasActiveVehicle ? 'Hay un vehículo activo. Procese la salida o use Forzar liberación.' : undefined}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+            >
+              <LuArrowRight className="w-4 h-4" />
+              Liberar
+            </button>
+            {hasActiveVehicle && (
+              <button
+                onClick={() => setForceOpen(true)}
+                disabled={isUpdating}
+                className="inline-flex items-center justify-center px-4 py-3 text-sm font-semibold rounded-xl bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 transition-all duration-200 shadow-sm disabled:opacity-50"
+                title="Forzar liberación"
+              >
+                <LuTriangle className="w-4 h-4 mr-1" />
+                Forzar
+              </button>
+            )}
+          </>
         )}
 
         {spot.status === 'maintenance' && (
@@ -1031,6 +1065,40 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
           </div>
         </div>
       )}
+
+      {/* Dialogo de forzar liberación */}
+      <Dialog open={forceOpen} onOpenChange={(open) => { setForceOpen(open); if (!open) setConfirmText(''); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <LuTriangle className="w-5 h-5" />
+              Forzar liberación del espacio
+            </DialogTitle>
+            <DialogDescription>
+              Este espacio tiene un vehículo activo con placa <strong>{spot.active_vehicle?.plate?.toUpperCase()}</strong>.
+              Para continuar, escriba exactamente: <span className="font-semibold">{FORCE_PHRASE}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">
+            <Input value={confirmText} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmText(e.target.value)} placeholder={FORCE_PHRASE} />
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setForceOpen(false)}
+              className="px-4 py-2 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => { onRelease(spot.id!); setForceOpen(false); setConfirmText(''); }}
+              disabled={confirmText.trim().toUpperCase() !== FORCE_PHRASE}
+              className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              Confirmar liberación
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { Label } from '@/components/common/Label';
@@ -19,11 +19,20 @@ import {
   AlertCircle,
   AlertTriangle,
   Receipt,
-  Search
+  Search,
+  Printer,
+  Download,
+  ShieldAlert
 } from 'lucide-react';
 import { ParkingLot, ActiveVehicle } from '@/types/parking';
 import { useRegisterVehicleExit, useSearchVehicle, useCostCalculator } from '@/api/hooks/useVehicles';
 import { useToast } from '@/hooks';
+import { normalizePlate, validatePlate } from '@/utils/plate';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
+import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
+import type { VehicleExitResponse } from '@/types/parking';
+import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
+import { PrinterSelector } from '@/components/common/PrinterSelector';
 
 interface VehicleExitCardProps {
   parkingLots?: ParkingLot[];
@@ -77,6 +86,11 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   onError
 }) => {
   const { addToast } = useToast();
+  const { profile } = useAdminProfileStatus();
+  const isOperatorAuthorized = useMemo(() => {
+    const role = profile?.role || '';
+    return role === 'local_admin' || role === 'operator';
+  }, [profile?.role]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
@@ -87,13 +101,17 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [currentCost, setCurrentCost] = useState<number | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [plateError, setPlateError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [exitResponse, setExitResponse] = useState<VehicleExitResponse | null>(null);
+  const [receiptParsed, setReceiptParsed] = useState<Record<string, unknown> | null>(null);
 
   // Always call the hook but conditionally use the result
   const costCalculator = useCostCalculator(selectedParkingLot || (lots[0] as ParkingLot || ({} as ParkingLot)));
 
   const searchVehicle = useSearchVehicle(
     selectedParkingLot?.id || '',
-    plate,
+    normalizePlate(plate),
     { enabled: plate.length >= 3 && !!selectedParkingLot }
   );
 
@@ -101,16 +119,15 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     onSuccess: (response, { vehicleData }) => {
       onSuccess?.(vehicleData.plate, response.total_cost);
       addToast(`Salida registrada: ${vehicleData.plate} - $${response.total_cost.toLocaleString()}`, 'success');
+      setExitResponse(response);
+      try {
+        const parsed = response.receipt ? JSON.parse(response.receipt) : null;
+        setReceiptParsed(parsed);
+      } catch (e) {
+        console.warn('Invalid receipt JSON', e);
+        setReceiptParsed(null);
+      }
       setShowReceipt(true);
-      // Reset después de un momento
-      setTimeout(() => {
-        setPlate('');
-        setSearchedVehicle(null);
-        setPaymentMethod(null);
-        setPaymentAmount('');
-        setCurrentCost(null);
-        setShowReceipt(false);
-      }, 5000);
     },
     onError: (error) => {
       onError?.(error.message);
@@ -160,19 +177,26 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const normalized = normalizePlate(plate);
+    const validAny = (
+      validatePlate(normalized, 'car').isValid ||
+      validatePlate(normalized, 'motorcycle').isValid ||
+      validatePlate(normalized, 'truck').isValid ||
+      validatePlate(normalized, 'bicycle').isValid
+    );
+
+    if (!validAny) {
+      setPlateError('Placa inválida');
+      onError?.('Placa inválida');
+      return;
+    }
+
     if (!searchedVehicle || !paymentMethod || !paymentAmount) {
       onError?.('Por favor complete todos los campos');
       return;
     }
 
-    registerExit.mutate({
-      parkingLotId: selectedParkingLot!.id!,
-      vehicleData: {
-        plate: plate.trim().toUpperCase(),
-        payment_amount: parseFloat(paymentAmount),
-        payment_method: paymentMethod
-      }
-    });
+    setConfirmOpen(true);
   };
 
   const calculateChange = (): number => {
@@ -201,6 +225,240 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           <p className="text-gray-600">
             Vehículo <strong>{plate.toUpperCase()}</strong> ha salido exitosamente
           </p>
+
+          {/* Vista previa estructurada del recibo */}
+          {exitResponse && (
+            <div className="mt-6 mx-auto max-w-sm text-left bg-white border rounded-lg p-4">
+              <div className="text-center">
+                <h3 className="font-semibold text-gray-900">PARKIU S.A.S.</h3>
+                <p className="text-xs text-gray-500">Calle Principal #123, Ciudad</p>
+                <p className="text-xs text-gray-500">Tel: (601) 123-4567</p>
+                <p className="text-xs font-medium text-gray-700">NIT: 901.234.567-8</p>
+              </div>
+              <div className="my-3 border-t border-dashed" />
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-600">Ticket:</div>
+                <div className="text-right font-mono">T-{exitResponse.transaction_id}</div>
+                <div className="text-gray-600">Fecha:</div>
+                <div className="text-right">{new Date().toLocaleDateString('es-CO')}</div>
+                <div className="text-gray-600">Hora:</div>
+                <div className="text-right">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="text-gray-600">Placa:</div>
+                <div className="text-right font-mono">{plate.toUpperCase()}</div>
+                <div className="text-gray-600">Entrada:</div>
+                <div className="text-right">{receiptParsed?.entry_time ? String(receiptParsed.entry_time) : '-'}</div>
+                <div className="text-gray-600">Salida:</div>
+                <div className="text-right">{receiptParsed?.exit_time ? String(receiptParsed.exit_time) : '-'}</div>
+                <div className="text-gray-600">Tiempo:</div>
+                <div className="text-right">{Math.floor(exitResponse.duration_minutes / 60)}h {exitResponse.duration_minutes % 60}m</div>
+              </div>
+              <div className="my-3 border-t border-dashed" />
+              <div className="text-sm">
+                {(() => {
+                  const hourlyRateValue = (() => {
+                    const v = (receiptParsed as Record<string, unknown> | null)?.hourly_rate as unknown;
+                    const n = typeof v === 'number' ? v : Number(v);
+                    return Number.isFinite(n) && n > 0 ? n : undefined;
+                  })();
+                  const vt = (receiptParsed as Record<string, unknown> | null)?.vehicle_type as 'car' | 'motorcycle' | 'bicycle' | 'truck' | undefined;
+                  const perMinute = (() => {
+                    if (!selectedParkingLot) return undefined;
+                    switch (vt) {
+                      case 'car': return selectedParkingLot.car_rate_per_minute;
+                      case 'motorcycle': return selectedParkingLot.motorcycle_rate_per_minute;
+                      case 'bicycle': return selectedParkingLot.bicycle_rate_per_minute;
+                      case 'truck': return selectedParkingLot.truck_rate_per_minute;
+                      default: return undefined;
+                    }
+                  })();
+                  const computedHourly = hourlyRateValue ?? (perMinute ? Math.round(perMinute * 60) : selectedParkingLot?.price_per_hour);
+                  const baseCost = Math.min(exitResponse.total_cost, computedHourly || exitResponse.total_cost);
+                  const additionalCost = Math.max(0, exitResponse.total_cost - baseCost);
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tarifa base:</span>
+                        <span className="font-medium">${baseCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tiempo adicional:</span>
+                        <span className="font-medium">${additionalCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between mt-2 border-t pt-2">
+                        <span className="font-semibold">TOTAL:</span>
+                        <span className="font-bold">${exitResponse.total_cost.toLocaleString()}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="text-center text-xs text-gray-500 mt-4">
+                ¡Gracias por su preferencia!<br />
+                www.parkiu.com
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  type="button"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    try {
+                      // Attempt silent QZ printing with ESC/POS
+                      (async () => {
+                        const vt = (receiptParsed as Record<string, unknown> | null)?.vehicle_type as 'car' | 'motorcycle' | 'bicycle' | 'truck' | undefined;
+                        const hourlyRateValue = (() => {
+                          const v = (receiptParsed as Record<string, unknown> | null)?.hourly_rate as unknown;
+                          const n = typeof v === 'number' ? v : Number(v);
+                          return Number.isFinite(n) && n > 0 ? n : undefined;
+                        })();
+                        const perMinute = (() => {
+                          if (!selectedParkingLot) return undefined;
+                          switch (vt) {
+                            case 'car': return selectedParkingLot.car_rate_per_minute;
+                            case 'motorcycle': return selectedParkingLot.motorcycle_rate_per_minute;
+                            case 'bicycle': return selectedParkingLot.bicycle_rate_per_minute;
+                            case 'truck': return selectedParkingLot.truck_rate_per_minute;
+                            default: return undefined;
+                          }
+                        })();
+                        const computedHourly = hourlyRateValue ?? (perMinute ? Math.round(perMinute * 60) : selectedParkingLot?.price_per_hour || exitResponse.total_cost);
+                        const base = Math.min(exitResponse.total_cost, computedHourly);
+                        const additional = Math.max(0, exitResponse.total_cost - base);
+
+                        const ok = await tryPrintViaQZ({
+                          transactionId: exitResponse.transaction_id,
+                          plate: plate.toUpperCase(),
+                          entryTime: receiptParsed?.entry_time ? String(receiptParsed.entry_time) : undefined,
+                          exitTime: receiptParsed?.exit_time ? String(receiptParsed.exit_time) : undefined,
+                          durationMinutes: exitResponse.duration_minutes,
+                          space: (receiptParsed && 'space_number' in receiptParsed) ? String((receiptParsed as Record<string, unknown>)['space_number']) : undefined,
+                          vehicleType: vt,
+                          baseAmount: base,
+                          additionalAmount: additional,
+                          totalAmount: exitResponse.total_cost,
+                          company: selectedParkingLot ? {
+                            name: selectedParkingLot.name,
+                            address: selectedParkingLot.address,
+                            phone: selectedParkingLot.contact_phone,
+                            taxId: selectedParkingLot.tax_id,
+                          } : undefined,
+                        });
+
+                        if (ok) return; // Printed silently via QZ
+
+                        // Fallback to HTML if QZ is unavailable
+                        const wantSelect = await selectQZPrinter();
+                        void wantSelect; // no-op; selection stored for next time
+
+                        // ...falls through to existing HTML printing below
+                      })();
+
+                      const entry = receiptParsed?.entry_time ? String(receiptParsed.entry_time) : '';
+                      const exitT = receiptParsed?.exit_time ? String(receiptParsed.exit_time) : '';
+                      const space = (receiptParsed && 'space_number' in receiptParsed) ? String((receiptParsed as Record<string, unknown>)['space_number']) : '';
+                      const vt = (receiptParsed as Record<string, unknown> | null)?.vehicle_type as 'car' | 'motorcycle' | 'bicycle' | 'truck' | undefined;
+                      const hourlyRateValue = (() => {
+                        const v = (receiptParsed as Record<string, unknown> | null)?.hourly_rate as unknown;
+                        const n = typeof v === 'number' ? v : Number(v);
+                        return Number.isFinite(n) && n > 0 ? n : undefined;
+                      })();
+                      const perMinute = (() => {
+                        if (!selectedParkingLot) return undefined;
+                        switch (vt) {
+                          case 'car': return selectedParkingLot.car_rate_per_minute;
+                          case 'motorcycle': return selectedParkingLot.motorcycle_rate_per_minute;
+                          case 'bicycle': return selectedParkingLot.bicycle_rate_per_minute;
+                          case 'truck': return selectedParkingLot.truck_rate_per_minute;
+                          default: return undefined;
+                        }
+                      })();
+                      const computedHourly = hourlyRateValue ?? (perMinute ? Math.round(perMinute * 60) : selectedParkingLot?.price_per_hour || exitResponse.total_cost);
+                      const base = Math.min(exitResponse.total_cost, computedHourly);
+                      const additional = Math.max(0, exitResponse.total_cost - base);
+                      const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Recibo ${plate.toUpperCase()}</title><style>
+                        @page { size: 80mm auto; margin: 0; }
+                        body { width: 80mm; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px; }
+                        .ticket { padding: 6mm 4mm; }
+                        .center { text-align: center; }
+                        .mono { font-family: inherit; }
+                        .row { display: flex; justify-content: space-between; margin: 2px 0; }
+                        hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+                        h3 { margin: 0 0 2mm; }
+                      </style></head><body><div class="ticket">
+                        <div class="center">
+                          <h3>${selectedParkingLot ? selectedParkingLot.name : 'PARKIU S.A.S.'}</h3>
+                          <div>${selectedParkingLot ? selectedParkingLot.address : 'Calle Principal #123, Ciudad'}</div>
+                          <div>${selectedParkingLot?.contact_phone ? 'Tel: ' + selectedParkingLot.contact_phone : 'Tel: (601) 123-4567'}</div>
+                          ${selectedParkingLot?.tax_id ? `<div><strong>NIT:</strong> ${selectedParkingLot.tax_id}</div>` : ''}
+                        </div>
+                        <hr />
+                        <div class="row"><div>Ticket:</div><div class="mono">T-${exitResponse.transaction_id}</div></div>
+                        <div class="row"><div>Fecha:</div><div>${new Date().toLocaleDateString('es-CO')}</div></div>
+                        <div class="row"><div>Hora:</div><div>${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}</div></div>
+                        <div class="row"><div>Placa:</div><div class="mono">${plate.toUpperCase()}</div></div>
+                        ${vt ? `<div class="row"><div>Tipo:</div><div>${vt}</div></div>` : ''}
+                        ${space ? `<div class="row"><div>Espacio:</div><div class="mono">${space}</div></div>` : ''}
+                        ${entry ? `<div class="row"><div>Entrada:</div><div>${entry}</div></div>` : ''}
+                        ${exitT ? `<div class="row"><div>Salida:</div><div>${exitT}</div></div>` : ''}
+                        <div class="row"><div>Tiempo:</div><div>${Math.floor(exitResponse.duration_minutes/60)}h ${exitResponse.duration_minutes%60}m</div></div>
+                        <hr />
+                        <div class="row"><div>Tarifa base:</div><div>$${base.toLocaleString('es-CO')}</div></div>
+                        <div class="row"><div>Tiempo adicional:</div><div>$${additional.toLocaleString('es-CO')}</div></div>
+                        <div class="row" style="margin-top:4px;"><div><strong>TOTAL:</strong></div><div><strong>$${exitResponse.total_cost.toLocaleString('es-CO')}</strong></div></div>
+                        <hr />
+                        <div class="center">¡Gracias por su preferencia!<br/>www.parkiu.com<br/>Powered by ParkiU</div>
+                      </div></body></html>`;
+                      const win = window.open('', '_blank');
+                      if (win) {
+                        win.document.write(html);
+                        win.document.close();
+                        win.focus();
+                        win.print();
+                      }
+                    } catch (e) {
+                      console.error('Error printing receipt', e);
+                    }
+                  }}
+                >
+                  <Printer className="w-4 h-4 mr-2" /> Imprimir
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-gray-700 hover:bg-gray-800 text-white"
+                  onClick={() => {
+                    const blob = new Blob([
+                      receiptParsed ? JSON.stringify(receiptParsed, null, 2) : (exitResponse.receipt || '')
+                    ], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `recibo-${plate.toUpperCase()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" /> Descargar JSON
+                </Button>
+              </div>
+            </div>
+          )}
+          <div className="mt-6">
+            <Button
+              type="button"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+              onClick={() => {
+                setShowReceipt(false);
+                setPlate('');
+                setSearchedVehicle(null);
+                setPaymentMethod(null);
+                setPaymentAmount('');
+                setCurrentCost(null);
+                setExitResponse(null);
+                setReceiptParsed(null);
+              }}
+            >
+              Cerrar
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -221,6 +479,17 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       </CardHeader>
 
       <CardContent>
+        <div className="mb-4">
+          <PrinterSelector />
+        </div>
+        {!isOperatorAuthorized && (
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertDescription>
+              No tiene permisos para operar salidas. Contacte al administrador.
+            </AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Selector de Parqueadero */}
           {lots.length > 1 && (
@@ -281,12 +550,30 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 type="text"
                 placeholder="Buscar por placa..."
                 value={plate}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlate(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const value = e.target.value;
+                  setPlate(value);
+                  const normalized = normalizePlate(value);
+                  if (!normalized) {
+                    setPlateError(null);
+                    return;
+                  }
+                  const validAny = (
+                    validatePlate(normalized, 'car').isValid ||
+                    validatePlate(normalized, 'motorcycle').isValid ||
+                    validatePlate(normalized, 'truck').isValid ||
+                    validatePlate(normalized, 'bicycle').isValid
+                  );
+                  setPlateError(validAny ? null : 'Placa inválida');
+                }}
                 className="uppercase text-center text-lg font-bold tracking-wider pl-12"
                 maxLength={8}
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
+            {plateError && (
+              <p className="text-xs text-red-600 mt-1">{plateError}</p>
+            )}
 
             {searchVehicle.isLoading && plate.length >= 3 && (
               <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
@@ -497,7 +784,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                   registerExit.isPending ||
                   !searchedVehicle ||
                   !paymentMethod ||
-                  isUnderpaid()
+                  isUnderpaid() ||
+                  !isOperatorAuthorized
                 }
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg font-semibold"
               >
@@ -525,6 +813,69 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
             </Alert>
           )}
         </form>
+
+        {/* Confirmación de salida */}
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar salida</DialogTitle>
+              <DialogDescription>
+                Revise la información antes de confirmar.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Placa</span>
+                <span className="font-mono font-semibold">{normalizePlate(plate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Costo total</span>
+                <span className="font-semibold">${currentCost?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Método</span>
+                <span>{paymentMethods.find(m => m.value === paymentMethod)?.label}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Monto recibido</span>
+                <span>${parseFloat(paymentAmount || '0').toLocaleString()}</span>
+              </div>
+              {!isUnderpaid() && (
+                <div className="flex justify-between">
+                  <span>Cambio</span>
+                  <span className="font-semibold">${(Math.max(0, parseFloat(paymentAmount || '0') - (currentCost || 0))).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  registerExit.mutate({
+                    parkingLotId: selectedParkingLot!.id!,
+                    vehicleData: {
+                      plate: normalizePlate(plate),
+                      payment_amount: parseFloat(paymentAmount),
+                      payment_method: paymentMethod as 'cash' | 'card' | 'digital'
+                    }
+                  });
+                }}
+                disabled={registerExit.isPending}
+              >
+                Confirmar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

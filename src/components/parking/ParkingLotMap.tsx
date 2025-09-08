@@ -73,7 +73,7 @@ export function ParkingLotMap({
       <div
         className="relative cursor-pointer transform hover:scale-105 transition-all duration-200"
         onClick={onClick}
-        title={`Espacio ${spot.number} - ${spot.status}`}
+        title={`Espacio ${spot.number} - ${spot.status}${spot.active_vehicle?.plate ? ` • ${spot.active_vehicle.plate}` : ''}`}
       >
         {/* Líneas del espacio de parqueo */}
         <div className={`w-20 h-12 ${getCarSpotColor()} border-2 rounded-md shadow-lg relative overflow-hidden`}>
@@ -94,17 +94,19 @@ export function ParkingLotMap({
 
           {/* Indicador de estado con pulsación */}
           <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
-            spot.status === 'available' ? 'bg-white' :
-            spot.status === 'occupied' ? 'bg-yellow-300' : 'bg-orange-300'
+            spot.status === 'available' ? 'bg-emerald-300' :
+            spot.status === 'occupied' ? 'bg-red-300' : 'bg-amber-300'
           } animate-pulse shadow-sm`}></div>
         </div>
 
-        {/* Número del espacio debajo */}
-        <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2">
-          <div className="text-xs font-semibold text-slate-600 bg-white px-1 rounded shadow-sm">
-            {spot.number}
+        {/* Etiqueta inferior: placa si está ocupado; 'MTO' si mantenimiento; vacío si libre */}
+        {(spot.status === 'occupied' && spot.active_vehicle?.plate) || spot.status === 'maintenance' ? (
+          <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2">
+            <div className="text-[11px] font-semibold text-slate-700 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-200 tracking-wide">
+              {spot.status === 'occupied' ? spot.active_vehicle?.plate : 'MTO'}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     );
   };
@@ -125,10 +127,10 @@ export function ParkingLotMap({
     };
 
     return (
-            <div
+      <div
         className="relative cursor-pointer transform hover:scale-110 transition-all duration-200"
         onClick={onClick}
-        title={`Espacio ${spot.number} - ${spot.status}`}
+        title={`Espacio ${spot.number} - ${spot.status}${spot.active_vehicle?.plate ? ` • ${spot.active_vehicle.plate}` : ''}`}
         style={{ paddingBottom: '24px' }} // Espacio extra para el label
       >
         {/* Espacio más pequeño para motos */}
@@ -147,15 +149,15 @@ export function ParkingLotMap({
 
           {/* Indicador de estado */}
           <div className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${
-            spot.status === 'available' ? 'bg-white' :
-            spot.status === 'occupied' ? 'bg-yellow-300' : 'bg-orange-300'
+            spot.status === 'available' ? 'bg-emerald-300' :
+            spot.status === 'occupied' ? 'bg-red-300' : 'bg-amber-300'
           } animate-pulse`}></div>
         </div>
 
-        {/* Número pequeño mejorado */}
+        {/* Etiqueta inferior: placa si está ocupado, de lo contrario número */}
         <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 z-10">
           <div className="text-xs font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded-md shadow-lg border border-slate-300 min-w-[20px] text-center whitespace-nowrap">
-            {spot.number}
+            {spot.status === 'occupied' && spot.active_vehicle?.plate ? spot.active_vehicle.plate : spot.number}
           </div>
         </div>
       </div>
@@ -184,8 +186,8 @@ export function ParkingLotMap({
 
         {/* Indicador de estado */}
         <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
-          spot.status === 'available' ? 'bg-green-400' :
-          spot.status === 'occupied' ? 'bg-red-400' : 'bg-yellow-400'
+          spot.status === 'available' ? 'bg-emerald-400' :
+          spot.status === 'occupied' ? 'bg-red-400' : 'bg-amber-400'
         } border-2 border-white shadow-sm animate-pulse`}></div>
       </div>
     );

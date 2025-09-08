@@ -3,8 +3,8 @@ import { API_CONFIG, buildApiUrl } from '@/config/backend';
 import {
   ParkingLot,
   ParkingLotAPI,
-  ParkingSpot, // ✅ Agregar ParkingSpot
-  ParkingSpaceAPI, // ✅ Agregar tipo de API para espacios
+  ParkingSpot,
+  ParkingSpaceAPI,
   ParkingLotFilters,
   ParkingLotStats,
   ParkingApiResponse,
@@ -12,8 +12,9 @@ import {
   toParkingLotAPI,
   toParkingLotCreatePayload,
   fromParkingLotAPI,
-  fromParkingSpaceAPI, // ✅ Agregar adaptador de espacios
-  toParkingSpaceCreatePayload // ✅ Agregar adaptador para crear espacios
+  fromParkingSpaceAPI,
+  toParkingSpaceCreatePayload,
+  ParkingSpaceWithVehicleAPI
 } from './types';
 
 /**
@@ -412,6 +413,44 @@ export class ParkingLotService {
         error: apiError.userMessage,
         status: 'error'
       };
+    }
+  }
+
+  /**
+   * ✅ Obtiene todos los espacios de un parking lot con el vehículo activo (si aplica)
+   * Endpoint: GET /parking-spaces/lot/{id}/with-vehicles
+   */
+  async getParkingSpacesWithVehicles(token: string, parkingLotId: string): Promise<ParkingApiResponse<ParkingSpot[]>> {
+    try {
+      const url = buildApiUrl(`/parking-spaces/lot/${parkingLotId}/with-vehicles`);
+      const response = await axios.get(url, {
+        headers: this.createAuthHeaders(token),
+        timeout: API_CONFIG.TIMEOUT
+      });
+      const apiSpaces: ParkingSpaceWithVehicleAPI[] = response.data.parking_spaces || [];
+
+      const mappedParkingSpots: ParkingSpot[] = apiSpaces.map((api) => {
+        const base = fromParkingSpaceAPI(api as unknown as ParkingSpaceAPI);
+        const active = api.active_vehicle
+          ? {
+              plate: api.active_vehicle.plate,
+              vehicle_type: api.active_vehicle.vehicle_type,
+              entry_time: api.active_vehicle.entry_time,
+              duration_minutes: api.active_vehicle.duration_minutes,
+            }
+          : null;
+        return { ...base, active_vehicle: active };
+      });
+
+      // ✅ Deduplicar por ID para evitar elementos con claves repetidas en UI
+      const uniqueById = Array.from(
+        new Map(mappedParkingSpots.map((spot) => [String(spot.id), spot])).values()
+      );
+
+      return { data: uniqueById, status: 'success' };
+    } catch (error) {
+      const apiError = this.handleError(error, 'getParkingSpacesWithVehicles');
+      return { data: [], error: apiError.userMessage, status: 'error' };
     }
   }
 

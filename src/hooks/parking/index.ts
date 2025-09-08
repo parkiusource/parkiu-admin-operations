@@ -53,6 +53,7 @@ export {
 
   // ✅ Real Backend Hooks
   useRealParkingSpaces,
+  useRealParkingSpacesWithVehicles,
   useUpdateRealParkingSpaceStatus,
   useCreateRealParkingSpace
 } from './useParkingSpots';

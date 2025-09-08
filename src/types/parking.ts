@@ -18,6 +18,7 @@ export interface ParkingLot {
   closing_time?: string;
   contact_name?: string;
   contact_phone?: string;
+  tax_id?: string; // NIT / tax identification
 
   // 🇨🇴 NUEVAS TARIFAS COLOMBIANAS POR MINUTO
   car_rate_per_minute: number;        // $/minuto para carros
@@ -70,6 +71,7 @@ export interface ParkingLotAPI {
   description?: string;
   opening_time?: string;
   closing_time?: string;
+  tax_id?: string;
 
   // 🇨🇴 TARIFAS COLOMBIANAS POR MINUTO (nuevos campos principales)
   car_rate_per_minute: number;
@@ -120,6 +122,7 @@ export function toParkingLotAPI(parking: ParkingLot): ParkingLotAPI {
     description: parking.description,
     opening_time: parking.opening_time,
     closing_time: parking.closing_time,
+    tax_id: parking.tax_id,
 
     // 🇨🇴 TARIFAS PRINCIPALES
     car_rate_per_minute: parking.car_rate_per_minute,
@@ -158,6 +161,7 @@ export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
     closing_time: api.closing_time,
     contact_name: api.contact_name,
     contact_phone: api.contact_phone,
+    tax_id: api.tax_id,
 
     // 🇨🇴 TARIFAS PRINCIPALES (usar valores del API si existen, sino calcular desde legacy)
     car_rate_per_minute: api.car_rate_per_minute || (api.hourly_rate || 5000) / 60,

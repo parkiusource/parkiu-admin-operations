@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
-import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuBike, LuArrowRight } from 'react-icons/lu';
+import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight } from 'react-icons/lu';
+import { FaMotorcycle } from 'react-icons/fa';
 import { CircleParking } from 'lucide-react';
 import { setupMockParkingData, getMockDataStats } from '@/utils/setupMockData';
 
 // ✅ IMPORTAR NUESTROS NUEVOS HOOKS REORGANIZADOS
 import {
-  useParkingSpots,
   useAvailableParkingSpots,
   useParkingOccupancyStats,
   useUpdateSpotStatus,
   useOccupySpot,
-  useReleaseSpot
+  useReleaseSpot,
+  useRealParkingSpacesWithVehicles
 } from '@/hooks/parking';
 
 // ✅ IMPORTAR TIPOS CENTRALIZADOS
-import { ParkingSpot } from '@/db/schema';
+import { ParkingSpot } from '@/services/parking/types';
 
 // Información mock del parqueadero actual (esto debería venir de una API)
 const currentParking = {
@@ -56,11 +57,11 @@ export default function ParkingViewEnhanced() {
 
   // ✅ USAR NUESTROS HOOKS REORGANIZADOS
   const {
-    parkingSpots,
+    data: parkingSpots = [],
     isLoading: isLoadingSpots,
     error: spotsError,
     refetch: refetchSpots
-  } = useParkingSpots();
+  } = useRealParkingSpacesWithVehicles(String(currentParking.id), { refetchInterval: 1000 * 60 });
 
   const {
     availableSpots
@@ -415,7 +416,7 @@ export default function ParkingViewEnhanced() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {carSpots.map((spot) => (
                         <SpotCard
-                          key={spot.id}
+                          key={`car-${spot.id}-${spot.number}`}
                           spot={spot}
                           onOccupy={handleOccupySpot}
                           onRelease={handleReleaseSpot}
@@ -432,7 +433,7 @@ export default function ParkingViewEnhanced() {
                   <div className="p-5">
                     <div className="mb-4">
                       <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <LuBike className="w-4 h-4 text-slate-500" />
+                        <FaMotorcycle className="w-4 h-4 text-slate-500" />
                         Motocicletas
                         <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
                           {motorcycleSpots.length} espacios
@@ -442,7 +443,7 @@ export default function ParkingViewEnhanced() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {motorcycleSpots.map((spot) => (
                         <SpotCard
-                          key={spot.id}
+                          key={`moto-${spot.id}-${spot.number}`}
                           spot={spot}
                           onOccupy={handleOccupySpot}
                           onRelease={handleReleaseSpot}
@@ -494,13 +495,13 @@ interface SpotCardProps {
 }
 
 function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }: SpotCardProps) {
-  const IconComponent = spot.type === 'car' ? LuCar : LuBike;
+  const IconComponent = spot.type === 'car' ? LuCar : FaMotorcycle;
 
   return (
     <div className={`group relative bg-white rounded-lg border-l-4 ${
       spot.status === 'available' ? 'border-l-emerald-500 border-slate-200' :
-      spot.status === 'occupied' ? 'border-l-amber-500 border-slate-200' :
-      'border-l-rose-500 border-slate-200'
+      spot.status === 'occupied' ? 'border-l-red-500 border-slate-200' :
+      'border-l-amber-500 border-slate-200'
     } p-4 hover:shadow-lg transition-all duration-200 ${isUpdating ? 'opacity-50' : ''}`}>
 
       {/* Header de la tarjeta */}
@@ -518,8 +519,8 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
         </div>
         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
           spot.status === 'available' ? 'bg-emerald-50 text-emerald-700' :
-          spot.status === 'occupied' ? 'bg-amber-50 text-amber-700' :
-          'bg-rose-50 text-rose-700'
+          spot.status === 'occupied' ? 'bg-red-50 text-red-700' :
+          'bg-amber-50 text-amber-700'
         }`}>
           {spot.status === 'available' ? 'Disponible' :
            spot.status === 'occupied' ? 'Ocupado' :
