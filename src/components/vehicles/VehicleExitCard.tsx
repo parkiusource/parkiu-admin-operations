@@ -117,20 +117,32 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     }
   });
 
-  // Actualizar costo actual cada minuto
+  // Actualizar costo actual cada minuto (optimizado)
   useEffect(() => {
     if (searchedVehicle) {
       const updateCost = () => {
-        const costInfo = costCalculator.calculateCost(
-          searchedVehicle.entry_time,
-          searchedVehicle.vehicle_type
-        );
-        setCurrentCost(costInfo.calculated_cost);
-        setPaymentAmount(costInfo.calculated_cost.toString());
+        // Use requestIdleCallback for non-critical updates to avoid blocking main thread
+        const performUpdate = () => {
+          const costInfo = costCalculator.calculateCost(
+            searchedVehicle.entry_time,
+            searchedVehicle.vehicle_type
+          );
+          setCurrentCost(costInfo.calculated_cost);
+          setPaymentAmount(costInfo.calculated_cost.toString());
+        };
+
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(performUpdate);
+        } else {
+          performUpdate();
+        }
       };
 
+      // Initial update
       updateCost();
-      const interval = setInterval(updateCost, 60000); // Cada minuto
+
+      // Update every minute, but use a more efficient approach
+      const interval = setInterval(updateCost, 60000);
 
       return () => clearInterval(interval);
     }

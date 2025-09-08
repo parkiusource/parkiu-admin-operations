@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { AuthProvider } from './features/auth/components/AuthProvider';
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
-import { useConnectionStatus } from './hooks';
+import { connectionService } from './services/connectionService';
 import { ToastProvider } from './context/ToastProvider';
 import { ToastContainer } from './components/Toast';
 import { BackendStatus } from './components/common/BackendStatus';
@@ -60,8 +60,11 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  // Inicializar el hook de estado de conexión
-  useConnectionStatus();
+  // Initialize connection status monitoring
+  useEffect(() => {
+    const cleanup = connectionService.initialize();
+    return cleanup;
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

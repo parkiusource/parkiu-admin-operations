@@ -17,9 +17,10 @@ import {
   Calculator
 } from 'lucide-react';
 import { VehicleType, ParkingLot } from '@/types/parking';
-import { useRegisterVehicleEntry } from '@/api/hooks/useVehicles';
+import { useRegisterVehicleEntry, useSearchVehicle } from '@/api/hooks/useVehicles';
 import { useRealParkingSpaces } from '@/hooks/parking/useParkingSpots';
 import { useToast } from '@/hooks';
+import { validatePlate, normalizePlate } from '@/utils/plate';
 
 interface VehicleEntryCardProps {
   parkingLots?: ParkingLot[];
@@ -81,6 +82,8 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [autoReset, setAutoReset] = useState<boolean>(true);
   const [autoAssign, setAutoAssign] = useState<boolean>(true);
+  const [plateError, setPlateError] = useState<string | null>(null);
+  const [spaceError, setSpaceError] = useState<string | null>(null);
   const { addToast } = useToast();
 
   // Cargar espacios del parqueadero seleccionado desde el backend real
@@ -88,6 +91,13 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
     selectedParkingLot?.id,
     { enabled: !!selectedParkingLot }
   );
+  // Duplicate active vehicle check
+  const { data: existingActiveVehicle } = useSearchVehicle(
+    selectedParkingLot?.id || '',
+    normalizePlate(plate),
+    { enabled: !!selectedParkingLot && !!plate && plate.length >= 3 }
+  );
+
 
   // Filtrar espacios disponibles y por tipo de vehículo
   const availableSpots = parkingSpots.filter(spot => {
@@ -141,13 +151,56 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    setPlateError(null);
+    setSpaceError(null);
+
     if (!selectedParkingLot || !selectedVehicleType || !plate.trim()) {
       onError?.('Por favor complete todos los campos');
       return;
     }
 
+    // Validate plate format by vehicle type
+    const plateCheck = validatePlate(plate, selectedVehicleType);
+    if (!plateCheck.isValid) {
+      const message = plateCheck.reason || 'Placa inválida';
+      setPlateError(message);
+      onError?.(message);
+      return;
+    }
+
+    // Prevent duplicate active entry
+    if (existingActiveVehicle) {
+      const message = `La placa ${plateCheck.normalized} ya está activa en el parqueadero`;
+      setPlateError(message);
+      onError?.(message);
+      return;
+    }
+
+    // Manual assignment: verify selected space is currently available
+    if (!autoAssign) {
+      const space = parkingSpots.find(s => `${s.number}`.toUpperCase() === spaceNumber.trim().toUpperCase());
+      if (!space) {
+        const message = 'El espacio seleccionado no existe';
+        setSpaceError(message);
+        onError?.(message);
+        return;
+      }
+      if (space.status !== 'available') {
+        const message = `El espacio ${space.number} no está disponible (${space.status})`;
+        setSpaceError(message);
+        onError?.(message);
+        return;
+      }
+      if (selectedVehicleType && space.type && space.type !== selectedVehicleType) {
+        const message = `El espacio ${space.number} es para ${space.type}`;
+        setSpaceError(message);
+        onError?.(message);
+        return;
+      }
+    }
+
     const payload = {
-      plate: plate.trim().toUpperCase(),
+      plate: normalizePlate(plate),
       vehicle_type: selectedVehicleType,
       ...(autoAssign ? {} : { space_number: spaceNumber.trim().toUpperCase() })
     };
@@ -299,11 +352,22 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                 type="text"
                 placeholder="Ej: ABC123"
                 value={plate}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlate(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setPlate(e.target.value);
+                  if (selectedVehicleType) {
+                    const check = validatePlate(e.target.value, selectedVehicleType);
+                    setPlateError(check.isValid ? null : (check.reason || 'Placa inválida'));
+                  } else {
+                    setPlateError(null);
+                  }
+                }}
                 className="uppercase text-center text-lg font-bold tracking-wider"
                 maxLength={8}
                 required
               />
+              {plateError && (
+                <p className="text-xs text-red-600">{plateError}</p>
+              )}
               <p className="text-xs text-gray-500">
                 Ingrese la placa sin espacios ni guiones
               </p>
@@ -319,7 +383,10 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                   <select
                     id="space"
                     value={spaceNumber}
-                    onChange={(e) => setSpaceNumber(e.target.value)}
+                    onChange={(e) => {
+                      setSpaceNumber(e.target.value);
+                      setSpaceError(null);
+                    }}
                     className="w-full p-3 border border-gray-300 rounded-lg text-base font-semibold text-center focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   >
@@ -338,7 +405,10 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                       type="text"
                       placeholder="Ej: A-15, B2, 101"
                       value={spaceNumber}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSpaceNumber(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setSpaceNumber(e.target.value);
+                        setSpaceError(null);
+                      }}
                       className="text-center text-lg font-bold"
                       required
                     />
@@ -353,6 +423,9 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                       )}
                     </div>
                   </div>
+                )}
+                {spaceError && (
+                  <p className="text-xs text-red-600">{spaceError}</p>
                 )}
                 <p className="text-xs text-gray-500">
                   {availableSpots && availableSpots.length > 0

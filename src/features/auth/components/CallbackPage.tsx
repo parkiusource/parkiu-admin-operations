@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -6,23 +6,42 @@ import { Loader2 } from 'lucide-react';
 export const CallbackPage = () => {
   const { handleRedirectCallback, error, isAuthenticated } = useAuth0();
   const navigate = useNavigate();
+  const processedRef = useRef(false);
 
   useEffect(() => {
     const processCallback = async () => {
       try {
+        if (processedRef.current) return;
+        processedRef.current = true;
+
         if (isAuthenticated) {
-          // Redirigir a la raíz para que RootRedirect decida destino
           navigate('/', { replace: true });
+          return;
+        }
+
+        // Validar que la URL tiene parámetros de Auth0
+        const params = new URLSearchParams(window.location.search);
+        const hasAuthParams = params.has('code') && params.has('state');
+        if (!hasAuthParams) {
+          navigate('/login', { replace: true });
           return;
         }
 
         const result = await handleRedirectCallback();
         if (result) {
-          // Usar returnTo si existe; si no, dejar que RootRedirect decida
           const returnTo = result.appState?.returnTo || '/';
           navigate(returnTo, { replace: true });
+        } else {
+          navigate('/', { replace: true });
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        // Manejar estado inválido (ocurre si el callback se procesa dos veces o cambia el origen)
+        const message = err instanceof Error ? err.message : String(err ?? '');
+        if (message.toLowerCase().includes('invalid state')) {
+          console.warn('Auth0 invalid state detected. Redirecting to login.');
+          navigate('/login', { replace: true });
+          return;
+        }
         console.error('Error processing Auth0 callback:', err);
         navigate('/login', { replace: true });
       }

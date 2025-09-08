@@ -3,7 +3,7 @@
 // ===============================
 export { useVehicles } from './useVehicles';
 export { useTransactions } from './useTransactions';
-export * from './useConnectionStatus';
+// Note: useConnectionStatus replaced with connectionService
 export * from './useToast';
 
 // ===============================

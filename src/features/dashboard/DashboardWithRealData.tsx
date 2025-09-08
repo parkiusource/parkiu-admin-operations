@@ -85,15 +85,27 @@ export default function DashboardWithRealData() {
   }, [parkingLotIds, selectedParkingLot]);
 
   // Hooks para datos reales (siempre en el mismo orden)
+  // Optimized: Reduce update frequency to avoid performance issues
   const dashboardStats = useDashboardStats(parkingLotIds);
-  const realtimeStats = useRealtimeStats(selectedParkingLot, realtimeEnabled ? 30000 : 0);
+  const realtimeStats = useRealtimeStats(selectedParkingLot, realtimeEnabled ? 60000 : 0); // Increased to 60s
 
-  // Generar alertas cuando cambien las estadísticas
+  // Generar alertas cuando cambien las estadísticas (optimizado)
   useEffect(() => {
     if (realtimeStats.stats) {
-      const newAlerts = generateAlerts(realtimeStats.stats);
-      setAlerts(newAlerts);
-      setLastUpdate(new Date());
+      const updateAlerts = () => {
+        if (realtimeStats.stats) {
+          const newAlerts = generateAlerts(realtimeStats.stats);
+          setAlerts(newAlerts);
+          setLastUpdate(new Date());
+        }
+      };
+
+      // Use requestIdleCallback for non-critical UI updates
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(updateAlerts);
+      } else {
+        updateAlerts();
+      }
     }
   }, [realtimeStats.stats]);
 

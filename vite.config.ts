@@ -12,13 +12,22 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    strictPort: false, // Si 5173 está ocupado, usar el siguiente disponible
+    strictPort: false,
     open: false, // No abrir browser automáticamente
+    // Performance optimizations for development
+    hmr: {
+      overlay: false // Disable error overlay for better performance
+    },
+    fs: {
+      strict: false // Allow serving files from outside root
+    }
   },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')
-    }
+    },
+    // Deduplicate React to avoid multiple copies causing "Invalid hook call"
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime']
   },
   build: {
     target: 'esnext',
@@ -57,6 +66,14 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom']
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime'
+    ],
+    // Force pre-bundling of React to ensure single instance
+    force: true
   }
 })
