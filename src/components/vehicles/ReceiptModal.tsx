@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { Button } from '@/components/common/Button';
 import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
 import type { ParkingLot, VehicleTransaction } from '@/types/parking';

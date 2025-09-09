@@ -652,7 +652,7 @@ export const useCreateRealParkingSpace = (options?: {
       parkingLotId
     }: {
       spaceData: Omit<BackendParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>;
-      parkingLotId: number;
+      parkingLotId: string;
     }) => {
       const token = await getAccessTokenSilently();
       const response = await parkingLotService.createParkingSpace(token, spaceData, parkingLotId);

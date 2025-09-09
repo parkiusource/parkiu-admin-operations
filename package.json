@@ -9,6 +9,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "vitest --run",
+    "test:watch": "vitest",
     "clean": "rm -rf node_modules package-lock.json && npm install",
     "ports": "echo 'Puerto 5173:' && lsof -i :5173 && echo 'Puerto 5174:' && lsof -i :5174"
   },

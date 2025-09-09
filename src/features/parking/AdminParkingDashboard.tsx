@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding, LuTriangle } from 'react-icons/lu';
 import { FaMotorcycle } from 'react-icons/fa';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { Input } from '@/components/common/Input';
 import { CircleParking } from 'lucide-react';
 
@@ -17,6 +17,7 @@ import {
   useRealParkingSpacesWithVehicles,
   useUpdateRealParkingSpaceStatus
 } from '@/hooks/parking';
+import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
 
 // ✅ IMPORTAR TIPOS DEL BACKEND
 import { ParkingSpot } from '@/services/parking/types';
@@ -44,6 +45,12 @@ export default function AdminParkingDashboard() {
     error: lotsError
   } = useParkingLots();
 
+  // ✅ INFO DE PERFIL PARA GATING DE UI
+  const { profile } = useAdminProfileStatus();
+  const role = profile?.role || '';
+  const isAdminRole = role === 'global_admin' || role === 'local_admin';
+  const isTempAdmin = role === 'temp_admin';
+
   // ✅ OBTENER ESTADÍSTICAS REALES DEL OVERVIEW
   const overviewStats = useRealParkingOverview(parkingLots);
 
@@ -63,6 +70,20 @@ export default function AdminParkingDashboard() {
   const currentParking = parkingId
     ? parkingLots?.find(lot => lot.id === parkingId)
     : null; // No necesitamos fallback para vista de lista
+
+  // ✅ REDIRIGIR SI EL :id NO PERTENECE A LOS LOTS DEL USUARIO
+  useEffect(() => {
+    if (!parkingId) return;
+    if (isLoadingLots) return;
+    const belongs = parkingLots.some(lot => lot.id === parkingId);
+    if (!belongs) {
+      if (parkingLots.length > 0) {
+        navigate(`/parking/${parkingLots[0].id}`, { replace: true });
+      } else {
+        navigate('/parking', { replace: true });
+      }
+    }
+  }, [parkingId, parkingLots, isLoadingLots, navigate]);
 
   // ✅ OBTENER ESPACIOS REALES DEL BACKEND - SOLO para vista individual
   const {
@@ -91,8 +112,7 @@ export default function AdminParkingDashboard() {
 
   // ✅ HOOKS DE MUTACIÓN REALES DEL BACKEND
   const updateSpotStatus = useUpdateRealParkingSpaceStatus({
-    onSuccess: (updatedSpace) => {
-      console.log(`✅ Espacio ${updatedSpace.number} actualizado exitosamente`);
+    onSuccess: () => {
       // Los datos se actualizan automáticamente via invalidateQueries
     },
     onError: (error) => {
@@ -117,7 +137,6 @@ export default function AdminParkingDashboard() {
   };
 
   const refetchSpots = () => {
-    console.log('🔄 Refrescando espacios...');
     refetchSpaces();
   };
 
@@ -203,12 +222,20 @@ export default function AdminParkingDashboard() {
               <p className="text-parkiu-600 mb-4">
                 Debes registrar al menos un parqueadero para comenzar
               </p>
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-parkiu-600 text-white px-4 py-2 rounded-lg hover:bg-parkiu-700"
-              >
-                Crear parqueadero
-              </button>
+              {isAdminRole && (
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-parkiu-600 text-white px-4 py-2 rounded-lg hover:bg-parkiu-700"
+                >
+                  Crear parqueadero
+                </button>
+              )}
+              {/* Modal debe existir en este branch para que el botón funcione en estado vacío */}
+              <CreateParkingLotModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => {}}
+              />
             </div>
           </div>
         </div>
@@ -219,6 +246,13 @@ export default function AdminParkingDashboard() {
     return (
       <>
         <div className="min-h-screen bg-slate-50">
+          {isTempAdmin && (
+            <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+                <span className="font-semibold">Cuenta en verificación.</span> Tu parqueadero estará inactivo hasta la aprobación.
+              </div>
+            </div>
+          )}
           {/* Header elegante y limpio */}
           <div className="bg-white border-b border-slate-200">
             <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -319,13 +353,15 @@ export default function AdminParkingDashboard() {
                         className="pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:border-parkiu-500 w-full sm:w-72"
                       />
                     </div>
-                    <button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors shadow-sm whitespace-nowrap"
-                    >
-                      <LuPlus className="w-5 h-5" />
-                      Nuevo Parqueadero
-                    </button>
+                    {isAdminRole && (
+                      <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors shadow-sm whitespace-nowrap"
+                      >
+                        <LuPlus className="w-5 h-5" />
+                        Nuevo Parqueadero
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -381,13 +417,15 @@ export default function AdminParkingDashboard() {
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
                   Aún no tienes parqueaderos registrados. Crea uno para comenzar a gestionar tus espacios de estacionamiento.
                 </p>
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto font-medium transition-colors shadow-sm"
-                >
-                  <LuPlus className="w-5 h-5" />
-                  Crear mi primer parqueadero
-                </button>
+                {isAdminRole && !isTempAdmin && (
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto font-medium transition-colors shadow-sm"
+                  >
+                    <LuPlus className="w-5 h-5" />
+                    Crear mi primer parqueadero
+                  </button>
+                )}
               </div>
             ) : (
               /* Cards de parqueaderos con datos reales */
@@ -404,8 +442,7 @@ export default function AdminParkingDashboard() {
         <CreateParkingLotModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={(newParkingLot) => {
-            console.log('✅ Nuevo parqueadero creado:', newParkingLot);
+          onSuccess={() => {
             // El hook ya invalida las queries, así que la lista se actualizará automáticamente
           }}
         />
@@ -522,8 +559,8 @@ export default function AdminParkingDashboard() {
               </button>
               <button
                 onClick={() => setIsCreateSpaceModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors"
-                disabled={!currentParking?.id}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors disabled:opacity-50"
+                disabled={!currentParking?.id || !isAdminRole}
               >
                 <LuPlus className="h-4 w-4 mr-2" />
                 Nuevo Espacio
@@ -533,6 +570,13 @@ export default function AdminParkingDashboard() {
         </div>
       </div>
 
+      {isTempAdmin && (
+        <div className="max-w-[1600px] mx-auto px-4 py-3 sm:px-6 lg:px-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+            <span className="font-semibold">Parqueadero inactivo.</span> Pendiente de verificación del administrador.
+          </div>
+        </div>
+      )}
       <div className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Panel principal */}
@@ -703,7 +747,7 @@ export default function AdminParkingDashboard() {
             {/* ✅ MAPA VISUAL DEL PARQUEADERO */}
             <ParkingLotMap
               spots={filteredSpots}
-              onSpotClick={(spot) => console.log('Clicked spot:', spot)}
+              onSpotClick={() => {}}
               selectedSpotId={null}
               viewMode="realistic"
             />
@@ -895,7 +939,7 @@ export default function AdminParkingDashboard() {
             // El hook ya invalida las queries, así que la lista se actualizará automáticamente
             refetchSpaces();
           }}
-          parkingLotId={parseInt(currentParking.id)}
+          parkingLotId={currentParking.id}
         />
       )}
     </>

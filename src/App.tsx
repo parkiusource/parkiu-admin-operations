@@ -11,6 +11,7 @@ import { ToastContainer } from './components/Toast';
 import { BackendStatus } from './components/common/BackendStatus';
 import { RootRedirect } from './components/common/RootRedirect';
 import './index.css';
+import RoleGuard from './features/auth/components/RoleGuard';
 
 // Lazy load components
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
@@ -90,18 +91,23 @@ function App() {
                 <Route element={<MainLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
 
-                  {/* ✅ NUEVA ESTRUCTURA DE RUTAS PROFESIONAL */}
-                  <Route path="/parking" element={<AdminParkingDashboard />} />
-                  <Route path="/parking/:id" element={<AdminParkingDashboard />} />
-                  <Route path="/parking/:id/history" element={<TransactionsHistory />} />
+                  {/* ✅ Parking (visualización) permite también temp_admin */}
+                  <Route element={<RoleGuard allowed={["global_admin", "local_admin", "operator", "temp_admin"]} /> }>
+                    <Route path="/parking" element={<AdminParkingDashboard />} />
+                    <Route path="/parking/:id" element={<AdminParkingDashboard />} />
+                    <Route path="/parking/:id/history" element={<TransactionsHistory />} />
+                  </Route>
+
+                  {/* ✅ Vehicles (operación) sin temp_admin */}
+                  <Route element={<RoleGuard allowed={["global_admin", "local_admin", "operator"]} /> }>
+                    <Route path="/vehicles/entry" element={<VehicleEntry />} />
+                    <Route path="/vehicles/exit" element={<VehicleExit />} />
+                  </Route>
 
                   {/* Rutas de desarrollo y testing */}
                   <Route path="/parking-legacy" element={<ParkingView />} />
                   <Route path="/parking-enhanced" element={<ParkingViewEnhanced />} />
                   <Route path="/parking-test" element={<ParkingTestView />} />
-
-                  <Route path="/vehicles/entry" element={<VehicleEntry />} />
-                  <Route path="/vehicles/exit" element={<VehicleExit />} />
                 </Route>
               </Route>
             </Routes>

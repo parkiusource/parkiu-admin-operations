@@ -58,7 +58,7 @@ export interface ParkingLot {
 
 // ✅ Estructura EXACTA que devuelve tu backend real
 export interface ParkingLotAPI {
-  id?: number; // Puede ser undefined al crear
+  id?: string | number; // Backend ahora puede devolver string
   name?: string;
   address?: string;
   latitude?: number;
@@ -155,7 +155,7 @@ export interface ParkingSpacesResponse {
 // ✅ Payload para CREAR espacios (lo que enviamos al POST)
 export interface CreateParkingSpacePayload {
   space_number: string;
-  parking_lot_id: number;
+  parking_lot_id: string;
   vehicle_type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
   is_reserved: boolean;
   reserved_for?: string;
@@ -497,7 +497,7 @@ export function toParkingSpaceAPI(spot: ParkingSpot): Partial<ParkingSpaceAPI> {
 // ✅ Adaptador: Frontend ParkingSpot -> Backend CreateParkingSpacePayload para crear
 export function toParkingSpaceCreatePayload(
   spot: Omit<ParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>,
-  parkingLotId: number
+  parkingLotId: string
 ): CreateParkingSpacePayload {
   // Mapear tipos del frontend al backend (solo tipos soportados por el backend)
   const validBackendTypes = ['car', 'motorcycle', 'truck', 'bicycle'] as const;

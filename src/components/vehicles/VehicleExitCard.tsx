@@ -89,7 +89,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const { profile } = useAdminProfileStatus();
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
-    return role === 'local_admin' || role === 'operator';
+    return role === 'local_admin' || role === 'global_admin' || role === 'operator';
   }, [profile?.role]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots

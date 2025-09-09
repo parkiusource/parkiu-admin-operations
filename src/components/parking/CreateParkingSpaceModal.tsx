@@ -8,7 +8,7 @@ interface CreateParkingSpaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (newSpace: ParkingSpot) => void;
-  parkingLotId: number;
+  parkingLotId: string;
 }
 
 interface SpaceFormData {

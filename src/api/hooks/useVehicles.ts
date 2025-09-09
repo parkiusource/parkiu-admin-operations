@@ -31,7 +31,6 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
     queryFn: async () => {
       try {
         if (!isAuthenticated) {
-          console.log('🔓 Usuario no autenticado en useActiveVehicles');
           return []; // Retornar array vacío en lugar de fallar
         }
 
@@ -42,7 +41,6 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
         const response = await VehicleService.getActiveVehicles(token, parkingLotId);
 
         if (response.error) {
-          console.warn('⚠️ Error del servicio de vehículos:', response.error);
           return []; // Retornar array vacío en lugar de fallar
         }
 
@@ -152,39 +150,35 @@ export const useRegisterVehicleEntry = (options?: {
 
   return useMutation({
     mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleEntry }) => {
-      console.log('🔍 useRegisterVehicleEntry - Iniciando mutación:', {
-        parkingLotId,
-        vehicleData,
-        isAuthenticated
-      });
+      // Iniciando mutación
 
       if (!isAuthenticated) {
         console.error('❌ useRegisterVehicleEntry - Usuario NO autenticado');
         throw new Error('Usuario no autenticado');
       }
 
-      console.log('✅ useRegisterVehicleEntry - Usuario autenticado, obteniendo token...');
+      // Usuario autenticado, obteniendo token
 
       try {
         const token = await getAccessTokenSilently({
           timeoutInSeconds: 10
         });
 
-        console.log('✅ useRegisterVehicleEntry - Token obtenido, llamando servicio...');
+        // Token obtenido, llamando servicio
 
         const response = await VehicleService.registerEntry(token, parkingLotId, vehicleData);
 
-        console.log('📦 useRegisterVehicleEntry - Respuesta del servicio:', response);
+        // Respuesta del servicio
 
         if (response.error) {
           console.error('❌ useRegisterVehicleEntry - Error del servicio:', response.error);
           throw new Error(response.error);
         }
 
-        console.log('✅ useRegisterVehicleEntry - Registro exitoso');
+        // Registro exitoso
         return response.data!;
       } catch (error) {
-        console.error('🚨 useRegisterVehicleEntry - Error completo:', error);
+        // Error completo
         throw error as Error;
       }
     },
@@ -230,11 +224,11 @@ export const useRegisterVehicleEntry = (options?: {
         delete globalDebounce[debounceKey];
       }, 200);
 
-      console.log(`⚡ Entrada de vehículo ${variables.vehicleData.plate} OPTIMIZADA en espacio ${data.spot_number}`);
+      // Entrada de vehículo optimizada
       options?.onSuccess?.(data as VehicleEntryResponse, variables);
     },
     onError: (error) => {
-      console.error('🚨 useRegisterVehicleEntry - onError ejecutado:', error);
+      // onError ejecutado
       options?.onError?.(error);
     }
   });
@@ -305,7 +299,7 @@ export const useRegisterVehicleExit = (options?: {
         delete globalDebounce[debounceKey];
       }, 200);
 
-      console.log(`⚡ Salida de vehículo ${variables.vehicleData.plate} OPTIMIZADA - Costo: $${data.total_cost.toLocaleString()}`);
+      // Salida de vehículo optimizada
       options?.onSuccess?.(data, variables);
     },
     onError: (error) => {

@@ -81,7 +81,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   const { profile } = useAdminProfileStatus();
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
-    return role === 'local_admin' || role === 'operator';
+    return role === 'local_admin' || role === 'global_admin' || role === 'operator';
   }, [profile?.role]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
@@ -123,7 +123,6 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
 
   const registerEntry = useRegisterVehicleEntry({
     onSuccess: (response, { vehicleData }) => {
-      console.log('🎉 VehicleEntryCard - Registro exitoso:', { response, vehicleData });
       const spot = response.spot_number || vehicleData.space_number || vehicleData.parking_space_number || vehicleData.spot_number || 'espacio asignado';
       onSuccess?.(vehicleData.plate, spot);
       addToast(`Entrada registrada: ${vehicleData.plate} en ${spot}`, 'success');
@@ -138,12 +137,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
     }
   });
 
-  // Debug: Estado del hook en tiempo real
-  console.log('🔧 VehicleEntryCard - Hook estado:', {
-    isLoading: registerEntry.isPending,
-    isError: registerEntry.isError,
-    error: registerEntry.error
-  });
+  // Debug removido
 
   const calculateEstimatedCost = (vehicleType: VehicleType, hours: number = 1) => {
     if (!selectedParkingLot) return 0;

@@ -37,14 +37,10 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
           'query-vendor': ['@tanstack/react-query'],
-          'utils-vendor': ['date-fns', 'axios'],
-          // ✅ OPTIMIZACIÓN: Separar dependencias pesadas
+          'utils-vendor': ['axios'],
           'auth-vendor': ['@auth0/auth0-react'],
-          'animation-vendor': ['framer-motion', 'lottie-react'],
-          'icons-vendor': ['lucide-react', 'react-icons', '@heroicons/react'],
-          'forms-vendor': ['react-hook-form'],
+          'icons-vendor': ['lucide-react'],
           'db-vendor': ['dexie']
         }
       },
@@ -69,11 +65,8 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'react-router-dom',
-      'react/jsx-runtime',
-      'react/jsx-dev-runtime'
+      'react-router-dom'
     ],
-    // Force pre-bundling of React to ensure single instance
     force: true
   }
 })

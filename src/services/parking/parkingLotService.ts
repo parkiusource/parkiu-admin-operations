@@ -535,7 +535,7 @@ export class ParkingLotService {
   async createParkingSpace(
     token: string,
     spaceData: Omit<ParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>,
-    parkingLotId: number
+    parkingLotId: string
   ): Promise<ParkingApiResponse<ParkingSpot>> {
     try {
       const createPayload = toParkingSpaceCreatePayload(spaceData, parkingLotId);

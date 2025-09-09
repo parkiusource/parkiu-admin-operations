@@ -43,11 +43,10 @@ export default function ParkingViewEnhanced() {
   useEffect(() => {
     async function initializeData() {
       try {
-        console.log('🔧 Inicializando datos mock para testing...');
         await setupMockParkingData();
         const stats = await getMockDataStats();
         setMockDataStats(stats);
-        console.log('✅ Datos mock listos para testing');
+        // Datos mock listos
       } catch (error) {
         console.error('❌ Error inicializando datos mock:', error);
       }
@@ -75,21 +74,21 @@ export default function ParkingViewEnhanced() {
   // ✅ HOOKS DE MUTACIÓN PARA ACCIONES
   const updateSpotStatus = useUpdateSpotStatus({
     onSuccess: () => {
-      console.log('✅ Estado del espacio actualizado');
+      // Estado del espacio actualizado
       refetchSpots();
     }
   });
 
   const occupySpot = useOccupySpot({
     onSuccess: () => {
-      console.log('✅ Espacio ocupado exitosamente');
+      // Espacio ocupado exitosamente
       refetchSpots();
     }
   });
 
   const releaseSpot = useReleaseSpot({
     onSuccess: () => {
-      console.log('✅ Espacio liberado exitosamente');
+      // Espacio liberado exitosamente
       refetchSpots();
     }
   });
@@ -375,7 +374,7 @@ export default function ParkingViewEnhanced() {
                   🔄 Refetch Spots
                 </button>
                 <button
-                  onClick={() => console.log('Current data:', { parkingSpots, availableSpots, occupancyStats })}
+                  onClick={() => {}}
                   className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
                 >
                   🔍 Log Data

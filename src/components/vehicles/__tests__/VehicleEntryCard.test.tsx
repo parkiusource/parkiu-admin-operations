@@ -3,6 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { VehicleEntryCard } from '../../vehicles/VehicleEntryCard';
 import type { ParkingLot } from '@/types/parking';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+vi.mock('@/hooks/useAdminProfileCentralized', () => ({
+  useAdminProfileStatus: () => ({ profile: { role: 'local_admin' }, isAuthenticated: true, status: 'active', isLoading: false }),
+  useAdminProfileCentralized: () => ({ data: { profile: { role: 'local_admin', status: 'active' } }, isLoading: false })
+}));
 
 vi.mock('@/hooks', () => ({ useToast: () => ({ addToast: vi.fn() }) }));
 let mockSpaces: Array<{ id: number; number: string; status: 'available' | 'occupied'; type?: 'car' | 'motorcycle' | 'bicycle' | 'truck' }> = [
@@ -24,6 +30,11 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useRegisterVehicleEntry: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
   useSearchVehicle: () => ({ data: mockSearchData })
 }));
+
+function renderWithClient(ui: React.ReactElement) {
+  const qc = new QueryClient();
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 describe('VehicleEntryCard', () => {
   const parkingLot: ParkingLot = {
@@ -49,7 +60,7 @@ describe('VehicleEntryCard', () => {
   });
 
   it('rejects invalid car plate format', () => {
-    render(<VehicleEntryCard parkingLot={parkingLot} />);
+    renderWithClient(<VehicleEntryCard parkingLot={parkingLot} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: /Carro/i })[0]);
 
@@ -66,7 +77,7 @@ describe('VehicleEntryCard', () => {
       { id: 1, number: 'A1', status: 'occupied', type: 'car' },
       { id: 2, number: 'A2', status: 'occupied', type: 'car' },
     ];
-    render(<VehicleEntryCard parkingLot={parkingLot} />);
+    renderWithClient(<VehicleEntryCard parkingLot={parkingLot} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: /Carro/i })[0]);
     fireEvent.click(screen.getAllByLabelText(/Manual/)[0]);
@@ -84,7 +95,7 @@ describe('VehicleEntryCard', () => {
 
   it('blocks duplicate active entry for same plate', () => {
     mockSearchData = { plate: 'ABC123', vehicle_type: 'car', spot_number: 'A1', entry_time: new Date().toISOString(), duration_minutes: 0, current_cost: 0 };
-    render(<VehicleEntryCard parkingLot={parkingLot} />);
+    renderWithClient(<VehicleEntryCard parkingLot={parkingLot} />);
 
     fireEvent.click(screen.getAllByRole('button', { name: /Carro/i })[0]);
     const plateInput = screen.getAllByPlaceholderText('Ej: ABC123')[0];
