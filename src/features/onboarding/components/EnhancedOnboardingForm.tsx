@@ -163,7 +163,7 @@ export default function EnhancedOnboardingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-parkiu-50 via-sky-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-parkiu-50 via-sky-50 to-blue-50 flex items-center justify-center p-3">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-parkiu-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
@@ -171,13 +171,13 @@ export default function EnhancedOnboardingForm() {
       </div>
 
       <motion.div
-        className="relative w-full max-w-2xl bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden"
+        className="relative w-full max-w-lg lg:max-w-xl bg-white/90 backdrop-blur-xl rounded-xl lg:rounded-2xl shadow-xl border border-white/20 overflow-hidden"
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         {/* Header with gradient background */}
-        <div className="relative bg-gradient-to-r from-parkiu-600 via-parkiu-500 to-blue-600 px-8 py-12 text-center">
+        <div className="relative bg-gradient-to-r from-parkiu-600 via-parkiu-500 to-blue-600 px-4 lg:px-6 py-6 lg:py-8 text-center">
           <div className="absolute inset-0 bg-black/10"></div>
           <motion.div
             className="relative z-10"
@@ -185,40 +185,40 @@ export default function EnhancedOnboardingForm() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <img src="/logo-parkiu.svg" alt="ParkiÜ" className="w-12 h-12" />
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <img src="/logo-parkiu.svg" alt="ParkiÜ" className="w-10 h-10" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">¡Bienvenido a ParkiÜ!</h1>
-            <p className="text-parkiu-100 text-lg max-w-md mx-auto leading-relaxed">
-              Configura tu cuenta en pocos pasos y comienza a gestionar tu parqueadero de manera inteligente
+            <h1 className="text-2xl lg:text-3xl font-bold text-white mb-2">¡Bienvenido a ParkiÜ!</h1>
+            <p className="text-parkiu-100 text-base lg:text-lg max-w-sm mx-auto leading-relaxed">
+              Configura tu cuenta en pocos pasos y comienza a gestionar tu parqueadero
             </p>
           </motion.div>
         </div>
 
         {/* Progress section */}
-        <div className="px-8 py-8 bg-gray-50/50">
+        <div className="px-4 lg:px-6 py-4 lg:py-6 bg-gray-50/50">
           <ProgressBar />
         </div>
 
         {/* Content section */}
-        <div className="px-8 pb-8">
+        <div className="px-4 lg:px-6 pb-4 lg:pb-6">
           <motion.div
             key={currentStep}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.4 }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            className="bg-white rounded-lg lg:rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
             {StepComponent}
           </motion.div>
 
           {/* Navigation buttons */}
-          <div className="flex justify-between items-center mt-8 gap-4">
+          <div className="flex justify-between items-center mt-4 lg:mt-6 gap-3">
             <motion.button
               onClick={handleBack}
               disabled={currentStep === 1 || loading}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+              className={`px-4 lg:px-5 py-2 lg:py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 currentStep === 1 || loading
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
@@ -233,7 +233,7 @@ export default function EnhancedOnboardingForm() {
               <motion.button
                 onClick={handleNext}
                 disabled={loading}
-                className={`px-8 py-3 rounded-xl font-semibold text-white transition-all duration-200 ${
+                className={`px-6 lg:px-7 py-2 lg:py-2.5 rounded-lg font-semibold text-white transition-all duration-200 ${
                   loading
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-parkiu-600 to-parkiu-700 hover:from-parkiu-700 hover:to-parkiu-800 shadow-lg hover:shadow-xl'

@@ -15,7 +15,7 @@ export default function MainLayout() {
       <MobileSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col md:pl-56">
+      <div className="flex-1 flex flex-col lg:ml-64">
         {/* Mobile header */}
         <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">

@@ -22,6 +22,7 @@ const ParkingView = lazy(() => import('./features/parking/ParkingView'));
 const ParkingViewEnhanced = lazy(() => import('./features/parking/ParkingViewEnhanced'));
 const ParkingTestView = lazy(() => import('./features/parking/ParkingTestView'));
 const AdminParkingDashboard = lazy(() => import('./features/parking/AdminParkingDashboard'));
+const Settings = lazy(() => import('./features/settings/Settings'));
 const LoginForm = lazy(() => import('./features/auth/components/LoginForm').then(module => ({ default: module.LoginForm })));
 const CallbackPage = lazy(() => import('./features/auth/components/CallbackPage').then(module => ({ default: module.CallbackPage })));
 const EnhancedOnboardingForm = lazy(() => import('./features/onboarding/components/EnhancedOnboardingForm'));
@@ -108,6 +109,9 @@ function App() {
                   <Route path="/parking-legacy" element={<ParkingView />} />
                   <Route path="/parking-enhanced" element={<ParkingViewEnhanced />} />
                   <Route path="/parking-test" element={<ParkingTestView />} />
+
+                  {/* Configuración básica */}
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
               </Route>
             </Routes>

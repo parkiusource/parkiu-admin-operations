@@ -8,6 +8,7 @@ export const useAuth = () => {
     user,
     loginWithRedirect,
     logout: auth0Logout,
+    getAccessTokenSilently,
   } = useAuth0();
 
   const logout = useCallback(() => {
@@ -24,5 +25,6 @@ export const useAuth = () => {
     user,
     loginWithRedirect,
     logout,
+    getAccessTokenSilently,
   };
 };

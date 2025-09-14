@@ -22,7 +22,7 @@ export default function VehicleExit() {
 
   if (!parkingLots || parkingLots.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="text-center">
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             No hay parqueaderos disponibles
@@ -36,7 +36,7 @@ export default function VehicleExit() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
           🚛 Registro de Salida de Vehículos

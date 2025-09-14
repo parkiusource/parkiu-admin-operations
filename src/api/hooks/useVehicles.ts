@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useState, useEffect } from 'react';
 import { VehicleService } from '../services/vehicleService';
 import {
   VehicleEntry,
@@ -11,6 +12,29 @@ import {
   VehicleType,
   ParkingLot
 } from '@/types/parking';
+
+// ===============================
+// UTILITY HOOKS
+// ===============================
+
+/**
+ * 🔍 Hook personalizado para debounce
+ */
+const useDebounce = <T>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 // ===============================
 // QUERY HOOKS
@@ -102,7 +126,7 @@ export const useTransactionHistory = (
 };
 
 /**
- * 🔍 Hook para buscar un vehículo específico por placa
+ * 🔍 Hook para buscar un vehículo específico por placa (con debounce)
  */
 export const useSearchVehicle = (
   parkingLotId: string,
@@ -110,26 +134,44 @@ export const useSearchVehicle = (
   options?: {
     enabled?: boolean;
     staleTime?: number;
+    debounceMs?: number;
   }
 ) => {
   const { getAccessTokenSilently } = useAuth0();
   const normalizedPlate = (plate || '').trim().toUpperCase();
 
+  // 🚀 Aplicar debounce a la placa para evitar demasiadas peticiones
+  const debouncedPlate = useDebounce(normalizedPlate, options?.debounceMs ?? 500);
+
   return useQuery({
-    queryKey: ['vehicles', 'search', parkingLotId, normalizedPlate],
+    queryKey: ['vehicles', 'search', parkingLotId, debouncedPlate],
     queryFn: async () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Searching vehicle with plate:', debouncedPlate);
+      }
+
       const token = await getAccessTokenSilently();
-      const response = await VehicleService.searchVehicle(token, parkingLotId, normalizedPlate);
+      const response = await VehicleService.searchVehicle(token, parkingLotId, debouncedPlate);
 
       if (response.error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('❌ Vehicle search error:', response.error);
+        }
         throw new Error(response.error);
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Vehicle found:', response.data);
       }
 
       return response.data;
     },
-    enabled: (options?.enabled ?? true) && !!parkingLotId && !!normalizedPlate && normalizedPlate.length >= 3,
+    enabled: (options?.enabled ?? true) && !!parkingLotId && !!debouncedPlate && debouncedPlate.length >= 3,
     staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto para búsquedas
-    retry: false
+    retry: false,
+    // Evitar refetch automático para búsquedas
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 };
 

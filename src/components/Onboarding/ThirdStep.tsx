@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShieldCheck, Clock, CheckCircle, Sparkles, Zap, ArrowRight } from 'lucide-react';
+import { Shield, Clock, CheckCircle, Info, ArrowRight } from 'lucide-react';
 import type { AdminProfile } from '@/types/common';
 
 interface ThirdStepProps {
@@ -17,59 +17,10 @@ const ThirdStep = ({ onGoToDashboard, status, profile }: ThirdStepProps = {}) =>
         <p className="text-gray-600">Tu cuenta está siendo verificada por nuestro equipo</p>
       </div>
 
-      {/* Professional Verification Visual */}
-      <div className="flex justify-center mb-6">
-        <div className="relative">
-          {/* Main Circle */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="w-40 h-40 bg-gradient-to-br from-parkiu-500 via-parkiu-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl relative overflow-hidden"
-          >
-            {/* Animated Background Pattern */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 opacity-20"
-            >
-              <div className="w-full h-full bg-gradient-to-r from-transparent via-white to-transparent transform rotate-45"></div>
-            </motion.div>
-
-            {/* Shield Icon */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
-              className="relative z-10"
-            >
-              <ShieldCheck className="w-16 h-16 text-white drop-shadow-lg" />
-            </motion.div>
-
-            {/* Subtle Floating Elements */}
-            <motion.div
-              animate={{ y: [-8, 8, -8] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-6 right-6"
-            >
-              <Sparkles className="w-4 h-4 text-white/40" />
-            </motion.div>
-
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="absolute top-8 left-8"
-            >
-              <Zap className="w-3 h-3 text-white/30" />
-            </motion.div>
-          </motion.div>
-
-          {/* Subtle Pulsing Ring */}
-          <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0, 0.3] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 border-2 border-parkiu-300 rounded-full"
-          ></motion.div>
+      {/* Neutral verification visual */}
+      <div className="flex justify-center mb-4">
+        <div className="w-24 h-24 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center">
+          <Shield className="w-10 h-10 text-blue-600" />
         </div>
       </div>
 
@@ -130,7 +81,7 @@ const ThirdStep = ({ onGoToDashboard, status, profile }: ThirdStepProps = {}) =>
       >
         <div className="flex items-start gap-4">
           <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-            <span className="text-white text-sm font-bold">i</span>
+            <Info className="w-4 h-4 text-white" />
           </div>
           <div>
             <h3 className="font-semibold text-blue-900 mb-2">¿Qué sigue?</h3>

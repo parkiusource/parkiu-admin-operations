@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { Camera, User, CreditCard, Phone } from 'lucide-react';
 
 import { itemVariants } from './utils';
@@ -61,6 +61,7 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
   const { mutateAsync: completeProfile } = useCompleteProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const hasSubmittedRef = useRef(false);
 
   const {
     register,
@@ -97,6 +98,10 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
   }, [setValue]);
 
   const onSubmit = async (data: FormData) => {
+    // Guard against duplicate submissions (e.g., double clicks or StrictMode re-invocation)
+    if (hasSubmittedRef.current || isSubmitting) {
+      return data;
+    }
     setIsSubmitting(true);
     setLoading(true);
     try {
@@ -104,6 +109,7 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
       if (status && status !== 'pending_profile' && status !== 'initial') {
         console.log('Profile already completed, skipping API call. Status:', status);
         formStorage.clear();
+        hasSubmittedRef.current = true;
         return data;
       }
 
@@ -117,6 +123,7 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
       };
 
       await completeProfile(payload);
+      hasSubmittedRef.current = true;
       formStorage.clear(); // Clear storage after successful submission
       return data;
     } catch (error) {

@@ -68,8 +68,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
       if (win) {
         win.document.write(html);
         win.document.close();
-        win.focus();
-        win.print();
+
+        // Hacer la impresión asíncrona para no bloquear la aplicación
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          // Opcional: cerrar automáticamente después de imprimir
+          // win.close();
+        }, 100);
       }
     } catch (e) {
       console.error('Print error:', e);

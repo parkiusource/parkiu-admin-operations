@@ -23,11 +23,15 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
   const [activeOperation, setActiveOperation] = useState<OperationType>(null);
   const [searchPlate, setSearchPlate] = useState('');
 
-  // Hook para búsqueda de vehículos
+  // Hook para búsqueda de vehículos con debounce
   const { data: searchedVehicle, isLoading: isSearching } = useSearchVehicle(
     selectedParkingLot?.id || '',
     searchPlate,
-    { enabled: !!selectedParkingLot && searchPlate.length >= 3 && activeOperation === 'search' }
+    {
+      enabled: !!selectedParkingLot && searchPlate.length >= 3 && activeOperation === 'search',
+      debounceMs: 600, // Debounce más rápido para búsqueda interactiva
+      staleTime: 1000 * 60 * 1 // Cache por 1 minuto
+    }
   );
   const plateInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,13 +89,36 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
   }, [operations]);
 
   const renderModalContent = () => {
+    // Debug logging (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 QuickVehicleOperations - selectedParkingLot:', selectedParkingLot);
+      console.log('🔍 QuickVehicleOperations - activeOperation:', activeOperation);
+    }
+
+    // Verificar que tenemos datos del parqueadero
+    if (!selectedParkingLot) {
+      return (
+        <div className="text-center py-8">
+          <div className="text-red-600 mb-2">⚠️ Error</div>
+          <p className="text-gray-600">No se pudo cargar la información del parqueadero</p>
+        </div>
+      );
+    }
+
     switch (activeOperation) {
       case 'entry':
         return (
           <VehicleEntryCard
-            parkingLot={selectedParkingLot || undefined}
-            onSuccess={() => handleSuccess()}
-            onError={() => handleError()}
+            parkingLot={selectedParkingLot}
+            onSuccess={(plate: string, spot: string) => {
+              console.log('✅ VehicleEntry Success:', { plate, spot });
+              handleSuccess();
+            }}
+            onError={(error: string) => {
+              console.error('❌ VehicleEntry Error:', error);
+              handleError();
+            }}
+            onClose={closeModal} // Cerrar modal cuando se hace clic en "Cerrar"
             autoFocus={true}
             compact={true}
           />
@@ -100,9 +127,16 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
       case 'exit':
         return (
           <VehicleExitCard
-            parkingLot={selectedParkingLot || undefined}
-            onSuccess={() => handleSuccess()}
-            onError={() => handleError()}
+            parkingLot={selectedParkingLot}
+            onSuccess={(plate: string, cost: number) => {
+              console.log('✅ VehicleExit Success:', { plate, cost });
+              handleSuccess();
+            }}
+            onError={(error: string) => {
+              console.error('❌ VehicleExit Error:', error);
+              handleError();
+            }}
+            onClose={closeModal} // Cerrar modal cuando se hace clic en "Cerrar"
             autoFocus={true}
             compact={true}
           />
@@ -140,7 +174,11 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
                   />
                   {searchPlate && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      {isSearching ? (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      ) : (
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -237,7 +275,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
             <button
               onClick={() => setActiveOperation('entry')}
               className="flex items-center gap-2 px-3 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors group"
-              title="Entrada (F1 o Ctrl+E)"
+              title="Entrada (F1 o Ctrl/Cmd+E)"
             >
               <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Entrada</span>
@@ -247,7 +285,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
             <button
               onClick={() => setActiveOperation('exit')}
               className="flex items-center gap-2 px-3 py-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors group"
-              title="Salida (F2 o Ctrl+S)"
+              title="Salida (F2 o Ctrl/Cmd+D)"
             >
               <ArrowLeftStartOnRectangleIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Salida</span>
@@ -257,7 +295,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
             <button
               onClick={() => setActiveOperation('search')}
               className="flex items-center gap-2 px-3 py-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors group"
-              title="Buscar (F3 o Ctrl+F)"
+              title="Buscar (F3 o Ctrl/Cmd+B)"
             >
               <MagnifyingGlassIcon className="w-5 h-5" />
               <span className="text-sm font-medium">Buscar</span>

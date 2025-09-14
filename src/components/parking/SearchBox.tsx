@@ -1,5 +1,4 @@
 import { useState, useCallback, forwardRef } from 'react';
-import { useDebounce } from '@/api/base/useDebounce';
 import { useAutocompletePlaces, AutocompleteSuggestion } from '@/api/hooks/useAutocompletePlaces';
 import { Input } from '@/components/common/Input';
 import { LuX } from 'react-icons/lu';
@@ -17,8 +16,7 @@ export const SearchBox = forwardRef<HTMLInputElement, SearchBoxProps>(
     const [searchTerm, setSearchTerm] = useState(value || '');
     const [popoverOpen, setPopoverOpen] = useState(false);
 
-    const debouncedSearchTerm = useDebounce(searchTerm, 400);
-    const { results, isLoading, error } = useAutocompletePlaces(debouncedSearchTerm, locationBias);
+    const { results, isLoading, error } = useAutocompletePlaces(searchTerm, locationBias);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;

@@ -39,6 +39,7 @@ interface VehicleExitCardProps {
   parkingLot?: ParkingLot;
   onSuccess?: (plate: string, cost: number) => void;
   onError?: (error: string) => void;
+  onClose?: () => void; // Nueva prop para cerrar modal padre
   autoFocus?: boolean;
   compact?: boolean; // Nueva prop para modo compacto
 }
@@ -86,17 +87,25 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   parkingLot,
   onSuccess,
   onError,
+  onClose,
   compact = false
 }) => {
   const { addToast } = useToast();
   const { profile } = useAdminProfileStatus();
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
-    return role === 'local_admin' || role === 'global_admin' || role === 'operator';
-  }, [profile?.role]);
+    const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 VehicleExitCard - Authorization check:', { role, authorized, profile });
+    }
+    return authorized;
+  }, [profile]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 VehicleExitCard - Parking lots data:', { parkingLots, parkingLot, lots });
+  }
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingLot | null>(lots[0] || null);
   const [plate, setPlate] = useState('');
   const [searchedVehicle, setSearchedVehicle] = useState<ActiveVehicle | null>(null);
@@ -115,7 +124,11 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const searchVehicle = useSearchVehicle(
     selectedParkingLot?.id || '',
     normalizePlate(plate),
-    { enabled: plate.length >= 3 && !!selectedParkingLot }
+    {
+      enabled: plate.length >= 3 && !!selectedParkingLot,
+      debounceMs: 800, // Esperar 800ms después de que el usuario deje de escribir
+      staleTime: 1000 * 60 * 2 // Cache por 2 minutos
+    }
   );
 
   const registerExit = useRegisterVehicleExit({
@@ -232,14 +245,22 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
             Vehículo <strong>{plate.toUpperCase()}</strong> ha salido exitosamente
           </p>
 
-          {/* Vista previa estructurada del recibo */}
+          {/* Vista previa estructurada del recibo - Alineada con versión imprimible */}
           {exitResponse && (
             <div className="mt-6 mx-auto max-w-sm text-left bg-white border rounded-lg p-4">
               <div className="text-center">
-                <h3 className="font-semibold text-gray-900">PARKIU S.A.S.</h3>
-                <p className="text-xs text-gray-500">Calle Principal #123, Ciudad</p>
-                <p className="text-xs text-gray-500">Tel: (601) 123-4567</p>
-                <p className="text-xs font-medium text-gray-700">NIT: 901.234.567-8</p>
+                <h3 className="font-semibold text-gray-900">
+                  {selectedParkingLot?.name || 'PARKIU S.A.S.'}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {selectedParkingLot?.address || 'Calle Principal #123, Ciudad'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {selectedParkingLot?.contact_phone ? `Tel: ${selectedParkingLot.contact_phone}` : 'Tel: (601) 123-4567'}
+                </p>
+                <p className="text-xs font-medium text-gray-700">
+                  NIT: {selectedParkingLot?.tax_id || '901.234.567-8'}
+                </p>
               </div>
               <div className="my-3 border-t border-dashed" />
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -251,6 +272,26 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 <div className="text-right">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
                 <div className="text-gray-600">Placa:</div>
                 <div className="text-right font-mono">{plate.toUpperCase()}</div>
+                {/* Agregar espacio si está disponible - igual que en impresión */}
+                {(() => {
+                  const spaceNumber = receiptParsed && (receiptParsed as Record<string, unknown>).space_number;
+                  return spaceNumber ? (
+                    <>
+                      <div className="text-gray-600">Espacio:</div>
+                      <div className="text-right">{String(spaceNumber)}</div>
+                    </>
+                  ) : null;
+                })()}
+                {/* Agregar tipo de vehículo si está disponible - igual que en impresión */}
+                {(() => {
+                  const vehicleType = receiptParsed && (receiptParsed as Record<string, unknown>).vehicle_type;
+                  return vehicleType ? (
+                    <>
+                      <div className="text-gray-600">Tipo:</div>
+                      <div className="text-right capitalize">{String(vehicleType)}</div>
+                    </>
+                  ) : null;
+                })()}
                 <div className="text-gray-600">Entrada:</div>
                 <div className="text-right">{receiptParsed?.entry_time ? String(receiptParsed.entry_time) : '-'}</div>
                 <div className="text-gray-600">Salida:</div>
@@ -300,7 +341,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               </div>
               <div className="text-center text-xs text-gray-500 mt-4">
                 ¡Gracias por su preferencia!<br />
-                www.parkiu.com
+                www.parkiu.com<br />
+                <span className="text-gray-400">Powered by ParkiU</span>
               </div>
               <div className="flex gap-2 mt-4">
                 <Button
@@ -417,8 +459,14 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                       if (win) {
                         win.document.write(html);
                         win.document.close();
-                        win.focus();
-                        win.print();
+
+                        // Hacer la impresión asíncrona para no bloquear la aplicación
+                        setTimeout(() => {
+                          win.focus();
+                          win.print();
+                          // Opcional: cerrar automáticamente después de imprimir
+                          // win.close();
+                        }, 100);
                       }
                     } catch (e) {
                       console.error('Error printing receipt', e);
@@ -460,6 +508,10 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 setCurrentCost(null);
                 setExitResponse(null);
                 setReceiptParsed(null);
+                // Si está en modo compacto, cerrar el modal padre
+                if (compact && onClose) {
+                  onClose();
+                }
               }}
             >
               Cerrar
@@ -654,6 +706,67 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
             )}
           </form>
         </div>
+
+        {/* Modal de confirmación para modo compacto */}
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar salida</DialogTitle>
+              <DialogDescription>
+                Revise la información antes de confirmar.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Placa</span>
+                <span className="font-mono font-bold">{plate.toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Costo total</span>
+                <span className="font-bold">${currentCost?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Método de pago</span>
+                <span className="capitalize">{paymentMethods.find(m => m.value === paymentMethod)?.label}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Monto recibido</span>
+                <span className="font-bold">${parseFloat(paymentAmount || '0').toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Cambio</span>
+                <span className="font-bold text-green-600">${calculateChange().toLocaleString()}</span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  registerExit.mutate({
+                    parkingLotId: selectedParkingLot!.id!,
+                    vehicleData: {
+                      plate: normalizePlate(plate),
+                      payment_amount: parseFloat(paymentAmount),
+                      payment_method: paymentMethod as 'cash' | 'card' | 'digital'
+                    }
+                  });
+                }}
+                disabled={registerExit.isPending}
+              >
+                {registerExit.isPending ? 'Procesando...' : 'Confirmar Salida'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

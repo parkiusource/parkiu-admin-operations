@@ -22,11 +22,8 @@ import {
  * Consolidates functionality from src/services/parking.ts and src/api/services/admin.ts
  */
 export class ParkingLotService {
-  private readonly baseUrl: string;
 
   constructor() {
-    this.baseUrl = API_CONFIG.BASE_URL;
-    console.log('🔧 ParkingLotService initialized with URL:', this.baseUrl);
   }
 
   /**

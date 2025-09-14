@@ -18,7 +18,7 @@ const optionalParams = [
 ] as const;
 
 export type SearchOptions = {
-  languageCode?: string;
+  languageCode?: string; // e.g., 'es-CO'
   fieldMask?: string[] | string;
   [key: string]: unknown;
 };
@@ -51,7 +51,7 @@ const MAX_LOCAL_CACHE_SIZE = 20;
 
 export const useSearchPlaces = (
   textQuery: string,
-  options: SearchOptions = { languageCode: 'es' }
+  options: SearchOptions = { languageCode: 'es-CO' }
 ) => {
   const normalizedText = normalizeText(textQuery);
   const debouncedTextQuery = useDebounce(normalizedText, DEFAULT_TEXT_DEBOUNCE);
@@ -61,9 +61,7 @@ export const useSearchPlaces = (
   const cacheKey = `${debouncedTextQuery}-${JSON.stringify(options)}`;
 
   const params = new URLSearchParams();
-  if (options.languageCode && typeof options.languageCode === 'string') {
-    params.set('languageCode', options.languageCode || '');
-  }
+  params.set('languageCode', (options.languageCode && typeof options.languageCode === 'string') ? options.languageCode : 'es-CO');
 
   const requestBody: Record<string, unknown> = {
     textQuery: debouncedTextQuery,

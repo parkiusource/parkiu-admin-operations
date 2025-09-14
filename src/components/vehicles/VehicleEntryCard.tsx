@@ -34,6 +34,7 @@ interface VehicleEntryCardProps {
   defaultParkingLot?: ParkingLot | null;
   onSuccess?: (plate: string, spot: string) => void;
   onError?: (error: string) => void;
+  onClose?: () => void; // Nueva prop para cerrar modal padre
   autoFocus?: boolean;
   compact?: boolean; // Nueva prop para modo compacto
 }
@@ -80,16 +81,24 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   parkingLot,
   onSuccess,
   onError,
+  onClose,
   compact = false
 }) => {
   const { profile } = useAdminProfileStatus();
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
-    return role === 'local_admin' || role === 'global_admin' || role === 'operator';
-  }, [profile?.role]);
+    const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 VehicleEntryCard - Authorization check:', { role, authorized, profile });
+    }
+    return authorized;
+  }, [profile]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 VehicleEntryCard - Parking lots data:', { parkingLots, parkingLot, lots });
+  }
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingLot | null>(lots[0] || null);
   const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | null>(null);
   const [plate, setPlate] = useState('');
@@ -291,6 +300,12 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
               <div className="text-gray-600">Entrada:</div>
               <div className="text-right">{new Date(entryResponse.entry_time).toLocaleString('es-CO')}</div>
             </div>
+            {/* Pie de página alineado con versión imprimible */}
+            <div className="text-center text-xs text-gray-500 mt-4">
+              ¡Gracias por su preferencia!<br />
+              www.parkiu.com<br />
+              <span className="text-gray-400">Powered by ParkiU</span>
+            </div>
             <div className="flex gap-2 mt-4">
               <Button
                 type="button"
@@ -364,8 +379,14 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                     if (win) {
                       win.document.write(html);
                       win.document.close();
-                      win.focus();
-                      win.print();
+
+                      // Hacer la impresión asíncrona para no bloquear la aplicación
+                      setTimeout(() => {
+                        win.focus();
+                        win.print();
+                        // Opcional: cerrar automáticamente después de imprimir
+                        // win.close();
+                      }, 100);
                     }
                   })();
                 }}
@@ -382,6 +403,10 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                     setSpaceNumber('');
                     setSelectedVehicleType(null);
                     setEstimatedCost(null);
+                  }
+                  // Si está en modo compacto, cerrar el modal padre
+                  if (compact && onClose) {
+                    onClose();
                   }
                 }}
               >

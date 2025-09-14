@@ -74,18 +74,33 @@ export default function AdminParkingDashboard() {
   // ✅ CONFIGURAR ATAJOS DE TECLADO PARA OPERACIONES RÁPIDAS
   const { getShortcutsHelp, formatShortcut } = useParkingOperationShortcuts({
     onOpenVehicleEntry: () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Entrada rápida activada - window.quickOperations:', window.quickOperations);
+      }
       if (window.quickOperations) {
         window.quickOperations.openEntry();
+      } else {
+        console.warn('⚠️ window.quickOperations no está disponible para entrada');
       }
     },
     onOpenVehicleExit: () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Salida rápida activada - window.quickOperations:', window.quickOperations);
+      }
       if (window.quickOperations) {
         window.quickOperations.openExit();
+      } else {
+        console.warn('⚠️ window.quickOperations no está disponible para salida');
       }
     },
     onOpenSearch: () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Búsqueda rápida activada - window.quickOperations:', window.quickOperations);
+      }
       if (window.quickOperations) {
         window.quickOperations.openSearch();
+      } else {
+        console.warn('⚠️ window.quickOperations no está disponible para búsqueda');
       }
     },
     onRefresh: () => {
@@ -543,7 +558,7 @@ export default function AdminParkingDashboard() {
       <div className="min-h-screen bg-slate-50">
       {/* Header del parqueadero específico */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
 
           {/* ✅ BREADCRUMBS */}
           <div className="mb-4">
@@ -618,7 +633,7 @@ export default function AdminParkingDashboard() {
       </div>
 
       {isTempAdmin && (
-        <div className="max-w-[1600px] mx-auto px-4 py-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
             <span className="font-semibold">Parqueadero inactivo.</span> Pendiente de verificación del administrador.
           </div>
@@ -992,9 +1007,12 @@ export default function AdminParkingDashboard() {
 
       {/* ✅ OPERACIONES RÁPIDAS DE VEHÍCULOS */}
       {!isListView && currentParking && (
-        <QuickVehicleOperations
-          selectedParkingLot={currentParking}
-        />
+        <>
+          {process.env.NODE_ENV === 'development' && console.log('🔍 Renderizando QuickVehicleOperations con:', { isListView, currentParking })}
+          <QuickVehicleOperations
+            selectedParkingLot={currentParking}
+          />
+        </>
       )}
 
       {/* ✅ AYUDA DE ATAJOS DE TECLADO */}
@@ -1005,14 +1023,14 @@ export default function AdminParkingDashboard() {
         formatShortcut={formatShortcut}
       />
 
-      {/* ✅ BOTÓN DE AYUDA FLOTANTE */}
-      <button
-        onClick={() => setShowKeyboardHelp(true)}
-        className="fixed bottom-6 left-6 w-12 h-12 bg-gray-800 text-white rounded-full shadow-lg hover:bg-gray-700 transition-colors z-40 flex items-center justify-center group"
-        title="Atajos de teclado (Shift + ?)"
-      >
+      {/* ✅ BOTÓN DE AYUDA FLOTANTE - Posicionado encima de los controles de entrada/salida/buscar */}
+        <button
+          onClick={() => setShowKeyboardHelp(true)}
+          className="fixed bottom-40 right-6 w-12 h-12 bg-gray-800/60 backdrop-blur-sm text-white rounded-full shadow-lg hover:bg-gray-700/80 transition-all duration-200 z-50 flex items-center justify-center group"
+          title="Atajos de teclado (Shift + ?)"
+        >
         <LuKeyboard className="w-5 h-5" />
-        <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        <span className="absolute -top-8 right-0 bg-gray-800/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap">
           Atajos (Shift + ?)
         </span>
       </button>

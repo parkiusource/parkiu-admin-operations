@@ -56,13 +56,6 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
     );
   }
 
-  console.log('Auth0 Provider initialized with:', {
-    domain,
-    clientId: clientId ? `${clientId.substring(0, 8)}...` : 'missing',
-    audience,
-    redirectUri
-  });
-
   return (
     <Auth0Provider
       domain={domain}

@@ -3,6 +3,7 @@ import { useEffect, useCallback } from 'react';
 export interface KeyboardShortcut {
   key: string;
   ctrlKey?: boolean;
+  metaKey?: boolean; // Para Cmd en macOS
   altKey?: boolean;
   shiftKey?: boolean;
   action: () => void;
@@ -34,10 +35,16 @@ export const useKeyboardShortcuts = ({ shortcuts, enabled = true }: UseKeyboardS
     const matchingShortcut = shortcuts.find(shortcut => {
       const keyMatches = shortcut.key.toLowerCase() === event.key.toLowerCase();
       const ctrlMatches = !!shortcut.ctrlKey === event.ctrlKey;
+      const metaMatches = !!shortcut.metaKey === event.metaKey;
       const altMatches = !!shortcut.altKey === event.altKey;
       const shiftMatches = !!shortcut.shiftKey === event.shiftKey;
 
-      return keyMatches && ctrlMatches && altMatches && shiftMatches;
+      // En macOS, permitir que Ctrl y Cmd sean intercambiables para algunos atajos
+      const modifierMatches = shortcut.ctrlKey ?
+        (event.ctrlKey || event.metaKey) : // Si requiere Ctrl, aceptar Ctrl o Cmd
+        (ctrlMatches && metaMatches); // Si no requiere Ctrl, debe coincidir exactamente
+
+      return keyMatches && modifierMatches && altMatches && shiftMatches;
     });
 
     if (matchingShortcut) {
@@ -69,8 +76,13 @@ export const useKeyboardShortcuts = ({ shortcuts, enabled = true }: UseKeyboardS
   // Función para formatear la combinación de teclas
   const formatShortcut = useCallback((shortcut: KeyboardShortcut) => {
     const parts = [];
-    if (shortcut.ctrlKey) parts.push('Ctrl');
-    if (shortcut.altKey) parts.push('Alt');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+    if (shortcut.ctrlKey) {
+      parts.push(isMac ? 'Cmd' : 'Ctrl'); // Mostrar Cmd en Mac, Ctrl en otros
+    }
+    if (shortcut.metaKey) parts.push('Cmd');
+    if (shortcut.altKey) parts.push(isMac ? 'Option' : 'Alt');
     if (shortcut.shiftKey) parts.push('Shift');
     parts.push(shortcut.key.toUpperCase());
     return parts.join(' + ');
@@ -131,17 +143,17 @@ export const useParkingOperationShortcuts = (callbacks: {
       category: 'Operaciones'
     },
     {
-      key: 's',
+      key: 'd', // 'D' para Departure (salida) - sin conflictos conocidos
       ctrlKey: true,
       action: callbacks.onOpenVehicleExit,
-      description: 'Salida rápida',
+      description: 'Salida rápida (Ctrl+D)',
       category: 'Operaciones'
     },
     {
-      key: 'f',
+      key: 'b', // Cambiar de 'f' a 'b' para evitar conflicto con Ctrl+F (Buscar del navegador)
       ctrlKey: true,
       action: callbacks.onOpenSearch,
-      description: 'Buscar rápido',
+      description: 'Buscar rápido (Ctrl+B)',
       category: 'Navegación'
     },
     {

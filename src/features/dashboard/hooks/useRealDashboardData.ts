@@ -96,7 +96,12 @@ export const useParkingLotStats = (parkingLotId: string) => {
     staleTime: 2 * 60 * 1000, // 2 minutos para stats más frecuentes
     gcTime: 5 * 60 * 1000, // 5 minutos (antes cacheTime)
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnReconnect: false,
+    retry: (failureCount, error: Error & { response?: { status?: number } }) => {
+      const status = error?.response?.status || 0;
+      if (status === 403) return false; // no reintentar si es permisos insuficientes
+      return failureCount < 1; // solo 1 intento adicional
+    },
     enabled: isAuthenticated && !!parkingLotId,
   });
 };
@@ -115,6 +120,13 @@ export const useMultipleParkingStats = (parkingLotIds: string[]) => {
       queryFn: () => fetchWithAuth<ParkingLotStats>(`/admin/parking-lots/${id}/stats`, getAccessTokenSilently),
       staleTime: 2 * 60 * 1000,
       gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+     retry: (failureCount: number, error: Error & { response?: { status?: number } }) => {
+        const status = error?.response?.status || 0;
+        if (status === 403) return false;
+        return failureCount < 1;
+      },
       enabled: isAuthenticated && !!id,
     }))
   });
