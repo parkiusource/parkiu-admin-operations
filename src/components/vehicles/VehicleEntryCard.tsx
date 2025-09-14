@@ -31,8 +31,11 @@ import { PrinterSelector } from '@/components/common/PrinterSelector';
 interface VehicleEntryCardProps {
   parkingLots?: ParkingLot[];
   parkingLot?: ParkingLot;
+  defaultParkingLot?: ParkingLot | null;
   onSuccess?: (plate: string, spot: string) => void;
   onError?: (error: string) => void;
+  autoFocus?: boolean;
+  compact?: boolean; // Nueva prop para modo compacto
 }
 
 const vehicleTypes: {
@@ -76,7 +79,8 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   parkingLots,
   parkingLot,
   onSuccess,
-  onError
+  onError,
+  compact = false
 }) => {
   const { profile } = useAdminProfileStatus();
   const isOperatorAuthorized = useMemo(() => {
@@ -390,6 +394,198 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
     );
   }
 
+  // Renderizado compacto para modales
+  if (compact) {
+    return (
+      <div className="w-full">
+        {/* Header compacto */}
+        <div className="mb-3">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-green-700 mb-1">
+            <div className="p-1.5 bg-green-100 rounded">
+              <Car className="w-4 h-4 text-green-600" />
+            </div>
+            Registrar Entrada de Vehículo
+          </h3>
+          <p className="text-xs text-gray-600">
+            Seleccione el tipo de vehículo y complete los datos de entrada
+          </p>
+        </div>
+
+        {/* Contenido compacto */}
+        <div className="space-y-3">
+          <div className="mb-2">
+            <PrinterSelector />
+          </div>
+          {!isOperatorAuthorized && (
+            <Alert className="border-red-200 bg-red-50 p-2">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-700 text-xs">
+                No tiene permisos para registrar entradas. Contacte al administrador.
+              </AlertDescription>
+            </Alert>
+          )}
+
+                 <form onSubmit={handleSubmit} className="space-y-3">
+                   {selectedParkingLot && (
+                     <div className="p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 shadow-sm">
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2 text-blue-800">
+                           <MapPin className="w-4 h-4" />
+                           <span className="font-semibold text-sm">{selectedParkingLot.name}</span>
+                         </div>
+                         <div className="text-xs bg-blue-200 text-blue-700 px-2 py-1 rounded-full">
+                           {selectedParkingLot.total_spots} espacios
+                         </div>
+                       </div>
+                       {selectedVehicleType && (
+                         <div className="mt-2 text-xs text-blue-700 bg-blue-200/50 px-2 py-1 rounded">
+                           💰 Tarifa: ${getRatePerMinute(selectedVehicleType)?.toLocaleString('es-CO')}/minuto
+                         </div>
+                       )}
+                     </div>
+                   )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Tipo de Vehículo</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {vehicleTypes.map((vehicleType) => {
+                  const Icon = vehicleType.icon;
+                  const isSelected = selectedVehicleType === vehicleType.value;
+                  return (
+                    <button
+                      key={vehicleType.value}
+                      type="button"
+                      onClick={() => handleVehicleTypeSelect(vehicleType.value)}
+                      className={`p-2 rounded border-2 transition-all text-left ${
+                        isSelected
+                          ? `${vehicleType.color} text-white shadow-md`
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
+                        <span className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                          {vehicleType.label}
+                        </span>
+                        {isSelected && <Check className="w-3 h-3 text-white ml-auto" />}
+                      </div>
+                      <p className={`text-xs ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>
+                        {vehicleType.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-sm font-medium mb-1 block">Modo de asignación</Label>
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="assignmentMode"
+                      value="auto"
+                      checked={autoAssign}
+                      onChange={(e) => setAutoAssign(e.target.value === 'auto')}
+                      className="w-3 h-3"
+                    />
+                    <span className="text-xs">Auto-asignación</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="assignmentMode"
+                      value="manual"
+                      checked={!autoAssign}
+                      onChange={(e) => setAutoAssign(e.target.value !== 'manual')}
+                      className="w-3 h-3"
+                    />
+                    <span className="text-xs">Manual</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="plate" className="text-sm font-medium mb-1 block">
+                  Placa del Vehículo
+                </Label>
+                <Input
+                  id="plate"
+                  type="text"
+                  value={plate}
+                  onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                  placeholder="EJ: ABC123"
+                  className="text-sm p-2 h-8"
+                  maxLength={8}
+                />
+              </div>
+            </div>
+
+            {!autoAssign && (
+              <div>
+                <Label htmlFor="spaceNumber" className="text-sm font-medium mb-1 block">
+                  Número de Espacio
+                  {spotsLoading && <span className="text-blue-500 ml-2 text-xs">(Cargando...)</span>}
+                </Label>
+                {availableSpots && availableSpots.length > 0 ? (
+                  <select
+                    id="spaceNumber"
+                    value={spaceNumber}
+                    onChange={(e) => setSpaceNumber(e.target.value)}
+                    className="w-full text-sm p-2 h-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Seleccione un espacio</option>
+                    {availableSpots.map((spot) => (
+                      <option key={spot.id} value={spot.number}>
+                        {spot.number} - {spot.type ? `${spot.type.charAt(0).toUpperCase() + spot.type.slice(1)}` : 'General'}
+                        {spot.floor && ` (Piso ${spot.floor})`}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    id="spaceNumber"
+                    type="text"
+                    value={spaceNumber}
+                    onChange={(e) => setSpaceNumber(e.target.value)}
+                    placeholder="Ingrese el número del espacio"
+                    className="text-sm p-2 h-8"
+                  />
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {availableSpots && availableSpots.length > 0
+                    ? `${availableSpots.length} espacios disponibles`
+                    : 'Ingrese el código o número del espacio'}
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={!selectedVehicleType || !plate.trim() || !selectedParkingLot || registerEntry.isPending}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 text-sm"
+            >
+              {registerEntry.isPending ? 'Registrando...' : '✓ Confirmar Entrada'}
+            </Button>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={autoReset}
+                onChange={(e) => setAutoReset(e.target.checked)}
+                className="w-3 h-3"
+              />
+              <span className="text-xs text-gray-600">Registrar otra automáticamente</span>
+            </label>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Renderizado normal para páginas completas
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="pb-4">

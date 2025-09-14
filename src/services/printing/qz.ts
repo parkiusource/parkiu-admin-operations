@@ -99,9 +99,16 @@ async function connectQZ(): Promise<Window['qz']> {
   }
 
   if (!qz || !qz.websocket || !qz.websocket.isActive()) {
-    await qz!.websocket.connect({ retries: 1, delay: 500 }).catch((err: unknown) => {
+    await qz!.websocket.connect({ retries: 3, delay: 1000 }).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`QZ Tray not available: ${message}`);
+      // Detect common macOS issues
+      if (message.includes('Connection refused') || message.includes('ECONNREFUSED')) {
+        throw new Error('QZ Tray no está ejecutándose. Busca el ícono 🖨️ en la barra de menú superior y ábrelo');
+      }
+      if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+        throw new Error('QZ Tray no responde. Reinicia la aplicación QZ Tray desde Aplicaciones');
+      }
+      throw new Error(`QZ Tray no disponible: ${message}`);
     });
   }
 
@@ -235,13 +242,31 @@ export async function selectQZPrinter(): Promise<string | null> {
 export async function listQZPrinters(): Promise<{ printers: string[]; defaultPrinter: string | null }> {
   try {
     const qz = await connectQZ();
-    if (!qz) return { printers: [], defaultPrinter: null };
+    if (!qz) {
+      throw new Error('QZ Tray no está disponible');
+    }
     const printers: string[] = await qz.printers.find();
     const def = await qz.printers.getDefault();
     return { printers, defaultPrinter: def };
   } catch (e) {
     console.warn('QZ list printers failed:', e);
-    return { printers: [], defaultPrinter: null };
+    // Re-throw with more user-friendly message
+    if (e instanceof Error) {
+      if (e.message.includes('Failed to load QZ Tray library')) {
+        // Detect macOS vs other platforms
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        if (isMac) {
+          throw new Error('QZ Tray instalado pero no ejecutándose. Busca el ícono 🖨️ en la barra de menú superior');
+        } else {
+          throw new Error('QZ Tray no está instalado. Descárgalo desde qz.io/download');
+        }
+      }
+      if (e.message.includes('QZ Tray not available') || e.message.includes('no está ejecutándose')) {
+        throw new Error(e.message);
+      }
+      throw e;
+    }
+    throw new Error('Error desconocido al conectar con QZ Tray');
   }
 }
 

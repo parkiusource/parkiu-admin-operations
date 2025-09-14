@@ -1,10 +1,26 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding, LuTriangle } from 'react-icons/lu';
+import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding, LuTriangle, LuKeyboard } from 'react-icons/lu';
 import { FaMotorcycle } from 'react-icons/fa';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { Input } from '@/components/common/Input';
+import { QuickVehicleOperations } from '@/components/parking/QuickVehicleOperations';
+import { KeyboardShortcutsHelp } from '@/components/common/KeyboardShortcutsHelp';
+import { useParkingOperationShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { CircleParking } from 'lucide-react';
+
+// ✅ DECLARACIÓN GLOBAL PARA OPERACIONES RÁPIDAS
+declare global {
+  interface Window {
+    quickOperations?: {
+      openEntry: () => void;
+      openExit: () => void;
+      openSearch: () => void;
+      close: () => void;
+      focusPlateInput: () => void;
+    };
+  }
+}
 
 // ✅ IMPORTAR MODALES PARA CREAR PARQUEADEROS Y ESPACIOS
 import { CreateParkingLotModal } from '@/components/parking/CreateParkingLotModal';
@@ -37,6 +53,7 @@ export default function AdminParkingDashboard() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // ✅ Estado para modal de parqueaderos
   const [isCreateSpaceModalOpen, setIsCreateSpaceModalOpen] = useState(false); // ✅ Estado para modal de espacios
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false); // ✅ Estado para ayuda de atajos
 
   // ✅ OBTENER PARKING LOTS REALES DEL ADMINISTRADOR
   const {
@@ -53,6 +70,36 @@ export default function AdminParkingDashboard() {
 
   // ✅ OBTENER ESTADÍSTICAS REALES DEL OVERVIEW
   const overviewStats = useRealParkingOverview(parkingLots);
+
+  // ✅ CONFIGURAR ATAJOS DE TECLADO PARA OPERACIONES RÁPIDAS
+  const { getShortcutsHelp, formatShortcut } = useParkingOperationShortcuts({
+    onOpenVehicleEntry: () => {
+      if (window.quickOperations) {
+        window.quickOperations.openEntry();
+      }
+    },
+    onOpenVehicleExit: () => {
+      if (window.quickOperations) {
+        window.quickOperations.openExit();
+      }
+    },
+    onOpenSearch: () => {
+      if (window.quickOperations) {
+        window.quickOperations.openSearch();
+      }
+    },
+    onRefresh: () => {
+      window.location.reload();
+    },
+    onToggleHelp: () => {
+      setShowKeyboardHelp(!showKeyboardHelp);
+    },
+    onFocusPlateInput: () => {
+      if (window.quickOperations) {
+        window.quickOperations.focusPlateInput();
+      }
+    },
+  });
 
   // ✅ OPTIMIZACIÓN: Memoizar filtros costosos
   const filteredParkingLots = useMemo(() => {
@@ -942,6 +989,33 @@ export default function AdminParkingDashboard() {
           parkingLotId={currentParking.id}
         />
       )}
+
+      {/* ✅ OPERACIONES RÁPIDAS DE VEHÍCULOS */}
+      {!isListView && currentParking && (
+        <QuickVehicleOperations
+          selectedParkingLot={currentParking}
+        />
+      )}
+
+      {/* ✅ AYUDA DE ATAJOS DE TECLADO */}
+      <KeyboardShortcutsHelp
+        isOpen={showKeyboardHelp}
+        onClose={() => setShowKeyboardHelp(false)}
+        shortcuts={getShortcutsHelp()}
+        formatShortcut={formatShortcut}
+      />
+
+      {/* ✅ BOTÓN DE AYUDA FLOTANTE */}
+      <button
+        onClick={() => setShowKeyboardHelp(true)}
+        className="fixed bottom-6 left-6 w-12 h-12 bg-gray-800 text-white rounded-full shadow-lg hover:bg-gray-700 transition-colors z-40 flex items-center justify-center group"
+        title="Atajos de teclado (Shift + ?)"
+      >
+        <LuKeyboard className="w-5 h-5" />
+        <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          Atajos (Shift + ?)
+        </span>
+      </button>
     </>
   );
 }

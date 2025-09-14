@@ -31,7 +31,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
     }
   })();
 
-  const ticketNo = transaction.id ?? transaction.id;
+  const ticketNo = transaction.transaction_id ?? transaction.transaction_id;
   const plate = transaction.plate?.toUpperCase() || '';
   const entry = transaction.entry_time || (parsed && (parsed['entry_time'] as string)) || '';
   const exitT = transaction.exit_time || (parsed && (parsed['exit_time'] as string)) || '';

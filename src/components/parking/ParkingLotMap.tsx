@@ -128,38 +128,42 @@ export function ParkingLotMap({
 
     return (
       <div
-        className="relative cursor-pointer transform hover:scale-110 transition-all duration-200"
+        className="relative cursor-pointer transform hover:scale-105 transition-all duration-200"
         onClick={onClick}
         title={`Espacio ${spot.number} - ${spot.status}${spot.active_vehicle?.plate ? ` • ${spot.active_vehicle.plate}` : ''}`}
-        style={{ paddingBottom: '24px' }} // Espacio extra para el label
       >
-        {/* Espacio más pequeño para motos */}
-        <div className={`w-14 h-8 ${getMotorcycleSpotColor()} border-2 rounded-md shadow-md relative overflow-hidden`}>
+        {/* Espacio de motocicleta - más pequeño pero proporcional */}
+        <div className={`w-16 h-10 ${getMotorcycleSpotColor()} border-2 rounded-md shadow-lg relative overflow-hidden`}>
 
-          {/* Líneas delimitadoras */}
+          {/* Líneas delimitadoras del espacio */}
           <div className="absolute inset-x-0 top-0 h-0.5 bg-white opacity-60"></div>
           <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white opacity-60"></div>
           <div className="absolute inset-y-0 left-0 w-0.5 bg-white opacity-60"></div>
           <div className="absolute inset-y-0 right-0 w-0.5 bg-white opacity-60"></div>
 
-          {/* Ícono de moto */}
+          {/* Ícono de moto y número */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <FaMotorcycle className="w-3 h-3 text-white drop-shadow-sm" />
+            <div className="text-center">
+              <FaMotorcycle className="w-4 h-4 text-white mb-0.5 mx-auto drop-shadow-sm" />
+              <div className="text-xs font-bold text-white drop-shadow-sm">{spot.number}</div>
+            </div>
           </div>
 
-          {/* Indicador de estado */}
-          <div className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${
+          {/* Indicador de estado con pulsación */}
+          <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
             spot.status === 'available' ? 'bg-emerald-300' :
             spot.status === 'occupied' ? 'bg-red-300' : 'bg-amber-300'
-          } animate-pulse`}></div>
+          } animate-pulse shadow-sm`}></div>
         </div>
 
-        {/* Etiqueta inferior: placa si está ocupado, de lo contrario número */}
-        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="text-xs font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded-md shadow-lg border border-slate-300 min-w-[20px] text-center whitespace-nowrap">
-            {spot.status === 'occupied' && spot.active_vehicle?.plate ? spot.active_vehicle.plate : spot.number}
+        {/* Etiqueta inferior: placa si está ocupado; 'MTO' si mantenimiento; vacío si libre */}
+        {(spot.status === 'occupied' && spot.active_vehicle?.plate) || spot.status === 'maintenance' ? (
+          <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2">
+            <div className="text-[11px] font-semibold text-slate-700 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-200 tracking-wide">
+              {spot.status === 'occupied' ? spot.active_vehicle?.plate : 'MTO'}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     );
   };
