@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAdminProfileCentralized } from '@/hooks/useAdminProfileCentralized';
+import { AdminProfile } from '@/types/common';
 
 export const ProtectedRoute = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth0();
@@ -31,11 +32,28 @@ export const ProtectedRoute = () => {
     const status = profileData.profile.status;
     const role = profileData.profile.role;
 
-    // Permitir acceso al dashboard si:
-    // 1. Status es 'active' (admins completos)
-    // 2. Es temp_admin con status 'pending_verify' (acceso limitado)
-    const canAccessDashboard = status === 'active' ||
-                              (role === 'temp_admin' && status === 'pending_verify');
+    // Verificar si el perfil está completo y tiene los datos necesarios
+    const hasCompleteProfile = status && status !== 'initial' && status !== 'pending_profile';
+    const profileWithLots = profileData.profile as AdminProfile & { parkingLots?: unknown[] };
+    const hasParkingLot = profileWithLots.parkingLots && profileWithLots.parkingLots.length > 0;
+
+    // Permitir acceso al dashboard solo si:
+    // 1. Status es 'active' (admins completos con todo verificado)
+    // 2. Es temp_admin con status 'pending_verify' Y tiene al menos un parqueadero registrado
+    const canAccessDashboard = (
+      status === 'active' ||
+      (role === 'temp_admin' && status === 'pending_verify' && hasParkingLot)
+    );
+
+    // Logging para debug
+    console.log('ProtectedRoute - Profile check:', {
+      status,
+      role,
+      hasCompleteProfile,
+      hasParkingLot,
+      canAccessDashboard,
+      parkingLotsCount: profileWithLots.parkingLots?.length || 0
+    });
 
     // Si no puede acceder al dashboard, necesita completar onboarding
     if (!canAccessDashboard) {

@@ -136,6 +136,21 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
       return data;
     } catch (error) {
       console.error('Error completing profile:', error);
+
+      // Si el error es que el admin ya no está en pending_profile status,
+      // significa que el perfil ya fue completado exitosamente en una llamada anterior
+      const errorMessage = error instanceof Error ? error.message : '';
+      const axiosError = error as { response?: { data?: { error?: string; message?: string } } };
+      const serverMessage = axiosError?.response?.data?.error || axiosError?.response?.data?.message || '';
+
+      if (errorMessage.includes('not in pending_profile status') ||
+          serverMessage.includes('not in pending_profile status')) {
+        console.log('Profile was already completed in a previous call, continuing...');
+        hasSubmittedRef.current = true;
+        formStorage.clear();
+        return data; // Permitir continuar al siguiente step
+      }
+
       throw error;
     } finally {
       setIsSubmitting(false);

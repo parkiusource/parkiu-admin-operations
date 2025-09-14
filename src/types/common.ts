@@ -20,6 +20,7 @@ export interface AdminProfile {
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+  parkingLots?: unknown[]; // Agregado para incluir parqueaderos en el perfil
 }
 
 export interface AdminProfilePayload {

@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAdminProfileCentralized } from '@/hooks/useAdminProfileCentralized';
+import { AdminProfile } from '@/types/common';
 
 /**
  * Componente que maneja la redirección inteligente desde la ruta raíz (/)
@@ -40,14 +41,24 @@ export const RootRedirect = () => {
   if (profileData?.profile) {
     const status = profileData.profile.status;
     const role = profileData.profile.role;
+    const profileWithLots = profileData.profile as AdminProfile & { parkingLots?: unknown[] };
+    const hasParkingLot = profileWithLots.parkingLots && profileWithLots.parkingLots.length > 0;
+
+    // Logging para debug
+    console.log('RootRedirect - Profile check:', {
+      status,
+      role,
+      hasParkingLot,
+      parkingLotsCount: profileWithLots.parkingLots?.length || 0
+    });
 
     // Si es admin activo (local_admin o global_admin), ir directo al dashboard
     if (status === 'active' && (role === 'local_admin' || role === 'global_admin')) {
       return <Navigate to="/dashboard" replace />;
     }
 
-    // Si es temp_admin con pending_verify, también puede ir al dashboard (con limitaciones)
-    if (role === 'temp_admin' && status === 'pending_verify') {
+    // Si es temp_admin con pending_verify Y tiene parqueadero, puede ir al dashboard (con limitaciones)
+    if (role === 'temp_admin' && status === 'pending_verify' && hasParkingLot) {
       return <Navigate to="/dashboard" replace />;
     }
 

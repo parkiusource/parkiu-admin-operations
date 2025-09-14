@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { User, ShieldCheck } from 'lucide-react';
 import { CircleParking } from 'lucide-react';
 import { FirstStep, SecondStep, ThirdStep } from '@/components/Onboarding';
-import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
+import { useAdminProfileStatus, useAdminProfileCentralized } from '@/hooks/useAdminProfileCentralized';
 import { useNavigate } from 'react-router-dom';
 
 interface StepFormRef {
@@ -26,6 +26,7 @@ const statusToStep: Record<string, number> = {
 
 export default function EnhancedOnboardingForm() {
   const { profile, status, isLoading: isProfileLoading } = useAdminProfileStatus();
+  const { refetch: refetchProfile } = useAdminProfileCentralized();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -135,15 +136,34 @@ export default function EnhancedOnboardingForm() {
     </div>
   );
 
+  // Función para refrescar perfil y sincronizar step
+  const refreshProfileAndSyncStep = useCallback(async (completedStep: number) => {
+    console.log(`Refrescando perfil después de completar step ${completedStep}...`);
+    const refreshedData = await refetchProfile();
+
+    if (refreshedData?.data?.profile?.status) {
+      const newStatus = refreshedData.data.profile.status;
+      const expectedStep = statusToStep[newStatus] || completedStep + 1;
+
+      console.log(`Status actualizado: ${newStatus}, step esperado: ${expectedStep}`);
+
+      // Sincronizar el step con el nuevo status del servidor
+      setCurrentStep(expectedStep);
+    } else {
+      // Si no hay datos actualizados, avanzar al siguiente step normalmente
+      setCurrentStep(completedStep + 1);
+    }
+  }, [refetchProfile]);
+
   // Manejo de pasos
   const handleNext = async () => {
     try {
       if (currentStep === 1) {
         await firstStepRef.current?.submitForm();
-        setCurrentStep(2);
+        await refreshProfileAndSyncStep(1);
       } else if (currentStep === 2) {
         await secondStepRef.current?.submitForm();
-        setCurrentStep(3);
+        await refreshProfileAndSyncStep(2);
       }
     } catch (error) {
       console.error('Error al avanzar al siguiente paso:', error);
@@ -151,17 +171,27 @@ export default function EnhancedOnboardingForm() {
       // No avanzamos al siguiente paso si hay error
     }
   };
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  const handleBack = async () => {
+    if (currentStep > 1) {
+      // Refrescar el perfil al navegar hacia atrás para asegurar sincronización
+      console.log('Refrescando perfil al navegar hacia atrás...');
+      await refetchProfile();
+      setCurrentStep(currentStep - 1);
+    }
   };
+
+  // Callback para cuando se completa el segundo step
+  const handleSecondStepComplete = useCallback(async () => {
+    await refreshProfileAndSyncStep(2);
+  }, [refreshProfileAndSyncStep]);
 
   // Renderizado de pasos
   const StepComponent = useMemo(() => {
     if (currentStep === 1) return <FirstStep ref={firstStepRef} setLoading={setLoading} profile={profile} status={status} />;
-    if (currentStep === 2) return <SecondStep ref={secondStepRef} onComplete={() => setCurrentStep(3)} />;
+    if (currentStep === 2) return <SecondStep ref={secondStepRef} onComplete={handleSecondStepComplete} />;
     if (currentStep === 3) return <ThirdStep onGoToDashboard={handleGoToDashboard} status={status} profile={profile} />;
     return null;
-  }, [currentStep, profile, status, handleGoToDashboard]);
+  }, [currentStep, profile, status, handleGoToDashboard, handleSecondStepComplete]);
 
   if (isProfileLoading) {
     return (
