@@ -63,14 +63,13 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
 export const useTransactionHistory = (
   parkingLotId: string,
   filters?: {
-    plate?: string;
-    start_date?: string;
-    end_date?: string;
     limit?: number;
     offset?: number;
+    date_from?: string;
+    date_to?: string;
+    plate?: string;
+    status?: 'active' | 'completed';
     payment_method?: 'cash' | 'card' | 'digital';
-    min_total?: number;
-    max_total?: number;
   },
   options?: {
     enabled?: boolean;

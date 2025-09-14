@@ -149,42 +149,54 @@ export class VehicleService {
   }
 
   /**
-   * 📊 Obtener historial de transacciones (endpoint por definir)
+   * 📊 Obtener historial de transacciones
    * GET /admin/parking-lots/{parking_lot_id}/vehicles/history
+   * Autenticación: Requerida (global_admin, local_admin)
+   * Soporta filtros: date_from, date_to, plate, status, limit, offset
    */
   static async getTransactionHistory(
     token: string,
     parkingLotId: string,
     filters?: {
-      plate?: string;
-      start_date?: string;
-      end_date?: string;
       limit?: number;
       offset?: number;
+      date_from?: string;
+      date_to?: string;
+      plate?: string;
+      status?: 'active' | 'completed';
       payment_method?: 'cash' | 'card' | 'digital';
-      min_total?: number;
-      max_total?: number;
     }
   ): Promise<{
     data?: VehicleTransaction[];
     error?: string;
   }> {
     try {
+      // Construir parámetros de consulta
+      const params = new URLSearchParams({
+        limit: (filters?.limit || 50).toString(),
+        offset: (filters?.offset || 0).toString(),
+      });
+
+      // Agregar filtros opcionales
+      if (filters?.date_from) params.append('date_from', filters.date_from);
+      if (filters?.date_to) params.append('date_to', filters.date_to);
+      if (filters?.plate) params.append('plate', filters.plate);
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.payment_method) params.append('payment_method', filters.payment_method);
+
       const response = await client.get(
-        `/admin/parking-lots/${parkingLotId}/vehicles/history`,
+        `/admin/parking-lots/${parkingLotId}/vehicles/history?${params.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
-          params: filters,
         }
       );
 
-      const body = (response?.data && typeof response.data === 'object' && 'data' in response.data)
-        ? (response.data as { data: unknown }).data as VehicleTransaction[]
-        : (response.data as VehicleTransaction[]);
-
-      return { data: body };
+      // El endpoint retorna { data: [...] } según la documentación
+      const body = response.data as { data: VehicleTransaction[] };
+      return { data: body.data };
     } catch (error: unknown) {
       console.error('Error fetching transaction history:', error);
       return {

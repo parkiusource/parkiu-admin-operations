@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useParkingLots } from '@/api/hooks/useParkingLots';
 import { useTransactionHistory } from '@/api/hooks';
 import { Button } from '@/components/common/Button';
-import { Input } from '@/components/common/Input';
 import ReceiptModal from '@/components/vehicles/ReceiptModal';
 import type { VehicleTransaction } from '@/types/parking';
 
@@ -12,37 +11,42 @@ export default function TransactionsHistory() {
   const { parkingLots } = useParkingLots();
   const lot = useMemo(() => parkingLots?.find(p => p.id === parkingLotId) || null, [parkingLots, parkingLotId]);
 
-  const [plate, setPlate] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
   const [selected, setSelected] = useState<VehicleTransaction | null>(null);
   const [open, setOpen] = useState(false);
+
+  // Estados de filtros
+  const [plate, setPlate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [status, setStatus] = useState<'all' | 'active' | 'completed'>('all');
+  const [paymentMethod, setPaymentMethod] = useState<'all' | 'cash' | 'card' | 'digital'>('all');
 
   const LIMIT = 50;
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<VehicleTransaction[]>([]);
   const [hasMore, setHasMore] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<string>('');
-  const [minTotal, setMinTotal] = useState<string>('');
-  const [maxTotal, setMaxTotal] = useState<string>('');
 
   // Reset pagination when filters or lot change
   useEffect(() => {
     setOffset(0);
     setItems([]);
     setHasMore(true);
-  }, [parkingLotId, plate, start, end, paymentMethod, minTotal, maxTotal]);
+  }, [parkingLotId, plate, dateFrom, dateTo, status, paymentMethod]);
 
-  const { data: page = [], isLoading } = useTransactionHistory(parkingLotId || '', {
-    plate: plate.trim() || undefined,
-    start_date: start || undefined,
-    end_date: end || undefined,
+  // Memoizar filtros para evitar que cambie la identidad en cada render y dispare refetch infinito
+  const filters = useMemo(() => ({
     limit: LIMIT,
     offset,
-    payment_method: paymentMethod as 'cash' | 'card' | 'digital' || undefined,
-    min_total: minTotal ? Number(minTotal) : undefined,
-    max_total: maxTotal ? Number(maxTotal) : undefined,
-  }, { enabled: !!parkingLotId });
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+    plate: plate.trim() || undefined,
+    status: status === 'all' ? undefined : status,
+    payment_method: paymentMethod === 'all' ? undefined : paymentMethod,
+  }), [offset, dateFrom, dateTo, plate, status, paymentMethod]);
+
+  const historyQuery = useTransactionHistory(parkingLotId || '', filters, { enabled: !!parkingLotId });
+  const page = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
+  const isLoading = historyQuery.isLoading;
 
   useEffect(() => {
     if (!page) return;
@@ -66,9 +70,9 @@ export default function TransactionsHistory() {
 
   const exportCsv = () => {
     const rows = [
-      ['ticket','plate','type','space','entry_time','exit_time','duration_minutes','total_cost','payment_method','operator'],
+      ['ticket','plate','type','space','entry_time','exit_time','duration_minutes','total_cost','payment_method','entry_admin','exit_admin'],
       ...items.map(t => [
-        String(t.id ?? ''),
+        String(t.transaction_id ?? ''),
         t.plate?.toUpperCase() ?? '',
         String(t.vehicle_type ?? ''),
         String(t.spot_number ?? ''),
@@ -76,8 +80,9 @@ export default function TransactionsHistory() {
         String(t.exit_time ?? ''),
         String(t.duration_minutes ?? ''),
         String(t.total_cost ?? ''),
-        String((t as { payment_method?: string }).payment_method ?? ''),
-        String(t.admin_uuid ?? ''),
+        String(t.payment_method ?? ''),
+        String(t.entry_admin ?? ''),
+        String(t.exit_admin ?? ''),
       ])
     ];
     const csv = rows.map(r => r.map(field => `"${String(field).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -100,43 +105,53 @@ export default function TransactionsHistory() {
     URL.revokeObjectURL(url);
   };
 
-  // Presets de rango rápido
-  const formatLocal = (date: Date): string => {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const refreshHistory = () => {
+    setOffset(0);
+    setItems([]);
+    setHasMore(true);
+    // El query se refrescará automáticamente cuando cambien los filtros
   };
 
-  const applyPreset = (preset: 'today' | 'yesterday' | '7d' | '30d') => {
+  const clearFilters = () => {
+    setPlate('');
+    setDateFrom('');
+    setDateTo('');
+    setStatus('all');
+    setPaymentMethod('all');
+  };
+
+  const applyQuickFilter = (preset: 'today' | 'yesterday' | 'week' | 'month') => {
     const now = new Date();
-    if (preset === 'today') {
-      const from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      setStart(formatLocal(from));
-      setEnd(formatLocal(now));
-      return;
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    switch (preset) {
+      case 'today': {
+        setDateFrom(formatDate(now));
+        setDateTo(formatDate(now));
+        break;
+      }
+      case 'yesterday': {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        setDateFrom(formatDate(yesterday));
+        setDateTo(formatDate(yesterday));
+        break;
+      }
+      case 'week': {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        setDateFrom(formatDate(weekAgo));
+        setDateTo(formatDate(now));
+        break;
+      }
+      case 'month': {
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(now.getMonth() - 1);
+        setDateFrom(formatDate(monthAgo));
+        setDateTo(formatDate(now));
+        break;
+      }
     }
-    if (preset === 'yesterday') {
-      const y = new Date(now);
-      y.setDate(now.getDate() - 1);
-      const from = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0);
-      const to = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 0);
-      setStart(formatLocal(from));
-      setEnd(formatLocal(to));
-      return;
-    }
-    if (preset === '7d') {
-      const from = new Date(now);
-      from.setDate(now.getDate() - 7);
-      from.setHours(0, 0, 0, 0);
-      setStart(formatLocal(from));
-      setEnd(formatLocal(now));
-      return;
-    }
-    // 30d
-    const from = new Date(now);
-    from.setDate(now.getDate() - 30);
-    from.setHours(0, 0, 0, 0);
-    setStart(formatLocal(from));
-    setEnd(formatLocal(now));
   };
 
   return (
@@ -149,86 +164,257 @@ export default function TransactionsHistory() {
         <Link to={`/parking/${parkingLotId}`}>Volver</Link>
       </div>
 
-      <div className="bg-white rounded-lg border p-4 mb-4">
-        <div className="flex flex-wrap gap-2 mb-3 text-sm">
-          <span className="text-gray-600 mr-2">Rango rápido:</span>
-          <Button type="button" variant="outline" onClick={() => applyPreset('today')}>Hoy</Button>
-          <Button type="button" variant="outline" onClick={() => applyPreset('yesterday')}>Ayer</Button>
-          <Button type="button" variant="outline" onClick={() => applyPreset('7d')}>7 días</Button>
-          <Button type="button" variant="outline" onClick={() => applyPreset('30d')}>30 días</Button>
+      {/* Filtros avanzados */}
+      <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Filtros de Búsqueda</h3>
+            <p className="text-sm text-gray-600">Filtra las transacciones por fecha, placa, estado o método de pago</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => applyQuickFilter('today')} size="sm">
+              Hoy
+            </Button>
+            <Button type="button" variant="outline" onClick={() => applyQuickFilter('yesterday')} size="sm">
+              Ayer
+            </Button>
+            <Button type="button" variant="outline" onClick={() => applyQuickFilter('week')} size="sm">
+              7 días
+            </Button>
+            <Button type="button" variant="outline" onClick={() => applyQuickFilter('month')} size="sm">
+              30 días
+            </Button>
+            <Button type="button" variant="outline" onClick={clearFilters} size="sm" className="text-red-600 hover:text-red-700">
+              Limpiar
+            </Button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="text-sm">Placa</label>
-            <Input value={plate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlate(e.target.value.toUpperCase())} placeholder="ABC123" />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Placa</label>
+            <input
+              type="text"
+              placeholder="ABC123"
+              value={plate}
+              onChange={(e) => setPlate(e.target.value.toUpperCase())}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+              maxLength={8}
+            />
           </div>
+
           <div>
-            <label className="text-sm">Desde</label>
-            <Input type="datetime-local" value={start} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStart(e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Desde</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
+
           <div>
-            <label className="text-sm">Hasta</label>
-            <Input type="datetime-local" value={end} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEnd(e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hasta</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
+
           <div>
-            <label className="text-sm">Método</label>
-            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full p-2 border rounded">
-              <option value="">Todos</option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'completed')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todos</option>
+              <option value="active">En parqueadero</option>
+              <option value="completed">Completadas</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Método de pago</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as 'all' | 'cash' | 'card' | 'digital')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Todos</option>
               <option value="cash">Efectivo</option>
               <option value="card">Tarjeta</option>
               <option value="digital">Digital</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      {/* Acciones y exportación */}
+      <div className="bg-white rounded-lg border shadow-sm p-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <label className="text-sm">Monto mín</label>
-            <Input type="number" inputMode="numeric" value={minTotal} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinTotal(e.target.value)} placeholder="0" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Historial de Transacciones</h3>
+            <p className="text-sm text-gray-600">
+              {items.length > 0 ? `${items.length} transacciones encontradas` : 'Registro completo de entradas y salidas'}
+            </p>
           </div>
-          <div>
-            <label className="text-sm">Monto máx</label>
-            <Input type="number" inputMode="numeric" value={maxTotal} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxTotal(e.target.value)} placeholder="" />
-          </div>
-          <div className="flex items-end gap-2">
-            <Button type="button" onClick={exportCsv}>Exportar CSV</Button>
-            <Button type="button" onClick={exportJson}>Exportar JSON</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={refreshHistory} className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Actualizar
+            </Button>
+            <Button type="button" onClick={exportCsv} className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Exportar CSV
+            </Button>
+            <Button type="button" variant="outline" onClick={exportJson} className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Exportar JSON
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border overflow-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+        <table className="min-w-full">
+          <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
             <tr>
-              <th className="px-3 py-2 text-left">Ticket</th>
-              <th className="px-3 py-2 text-left">Placa</th>
-              <th className="px-3 py-2 text-left">Tipo</th>
-              <th className="px-3 py-2 text-left">Espacio</th>
-              <th className="px-3 py-2 text-left">Entrada</th>
-              <th className="px-3 py-2 text-left">Salida</th>
-              <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2 text-left">Método</th>
-              <th className="px-3 py-2 text-left">Operador</th>
-              <th className="px-3 py-2">Recibo</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ticket</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vehículo</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Espacio</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Entrada</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Salida</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Método</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Operadores</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {offset === 0 && isLoading ? (
-              <tr><td colSpan={10} className="px-3 py-6 text-center text-gray-500">Cargando…</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Cargando transacciones...
+                </div>
+              </td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={10} className="px-3 py-6 text-center text-gray-500">Sin resultados</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>No hay transacciones registradas</span>
+                </div>
+              </td></tr>
             ) : (
-              items.map((t) => (
-                <tr key={String(t.id)} className="border-t">
-                  <td className="px-3 py-2">T-{t.id}</td>
-                  <td className="px-3 py-2 font-mono">{t.plate?.toUpperCase()}</td>
-                  <td className="px-3 py-2">{t.vehicle_type}</td>
-                  <td className="px-3 py-2 font-mono">{t.spot_number}</td>
-                  <td className="px-3 py-2">{t.entry_time ? new Date(t.entry_time).toLocaleString('es-CO') : '-'}</td>
-                  <td className="px-3 py-2">{t.exit_time ? new Date(t.exit_time).toLocaleString('es-CO') : '-'}</td>
-                  <td className="px-3 py-2 text-right">{typeof t.total_cost === 'number' ? `$${t.total_cost.toLocaleString('es-CO')}` : '-'}</td>
-                  <td className="px-3 py-2">{(t as { payment_method?: string }).payment_method || '-'}</td>
-                  <td className="px-3 py-2">{(t as { admin_uuid?: string }).admin_uuid || '-'}</td>
-                  <td className="px-3 py-2 text-center">
-                    <Button type="button" onClick={() => { setSelected(t); setOpen(true); }}>Ver</Button>
+              items.map((t, index) => (
+                <tr key={String(t.transaction_id)} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        T-{t.transaction_id}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">
+                        {t.vehicle_type === 'car' && '🚗'}
+                        {t.vehicle_type === 'motorcycle' && '🏍️'}
+                        {t.vehicle_type === 'bicycle' && '🚲'}
+                        {t.vehicle_type === 'truck' && '🚛'}
+                      </div>
+                      <div>
+                        <div className="font-mono font-semibold text-gray-900">{t.plate?.toUpperCase()}</div>
+                        <div className="text-sm text-gray-500 capitalize">{t.vehicle_type}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
+                      {t.spot_number}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-900">
+                      {t.entry_time ? new Date(t.entry_time).toLocaleDateString('es-CO') : '-'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {t.entry_time ? new Date(t.entry_time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    {t.exit_time ? (
+                      <div>
+                        <div className="text-sm text-gray-900">
+                          {new Date(t.exit_time).toLocaleDateString('es-CO')}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(t.exit_time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        En parqueadero
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-right">
+                    {typeof t.total_cost === 'number' ? (
+                      <div className="font-semibold text-gray-900">
+                        ${t.total_cost.toLocaleString('es-CO')}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4">
+                    {t.payment_method ? (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        t.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
+                        t.payment_method === 'card' ? 'bg-blue-100 text-blue-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>
+                        {t.payment_method === 'cash' ? '💵 Efectivo' :
+                         t.payment_method === 'card' ? '💳 Tarjeta' :
+                         '📱 Digital'}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="text-sm">
+                      <div className="text-gray-900">{t.entry_admin || '-'}</div>
+                      {t.exit_admin && (
+                        <div className="text-gray-500 text-xs">Salida: {t.exit_admin}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setSelected(t); setOpen(true); }}
+                      className="flex items-center gap-1 hover:bg-blue-50 hover:border-blue-300"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Ver
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -236,8 +422,29 @@ export default function TransactionsHistory() {
           </tbody>
         </table>
         {/* Sentinel for infinite scroll */}
-        <div ref={sentinelRef} className="p-3 text-center text-xs text-gray-500">
-          {hasMore ? (isLoading ? 'Cargando…' : 'Cargar más…') : 'Fin del historial'}
+        <div ref={sentinelRef} className="p-4 text-center border-t bg-gray-50">
+          {hasMore ? (
+            isLoading ? (
+              <div className="flex items-center justify-center gap-2 text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                Cargando más transacciones...
+              </div>
+            ) : (
+              <div className="text-gray-600">
+                <svg className="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                Desplázate para cargar más
+              </div>
+            )
+          ) : (
+            <div className="text-gray-500 flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Todas las transacciones cargadas
+            </div>
+          )}
         </div>
       </div>
 

@@ -249,24 +249,22 @@ export interface ActiveVehicle {
   current_cost: number;                // Costo actual calculado en tiempo real
 }
 
-// ✅ TRANSACCIÓN COMPLETA (para historial/reportes)
+// ✅ TRANSACCIÓN COMPLETA (para historial/reportes) - Actualizado según endpoint real
 export interface VehicleTransaction {
-  id?: number;                         // transaction_id del backend
-  plate: string;
-  vehicle_type: VehicleType;
-  parking_lot_id: string;
-  spot_number?: string;                // space_number del backend
-  entry_time: string;
-  exit_time?: string;
-  duration_minutes?: number;
-  total_cost?: number;                 // amount_charged
-  payment_amount?: number;
-  payment_method?: 'cash' | 'card' | 'digital';
-  status: 'active' | 'completed' | 'cancelled';
-  admin_uuid?: string;
-  created_at?: string;
-  updated_at?: string;
-  receipt?: string;                    // Para recibos JSON
+  transaction_id: number;              // ID único de la transacción
+  plate: string;                       // Placa del vehículo
+  vehicle_type: VehicleType;           // Tipo: car, motorcycle, bicycle, truck
+  spot_number: string;                 // Número del espacio asignado
+  entry_time: string;                  // Fecha/hora de entrada en ISO 8601
+  exit_time?: string | null;           // Fecha/hora de salida (null si activo)
+  duration_minutes?: number | null;    // Tiempo total en minutos (null si activo)
+  payment_amount?: number | null;      // Monto pagado por el cliente
+  payment_method?: 'cash' | 'card' | 'digital' | null; // Método de pago
+  total_cost?: number | null;          // Costo calculado por el sistema
+  status: 'active' | 'completed';      // Estado: active, completed
+  entry_admin: string;                 // Nombre del admin que registró entrada
+  exit_admin?: string | null;          // Nombre del admin que registró salida
+  receipt?: string;                    // JSON string del recibo (legacy)
 }
 
 // ✅ CALCULADORA DE COSTOS (utilidad para frontend)
