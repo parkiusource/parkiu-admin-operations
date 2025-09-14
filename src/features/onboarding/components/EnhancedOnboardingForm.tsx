@@ -30,6 +30,7 @@ export default function EnhancedOnboardingForm() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const firstStepRef = useRef<StepFormRef>(null);
   const secondStepRef = useRef<StepFormRef>(null);
 
@@ -38,12 +39,14 @@ export default function EnhancedOnboardingForm() {
     navigate('/dashboard');
   }, [navigate]);
 
-  // Sincroniza el paso con el status del perfil
+  // Sincroniza el paso con el status del perfil solo en la carga inicial
   useEffect(() => {
-    if (status) {
-      setCurrentStep(statusToStep[status] || 1);
+    if (status && !hasInitialized) {
+      const targetStep = statusToStep[status] || 1;
+      setCurrentStep(targetStep);
+      setHasInitialized(true);
     }
-  }, [status]);
+  }, [status, hasInitialized]);
 
   // Barra de progreso visual mejorada
   const ProgressBar = () => (
@@ -134,12 +137,18 @@ export default function EnhancedOnboardingForm() {
 
   // Manejo de pasos
   const handleNext = async () => {
-    if (currentStep === 1) {
-      await firstStepRef.current?.submitForm();
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      await secondStepRef.current?.submitForm();
-      setCurrentStep(3);
+    try {
+      if (currentStep === 1) {
+        await firstStepRef.current?.submitForm();
+        setCurrentStep(2);
+      } else if (currentStep === 2) {
+        await secondStepRef.current?.submitForm();
+        setCurrentStep(3);
+      }
+    } catch (error) {
+      console.error('Error al avanzar al siguiente paso:', error);
+      // El error ya se maneja en los componentes individuales
+      // No avanzamos al siguiente paso si hay error
     }
   };
   const handleBack = () => {

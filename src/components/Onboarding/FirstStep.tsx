@@ -97,6 +97,13 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
     }
   }, [setValue]);
 
+  // Reset submission state when status changes to allow re-submission if needed
+  useEffect(() => {
+    if (status) {
+      hasSubmittedRef.current = false;
+    }
+  }, [status]);
+
   const onSubmit = async (data: FormData) => {
     // Guard against duplicate submissions (e.g., double clicks or StrictMode re-invocation)
     if (hasSubmittedRef.current || isSubmitting) {
@@ -110,6 +117,7 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
         console.log('Profile already completed, skipping API call. Status:', status);
         formStorage.clear();
         hasSubmittedRef.current = true;
+        // Retornar exitosamente para permitir avanzar al siguiente step
         return data;
       }
 
@@ -197,7 +205,22 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
           <User className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Información básica</h2>
-        <p className="text-gray-600">Completa tu perfil para personalizar tu experiencia</p>
+        <p className="text-gray-600">
+          {status && status !== 'pending_profile' && status !== 'initial'
+            ? 'Tu perfil ya está completo. Puedes continuar al siguiente paso.'
+            : 'Completa tu perfil para personalizar tu experiencia'
+          }
+        </p>
+
+        {/* Mostrar indicador de perfil completo */}
+        {status && status !== 'pending_profile' && status !== 'initial' && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center gap-2">
+            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs">✓</span>
+            </div>
+            <span className="text-green-700 font-medium text-sm">Perfil completado exitosamente</span>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
