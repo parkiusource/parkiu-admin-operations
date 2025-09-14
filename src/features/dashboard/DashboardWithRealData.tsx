@@ -16,7 +16,6 @@ import {
 import { Link } from 'react-router-dom';
 import {
   useDashboardStats,
-  useRealtimeStats,
   calculateKPIs,
   generateAlerts,
   formatCurrency,
@@ -57,6 +56,20 @@ const mockRecentActivity = [
 // COMPONENTE PRINCIPAL
 // ===================================
 
+/**
+ * ✅ OPTIMIZACIÓN IMPLEMENTADA:
+ *
+ * PROBLEMA ANTERIOR:
+ * - useDashboardStats() hacía 1 llamada a /admin/stats + N llamadas a /admin/parking-lots/{id}/stats
+ * - useRealtimeStats() hacía 1 llamada adicional duplicada a /admin/parking-lots/{selectedId}/stats
+ * - Total: 1 + N + 1 = 2 + N llamadas (con N=3 parqueaderos = 5 llamadas)
+ *
+ * SOLUCIÓN:
+ * - Eliminamos useRealtimeStats() y reutilizamos los datos del cache de useDashboardStats()
+ * - Total: 1 + N llamadas (con N=3 parqueaderos = 4 llamadas)
+ * - Reducción: 1 llamada menos (20% menos tráfico API)
+ */
+
 export default function DashboardWithRealData() {
   // Estados locales primero (orden consistente)
   const [realtimeEnabled, setRealtimeEnabled] = useState(true);
@@ -87,7 +100,25 @@ export default function DashboardWithRealData() {
   // Hooks para datos reales (siempre en el mismo orden)
   // Optimized: Reduce update frequency to avoid performance issues
   const dashboardStats = useDashboardStats(parkingLotIds);
-  const realtimeStats = useRealtimeStats(selectedParkingLot, realtimeEnabled ? 60000 : 0); // Increased to 60s
+
+  // ✅ OPTIMIZACIÓN: Usar datos del cache en lugar de hacer llamada duplicada
+  // El hook useRealtimeStats hacía una llamada duplicada al mismo endpoint
+  // que ya está siendo llamado por useDashboardStats para cada parqueadero
+  // Nota: Como el tipo local ParkingLotStats no incluye parking_lot_id,
+  // usamos el índice basado en el orden de parkingLotIds
+  const selectedParkingIndex = parkingLotIds.findIndex(id => id === selectedParkingLot);
+  const selectedParkingStats = selectedParkingIndex >= 0
+    ? dashboardStats.multipleParkingStats.data[selectedParkingIndex]
+    : null;
+
+  // Solo usar realtimeStats si necesitamos actualizaciones más frecuentes
+  // Por ahora, usamos los datos del cache para evitar llamadas duplicadas
+  const realtimeStats = {
+    stats: selectedParkingStats || null,
+    loading: dashboardStats.isLoading,
+    error: dashboardStats.isError ? 'Error loading stats' : null,
+    refetch: dashboardStats.refetchAll
+  };
 
   // Generar alertas cuando cambien las estadísticas (optimizado)
   useEffect(() => {

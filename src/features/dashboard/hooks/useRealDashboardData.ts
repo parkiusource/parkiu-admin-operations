@@ -73,7 +73,7 @@ export const useAdminStats = () => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
   return useQuery<AdminStats>({
-    queryKey: ['admin', 'stats'],
+    queryKey: ['dashboard', 'admin-stats'], // ✅ Consistente con otros hooks del dashboard
     queryFn: () => fetchWithAuth<AdminStats>('/admin/stats', getAccessTokenSilently),
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos (antes cacheTime)
@@ -91,7 +91,7 @@ export const useParkingLotStats = (parkingLotId: string) => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
   return useQuery<ParkingLotStats>({
-    queryKey: ['parking-lot', parkingLotId, 'stats'],
+    queryKey: ['dashboard', 'parking-lot-stats', parkingLotId], // ✅ Consistente con otros hooks del dashboard
     queryFn: () => fetchWithAuth<ParkingLotStats>(`/admin/parking-lots/${parkingLotId}/stats`, getAccessTokenSilently),
     staleTime: 2 * 60 * 1000, // 2 minutos para stats más frecuentes
     gcTime: 5 * 60 * 1000, // 5 minutos (antes cacheTime)
@@ -111,7 +111,7 @@ export const useMultipleParkingStats = (parkingLotIds: string[]) => {
   // Usar useQueries para múltiples queries de forma segura
   const queries = useQueries({
     queries: parkingLotIds.map(id => ({
-      queryKey: ['parking-lot', id, 'stats'],
+      queryKey: ['dashboard', 'parking-lot-stats', id], // ✅ Consistente con otros hooks del dashboard
       queryFn: () => fetchWithAuth<ParkingLotStats>(`/admin/parking-lots/${id}/stats`, getAccessTokenSilently),
       staleTime: 2 * 60 * 1000,
       gcTime: 5 * 60 * 1000,
@@ -138,6 +138,9 @@ export const useMultipleParkingStats = (parkingLotIds: string[]) => {
 /**
  * Hook que actualiza automáticamente las estadísticas
  * Basado en el ejemplo de la documentación
+ *
+ * ⚠️ NOTA: Este hook está siendo reemplazado por optimización en DashboardWithRealData
+ * para evitar llamadas API duplicadas. Se mantiene para compatibilidad.
  */
 export const useRealtimeStats = (parkingLotId: string, intervalMs = 30000) => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
