@@ -121,6 +121,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const [exitResponse, setExitResponse] = useState<VehicleExitResponse | null>(null);
   const [receiptParsed, setReceiptParsed] = useState<Record<string, unknown> | null>(null);
   const [freezeCost, setFreezeCost] = useState(false);
+  const [freezePlate, setFreezePlate] = useState<string | null>(null);
 
   // Always call the hook but conditionally use the result
   const costCalculator = useCostCalculator(selectedParkingLot || (lots[0] as ParkingLot || ({} as ParkingLot)));
@@ -156,7 +157,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 
   // Actualizar costo actual cada minuto (optimizado)
   useEffect(() => {
-    if (!searchedVehicle || freezeCost) return;
+    if (!searchedVehicle) return;
+    const isFrozenForCurrent = freezeCost && normalizePlate(plate) === freezePlate;
+    if (isFrozenForCurrent) return;
     const updateCost = () => {
         // Use requestIdleCallback for non-critical updates to avoid blocking main thread
         const performUpdate = () => {
@@ -185,7 +188,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     const interval = setInterval(updateCost, 60000);
 
     return () => clearInterval(interval);
-  }, [searchedVehicle, costCalculator, paymentAmount, freezeCost]);
+  }, [searchedVehicle, costCalculator, paymentAmount, freezeCost, freezePlate, plate]);
 
   // Actualizar vehículo encontrado
   useEffect(() => {
@@ -228,8 +231,25 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       setPaymentAmount(snapshot.calculated_cost.toString());
     }
     setFreezeCost(true);
+    setFreezePlate(normalizePlate(plate));
     setConfirmOpen(true);
   };
+
+  // Descongelar automáticamente si se cierra el diálogo sin confirmar éxito
+  useEffect(() => {
+    if (!confirmOpen && freezeCost && !showReceipt) {
+      setFreezeCost(false);
+      setFreezePlate(null);
+    }
+  }, [confirmOpen, freezeCost, showReceipt]);
+
+  // Descongelar si cambia la placa mientras está congelado para otra placa
+  useEffect(() => {
+    if (freezeCost && freezePlate && normalizePlate(plate) !== freezePlate) {
+      setFreezeCost(false);
+      setFreezePlate(null);
+    }
+  }, [plate, freezeCost, freezePlate]);
 
   const calculateChange = (): number => {
     if (!currentCost || !paymentAmount) return 0;
