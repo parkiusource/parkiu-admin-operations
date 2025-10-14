@@ -120,6 +120,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [exitResponse, setExitResponse] = useState<VehicleExitResponse | null>(null);
   const [receiptParsed, setReceiptParsed] = useState<Record<string, unknown> | null>(null);
+  const [freezeCost, setFreezeCost] = useState(false);
 
   // Always call the hook but conditionally use the result
   const costCalculator = useCostCalculator(selectedParkingLot || (lots[0] as ParkingLot || ({} as ParkingLot)));
@@ -155,8 +156,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 
   // Actualizar costo actual cada minuto (optimizado)
   useEffect(() => {
-    if (searchedVehicle) {
-      const updateCost = () => {
+    if (!searchedVehicle || freezeCost) return;
+    const updateCost = () => {
         // Use requestIdleCallback for non-critical updates to avoid blocking main thread
         const performUpdate = () => {
           const costInfo = costCalculator.calculateCost(
@@ -177,15 +178,14 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
         }
       };
 
-      // Initial update
-      updateCost();
+    // Initial update
+    updateCost();
 
-      // Update every minute, but use a more efficient approach
-      const interval = setInterval(updateCost, 60000);
+    // Update every minute, but use a more efficient approach
+    const interval = setInterval(updateCost, 60000);
 
-      return () => clearInterval(interval);
-    }
-  }, [searchedVehicle, costCalculator, paymentAmount]);
+    return () => clearInterval(interval);
+  }, [searchedVehicle, costCalculator, paymentAmount, freezeCost]);
 
   // Actualizar vehículo encontrado
   useEffect(() => {
@@ -218,6 +218,16 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       return;
     }
 
+    // Congelar costo al iniciar checkout
+    const snapshot = costCalculator.calculateCost(
+      searchedVehicle.entry_time,
+      searchedVehicle.vehicle_type
+    );
+    setCurrentCost(snapshot.calculated_cost);
+    if (!paymentAmount) {
+      setPaymentAmount(snapshot.calculated_cost.toString());
+    }
+    setFreezeCost(true);
     setConfirmOpen(true);
   };
 
