@@ -10,7 +10,14 @@ vi.mock('@/hooks/useAdminProfileCentralized', () => ({
   useAdminProfileCentralized: () => ({ data: { profile: { role: 'local_admin', status: 'active' } }, isLoading: false })
 }));
 
-vi.mock('@/hooks', () => ({ useToast: () => ({ addToast: vi.fn() }) }));
+vi.mock('@/hooks', () => ({
+  useToast: () => ({ addToast: vi.fn() }),
+  useOperationPermissions: () => ({
+    canRegisterEntry: true,
+    canRegisterExit: true,
+    canOverrideOccupied: true,
+  }),
+}));
 let mockSpaces: Array<{ id: number; number: string; status: 'available' | 'occupied'; type?: 'car' | 'motorcycle' | 'bicycle' | 'truck' }> = [
   { id: 1, number: 'A1', status: 'available', type: 'car' },
   { id: 2, number: 'A2', status: 'occupied', type: 'car' },

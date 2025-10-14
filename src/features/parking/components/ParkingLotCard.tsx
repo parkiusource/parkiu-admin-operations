@@ -17,15 +17,6 @@ interface ParkingLotCardProps {
 export function ParkingLotCard({ parking }: ParkingLotCardProps) {
   const navigate = useNavigate();
 
-  // ✅ Validar que el parqueadero tenga ID
-  if (!parking.id) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-        <p className="text-red-600 text-center">Error: Parqueadero sin ID válido</p>
-      </div>
-    );
-  }
-
   // ✅ Calcular estadísticas usando SOLO los datos que ya tenemos del endpoint /parking-lots/
   const stats = useMemo(() => {
     const total = parking.total_spots || 0;
@@ -44,6 +35,15 @@ export function ParkingLotCard({ parking }: ParkingLotCardProps) {
       hasRealData
     };
   }, [parking.total_spots, parking.available_spaces]);
+
+  // ✅ Validar que el parqueadero tenga ID
+  if (!parking.id) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <p className="text-red-600 text-center">Error: Parqueadero sin ID válido</p>
+      </div>
+    );
+  }
 
   return (
     <div

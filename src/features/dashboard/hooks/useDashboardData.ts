@@ -30,7 +30,7 @@ const defaultQueryConfig = {
 // FUNCIONES DE FETCH
 // ===================================
 
-const fetchWithAuth = async (url: string): Promise<any> => {
+async function fetchWithAuth<T>(url: string): Promise<T> {
   const token = localStorage.getItem('auth_token'); // Ajustar según tu implementación
 
   const response = await fetch(`${API_BASE_URL}${url}`, {
@@ -44,8 +44,8 @@ const fetchWithAuth = async (url: string): Promise<any> => {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
-};
+  return response.json() as Promise<T>;
+}
 
 // ===================================
 // HOOKS PARA ESTADÍSTICAS DEL SISTEMA
@@ -58,7 +58,7 @@ export const useSystemStats = (params: DashboardStatsParams = {}) => {
 
   return useQuery<SystemStatsResponse>({
     queryKey: ['dashboard', 'system-stats', params],
-    queryFn: () => fetchWithAuth(`/api/dashboard/stats?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<SystemStatsResponse>(`/api/dashboard/stats?${queryParams.toString()}`),
     ...defaultQueryConfig,
     staleTime: 2 * 60 * 1000, // 2 minutos para stats críticas
   });
@@ -78,7 +78,7 @@ export const useParkingOverview = (params: ParkingOverviewParams = {}) => {
 
   return useQuery<ParkingOverviewResponse>({
     queryKey: ['dashboard', 'parking-overview', params],
-    queryFn: () => fetchWithAuth(`/api/dashboard/parkings?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<ParkingOverviewResponse>(`/api/dashboard/parkings?${queryParams.toString()}`),
     ...defaultQueryConfig,
   });
 };
@@ -95,7 +95,7 @@ export const useRecentActivity = (params: RecentActivityParams = {}) => {
 
   return useQuery<RecentActivityResponse>({
     queryKey: ['dashboard', 'recent-activity', params],
-    queryFn: () => fetchWithAuth(`/api/dashboard/activity?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<RecentActivityResponse>(`/api/dashboard/activity?${queryParams.toString()}`),
     ...defaultQueryConfig,
     staleTime: 1 * 60 * 1000, // 1 minuto para actividad reciente
   });
@@ -113,7 +113,7 @@ export const useOccupancyStats = (params: OccupancyStatsParams) => {
 
   return useQuery<OccupancyStats>({
     queryKey: ['dashboard', 'occupancy-stats', params],
-    queryFn: () => fetchWithAuth(`/api/dashboard/occupancy?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<OccupancyStats>(`/api/dashboard/occupancy?${queryParams.toString()}`),
     ...defaultQueryConfig,
     staleTime: 3 * 60 * 1000, // 3 minutos
   });
@@ -129,7 +129,7 @@ export const useRevenueStats = (timeRange: 'today' | 'week' | 'month' | 'year' =
 
   return useQuery<RevenueStats>({
     queryKey: ['dashboard', 'revenue-stats', timeRange],
-    queryFn: () => fetchWithAuth(`/api/dashboard/revenue?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<RevenueStats>(`/api/dashboard/revenue?${queryParams.toString()}`),
     ...defaultQueryConfig,
   });
 };
@@ -141,7 +141,7 @@ export const useRevenueStats = (timeRange: 'today' | 'week' | 'month' | 'year' =
 export const useSystemHealth = () => {
   return useQuery<SystemHealthResponse>({
     queryKey: ['dashboard', 'system-health'],
-    queryFn: () => fetchWithAuth('/api/dashboard/health'),
+    queryFn: () => fetchWithAuth<SystemHealthResponse>('/api/dashboard/health'),
     ...defaultQueryConfig,
     staleTime: 1 * 60 * 1000, // 1 minuto para salud del sistema
     refetchInterval: 2 * 60 * 1000, // Auto-refresh cada 2 minutos
@@ -158,7 +158,7 @@ export const useUserStats = (timeRange: 'today' | 'week' | 'month' = 'month') =>
 
   return useQuery<UserStats>({
     queryKey: ['dashboard', 'user-stats', timeRange],
-    queryFn: () => fetchWithAuth(`/api/dashboard/users?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<UserStats>(`/api/dashboard/users?${queryParams.toString()}`),
     ...defaultQueryConfig,
   });
 };
@@ -197,17 +197,21 @@ export const useDashboardData = (params: {
 // UTILIDADES PARA MANEJO DE ERRORES
 // ===================================
 
-export const getDashboardErrorMessage = (error: any): string => {
-  if (error?.response?.status === 401) {
+export const getDashboardErrorMessage = (error: unknown): string => {
+  const maybeResponse = (error as { response?: { status?: number } })?.response;
+  const status = maybeResponse?.status;
+
+  if (status === 401) {
     return 'Sesión expirada. Por favor, inicia sesión nuevamente.';
   }
-  if (error?.response?.status === 403) {
+  if (status === 403) {
     return 'No tienes permisos para acceder a esta información.';
   }
-  if (error?.response?.status >= 500) {
+  if (typeof status === 'number' && status >= 500) {
     return 'Error del servidor. Por favor, intenta más tarde.';
   }
-  return error?.message || 'Error desconocido al cargar los datos.';
+  const message = (error as { message?: string })?.message;
+  return message || 'Error desconocido al cargar los datos.';
 };
 
 // ===================================

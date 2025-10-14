@@ -49,7 +49,8 @@ export interface ActivityItem {
     userId?: string;
     sensorId?: string;
     amount?: number;
-    [key: string]: any;
+    // Permitir valores arbitrarios pero tipados de forma segura
+    [key: string]: string | number | boolean | null | undefined | Record<string, unknown> | Array<unknown>;
   };
 }
 

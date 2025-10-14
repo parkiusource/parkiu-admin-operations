@@ -33,7 +33,17 @@ import { useActiveVehicles, useVehicleStats } from '@/api/hooks/useVehicles';
 
 interface VehicleManagementDashboardProps {
   parkingLot: ParkingLot;
-  onTariffsUpdate?: (tariffs: any) => void;
+  onTariffsUpdate?: (tariffs: {
+    car_rate_per_minute: number;
+    motorcycle_rate_per_minute: number;
+    bicycle_rate_per_minute: number;
+    truck_rate_per_minute: number;
+    fixed_rate_car: number;
+    fixed_rate_motorcycle: number;
+    fixed_rate_bicycle: number;
+    fixed_rate_truck: number;
+    fixed_rate_threshold_minutes: number;
+  }) => void;
 }
 
 export const VehicleManagementDashboard: React.FC<VehicleManagementDashboardProps> = ({
@@ -65,7 +75,17 @@ export const VehicleManagementDashboard: React.FC<VehicleManagementDashboardProp
 
 
 
-  const handleTariffsSave = (tariffs: any) => {
+  const handleTariffsSave = (tariffs: {
+    car_rate_per_minute: number;
+    motorcycle_rate_per_minute: number;
+    bicycle_rate_per_minute: number;
+    truck_rate_per_minute: number;
+    fixed_rate_car: number;
+    fixed_rate_motorcycle: number;
+    fixed_rate_bicycle: number;
+    fixed_rate_truck: number;
+    fixed_rate_threshold_minutes: number;
+  }) => {
     onTariffsUpdate?.(tariffs);
     setShowTariffConfig(false);
     // toast.success('📋 Tarifas actualizadas correctamente'); // TODO: Add toast notification
