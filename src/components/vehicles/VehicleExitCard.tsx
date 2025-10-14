@@ -28,11 +28,12 @@ import { ParkingLot, ActiveVehicle } from '@/types/parking';
 import { useRegisterVehicleExit, useSearchVehicle, useCostCalculator } from '@/api/hooks/useVehicles';
 import { useToast } from '@/hooks';
 import { normalizePlate, validatePlate } from '@/utils/plate';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
 import type { VehicleExitResponse } from '@/types/parking';
 import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
 import { PrinterSelector } from '@/components/common/PrinterSelector';
+import ExitConfirmationDialog from './ExitConfirmationDialog';
+import { useOperationPermissions } from '@/hooks';
 
 interface VehicleExitCardProps {
   parkingLots?: ParkingLot[];
@@ -92,6 +93,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 }) => {
   const { addToast } = useToast();
   const { profile } = useAdminProfileStatus();
+  const { canRegisterExit } = useOperationPermissions();
+
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
     const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
@@ -697,8 +700,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 
                 <Button
                   type="submit"
-                  disabled={!searchedVehicle || !paymentMethod || !paymentAmount || isUnderpaid()}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white py-2 text-sm"
+                  disabled={!canRegisterExit || !searchedVehicle || !paymentMethod || !paymentAmount || isUnderpaid()}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={!canRegisterExit ? 'No tienes permisos para registrar salidas' : undefined}
                 >
                   ✓ Confirmar Salida - ${currentCost?.toLocaleString() || 0}
                 </Button>
@@ -707,66 +711,26 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           </form>
         </div>
 
-        {/* Modal de confirmación para modo compacto */}
-        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar salida</DialogTitle>
-              <DialogDescription>
-                Revise la información antes de confirmar.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Placa</span>
-                <span className="font-mono font-bold">{plate.toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Costo total</span>
-                <span className="font-bold">${currentCost?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Método de pago</span>
-                <span className="capitalize">{paymentMethods.find(m => m.value === paymentMethod)?.label}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Monto recibido</span>
-                <span className="font-bold">${parseFloat(paymentAmount || '0').toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Cambio</span>
-                <span className="font-bold text-green-600">${calculateChange().toLocaleString()}</span>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
-                onClick={() => setConfirmOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => {
-                  setConfirmOpen(false);
-                  registerExit.mutate({
-                    parkingLotId: selectedParkingLot!.id!,
-                    vehicleData: {
-                      plate: normalizePlate(plate),
-                      payment_amount: parseFloat(paymentAmount),
-                      payment_method: paymentMethod as 'cash' | 'card' | 'digital'
-                    }
-                  });
-                }}
-                disabled={registerExit.isPending}
-              >
-                {registerExit.isPending ? 'Procesando...' : 'Confirmar Salida'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Modal de confirmación mejorado */}
+        <ExitConfirmationDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          vehicle={searchedVehicle}
+          calculatedCost={currentCost || 0}
+          paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            registerExit.mutate({
+              parkingLotId: selectedParkingLot!.id!,
+              vehicleData: {
+                plate: normalizePlate(plate),
+                payment_amount: parseFloat(paymentAmount),
+                payment_method: paymentMethod as 'cash' | 'card' | 'digital'
+              }
+            });
+          }}
+          isProcessing={registerExit.isPending}
+        />
       </div>
     );
   }
@@ -1089,13 +1053,15 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               <Button
                 type="submit"
                 disabled={
+                  !canRegisterExit ||
                   registerExit.isPending ||
                   !searchedVehicle ||
                   !paymentMethod ||
                   isUnderpaid() ||
                   !isOperatorAuthorized
                 }
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg font-semibold"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!canRegisterExit ? 'No tienes permisos para registrar salidas' : undefined}
               >
                 {registerExit.isPending ? (
                   <>
@@ -1122,68 +1088,26 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           )}
         </form>
 
-        {/* Confirmación de salida */}
-        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar salida</DialogTitle>
-              <DialogDescription>
-                Revise la información antes de confirmar.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Placa</span>
-                <span className="font-mono font-semibold">{normalizePlate(plate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Costo total</span>
-                <span className="font-semibold">${currentCost?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Método</span>
-                <span>{paymentMethods.find(m => m.value === paymentMethod)?.label}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Monto recibido</span>
-                <span>${parseFloat(paymentAmount || '0').toLocaleString()}</span>
-              </div>
-              {!isUnderpaid() && (
-                <div className="flex justify-between">
-                  <span>Cambio</span>
-                  <span className="font-semibold">${(Math.max(0, parseFloat(paymentAmount || '0') - (currentCost || 0))).toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
-                onClick={() => setConfirmOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => {
-                  setConfirmOpen(false);
-                  registerExit.mutate({
-                    parkingLotId: selectedParkingLot!.id!,
-                    vehicleData: {
-                      plate: normalizePlate(plate),
-                      payment_amount: parseFloat(paymentAmount),
-                      payment_method: paymentMethod as 'cash' | 'card' | 'digital'
-                    }
-                  });
-                }}
-                disabled={registerExit.isPending}
-              >
-                Confirmar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Confirmación de salida mejorado */}
+        <ExitConfirmationDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          vehicle={searchedVehicle}
+          calculatedCost={currentCost || 0}
+          paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            registerExit.mutate({
+              parkingLotId: selectedParkingLot!.id!,
+              vehicleData: {
+                plate: normalizePlate(plate),
+                payment_amount: parseFloat(paymentAmount),
+                payment_method: paymentMethod as 'cash' | 'card' | 'digital'
+              }
+            });
+          }}
+          isProcessing={registerExit.isPending}
+        />
       </CardContent>
     </Card>
   );

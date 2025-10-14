@@ -5,6 +5,7 @@ export { useVehicles } from './useVehicles';
 export { useTransactions } from './useTransactions';
 // Note: useConnectionStatus replaced with connectionService
 export * from './useToast';
+export { useOperationPermissions } from './useOperationPermissions';
 
 // ===============================
 // PARKING HOOKS (NUEVO - REORGANIZADO)

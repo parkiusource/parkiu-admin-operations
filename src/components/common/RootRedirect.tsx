@@ -49,16 +49,21 @@ export const RootRedirect = () => {
       status,
       role,
       hasParkingLot,
-      parkingLotsCount: profileWithLots.parkingLots?.length || 0
+      parkingLotsCount: profileWithLots.parkingLots?.length || 0,
+      parkingLotsData: profileWithLots.parkingLots,
+      fullProfile: profileData.profile
     });
 
-    // Si es admin activo (local_admin o global_admin), ir directo al dashboard
-    if (status === 'active' && (role === 'local_admin' || role === 'global_admin')) {
+    // Si es admin activo (cualquier rol), ir directo al dashboard
+    if (status === 'active') {
+      console.log('Active admin - redirecting to dashboard');
       return <Navigate to="/dashboard" replace />;
     }
 
-    // Si es temp_admin con pending_verify Y tiene parqueadero, puede ir al dashboard (con limitaciones)
-    if (role === 'temp_admin' && status === 'pending_verify' && hasParkingLot) {
+    // Si es temp_admin con pending_verify, puede ir al dashboard (con limitaciones)
+    // El status pending_verify significa que ya completó el onboarding (perfil + parqueadero)
+    if (role === 'temp_admin' && status === 'pending_verify') {
+      console.log('temp_admin with pending_verify - redirecting to dashboard');
       return <Navigate to="/dashboard" replace />;
     }
 

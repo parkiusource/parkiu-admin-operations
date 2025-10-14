@@ -27,6 +27,7 @@ import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
 import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
 import type { VehicleEntryResponse } from '@/types/parking';
 import { PrinterSelector } from '@/components/common/PrinterSelector';
+import { useOperationPermissions } from '@/hooks';
 
 interface VehicleEntryCardProps {
   parkingLots?: ParkingLot[];
@@ -109,6 +110,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   const [plateError, setPlateError] = useState<string | null>(null);
   const [spaceError, setSpaceError] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { canRegisterEntry } = useOperationPermissions();
   const [showTicket, setShowTicket] = useState(false);
   const [entryResponse, setEntryResponse] = useState<VehicleEntryResponse | null>(null);
   const [entrySpot, setEntrySpot] = useState<string>('');
@@ -589,8 +591,9 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
 
             <Button
               type="submit"
-              disabled={!selectedVehicleType || !plate.trim() || !selectedParkingLot || registerEntry.isPending}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 text-sm"
+              disabled={!canRegisterEntry || !selectedVehicleType || !plate.trim() || !selectedParkingLot || registerEntry.isPending}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!canRegisterEntry ? 'No tienes permisos para registrar entradas' : undefined}
             >
               {registerEntry.isPending ? 'Registrando...' : '✓ Confirmar Entrada'}
             </Button>

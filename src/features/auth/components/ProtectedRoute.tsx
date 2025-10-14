@@ -38,12 +38,20 @@ export const ProtectedRoute = () => {
     const hasParkingLot = profileWithLots.parkingLots && profileWithLots.parkingLots.length > 0;
 
     // Permitir acceso al dashboard solo si:
-    // 1. Status es 'active' (admins completos con todo verificado)
-    // 2. Es temp_admin con status 'pending_verify' Y tiene al menos un parqueadero registrado
+    // 1. Status es 'active' (admins completos con todo verificado, cualquier rol)
+    // 2. Es temp_admin con status 'pending_verify' (ya completó onboarding, esperando verificación)
     const canAccessDashboard = (
       status === 'active' ||
-      (role === 'temp_admin' && status === 'pending_verify' && hasParkingLot)
+      (role === 'temp_admin' && status === 'pending_verify')
     );
+
+    // Logging adicional para casos específicos
+    if (status === 'active') {
+      console.log('Active admin - allowing dashboard access');
+    }
+    if (role === 'temp_admin' && status === 'pending_verify') {
+      console.log('temp_admin with pending_verify - allowing dashboard access');
+    }
 
     // Logging para debug
     console.log('ProtectedRoute - Profile check:', {
@@ -52,7 +60,9 @@ export const ProtectedRoute = () => {
       hasCompleteProfile,
       hasParkingLot,
       canAccessDashboard,
-      parkingLotsCount: profileWithLots.parkingLots?.length || 0
+      parkingLotsCount: profileWithLots.parkingLots?.length || 0,
+      parkingLotsData: profileWithLots.parkingLots,
+      fullProfile: profileData.profile
     });
 
     // Si no puede acceder al dashboard, necesita completar onboarding
