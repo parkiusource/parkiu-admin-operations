@@ -452,6 +452,23 @@ export const useRealParkingSpaces = (
       if (!parkingLotId) {
         throw new Error('Parking lot ID is required');
       }
+      // Offline fallback: leer de IndexedDB sin llamar al backend
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const local = await parkingSpotService.listSpots();
+        if (local.error) return [] as BackendParkingSpot[];
+        // Map de Dexie ParkingSpot -> BackendParkingSpot minimal
+        return (local.data as unknown as Array<{
+          id: number | string;
+          number?: string;
+          status: string;
+          type?: string;
+        }>).map((s) => ({
+          id: s.id,
+          number: s.number,
+          status: s.status,
+          type: s.type,
+        })) as BackendParkingSpot[];
+      }
 
       const token = await getAccessTokenSilently();
       const response = await parkingLotService.getParkingSpaces(token, parkingLotId);
@@ -493,6 +510,22 @@ export const useRealParkingSpacesWithVehicles = (
     queryKey: ['realParkingSpacesWithVehicles', parkingLotId],
     queryFn: async () => {
       if (!parkingLotId) throw new Error('Parking lot ID is required');
+      // Offline fallback: usar IndexedDB sin vehículos activos
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const local = await parkingSpotService.listSpots();
+        if (local.error) return [] as BackendParkingSpot[];
+        return (local.data as unknown as Array<{
+          id: number | string;
+          number?: string;
+          status: string;
+          type?: string;
+        }>).map((s) => ({
+          id: s.id,
+          number: s.number,
+          status: s.status,
+          type: s.type,
+        })) as BackendParkingSpot[];
+      }
       const token = await getAccessTokenSilently();
       const response = await parkingLotService.getParkingSpacesWithVehicles(token, parkingLotId);
       if (response.error) throw new Error(response.error);

@@ -12,6 +12,8 @@ import {
   VehicleType,
   ParkingLot
 } from '@/types/parking';
+import { connectionService } from '@/services/connectionService';
+import { enqueueOperation, generateIdempotencyKey } from '@/services/offlineQueue';
 
 // ===============================
 // UTILITY HOOKS
@@ -198,28 +200,39 @@ export const useRegisterVehicleEntry = (options?: {
         throw new Error('Usuario no autenticado');
       }
 
-      // Usuario autenticado, obteniendo token
-
       try {
+        // OFFLINE: encolar y retornar respuesta temporal para permitir impresión de ticket
+        if (!connectionService.isOnline()) {
+          const idempotencyKey = generateIdempotencyKey(`entry-${vehicleData.plate}`);
+          await enqueueOperation({
+            type: 'entry',
+            parkingLotId,
+            plate: vehicleData.plate,
+            payload: { ...vehicleData, idempotencyKey },
+            idempotencyKey,
+          });
+          const now = new Date().toISOString();
+          return {
+            transaction_id: Date.now(),
+            entry_time: now,
+            spot_number: vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '',
+            estimated_cost: 0,
+          } as VehicleEntryResponse;
+        }
+
         const token = await getAccessTokenSilently({
           timeoutInSeconds: 10
         });
 
-        // Token obtenido, llamando servicio
-
         const response = await VehicleService.registerEntry(token, parkingLotId, vehicleData);
-
-        // Respuesta del servicio
 
         if (response.error) {
           console.error('❌ useRegisterVehicleEntry - Error del servicio:', response.error);
           throw new Error(response.error);
         }
 
-        // Registro exitoso
         return response.data!;
       } catch (error) {
-        // Error completo
         throw error as Error;
       }
     },
@@ -238,7 +251,6 @@ export const useRegisterVehicleEntry = (options?: {
         return oldData ? [...oldData, newActiveVehicle] : [newActiveVehicle];
       });
 
-      // Solo invalidar queries que realmente necesitan refetch con debounce
       const debounceKey = `vehicle-entry-${variables.parkingLotId}`;
       const globalDebounce = globalThis as unknown as Record<string, NodeJS.Timeout>;
       const timeoutId = globalDebounce[debounceKey];
@@ -246,7 +258,6 @@ export const useRegisterVehicleEntry = (options?: {
       if (timeoutId) clearTimeout(timeoutId);
 
       globalDebounce[debounceKey] = setTimeout(() => {
-        // Invalidar transacciones y stats con refetchType: 'none' para evitar calls innecesarios
         queryClient.invalidateQueries({
           queryKey: ['vehicles', 'transactions', variables.parkingLotId],
           refetchType: 'none'
@@ -255,8 +266,6 @@ export const useRegisterVehicleEntry = (options?: {
           queryKey: ['parkingLotStats', variables.parkingLotId],
           refetchType: 'none'
         });
-
-        // Invalidar espacios disponibles para actualizar disponibilidad
         queryClient.invalidateQueries({
           queryKey: ['realParkingSpaces', variables.parkingLotId],
           refetchType: 'none'
@@ -265,11 +274,9 @@ export const useRegisterVehicleEntry = (options?: {
         delete globalDebounce[debounceKey];
       }, 200);
 
-      // Entrada de vehículo optimizada
       options?.onSuccess?.(data as VehicleEntryResponse, variables);
     },
     onError: (error) => {
-      // onError ejecutado
       options?.onError?.(error);
     }
   });
@@ -292,6 +299,30 @@ export const useRegisterVehicleExit = (options?: {
       }
 
       try {
+        // OFFLINE: encolar y devolver respuesta temporal para permitir impresión del recibo
+        if (!connectionService.isOnline()) {
+          const idempotencyKey = generateIdempotencyKey(`exit-${vehicleData.plate}`);
+          await enqueueOperation({
+            type: 'exit',
+            parkingLotId,
+            plate: vehicleData.plate,
+            payload: { ...vehicleData, idempotencyKey },
+            idempotencyKey,
+          });
+          const now = new Date().toISOString();
+          const tmp: VehicleExitResponse = {
+            transaction_id: Date.now(),
+            total_cost: vehicleData.payment_amount,
+            duration_minutes: 0,
+            receipt: JSON.stringify({
+              plate: vehicleData.plate,
+              exit_time: now,
+              total_cost: vehicleData.payment_amount,
+            })
+          };
+          return tmp;
+        }
+
         const token = await getAccessTokenSilently({
           timeoutInSeconds: 10,
         });

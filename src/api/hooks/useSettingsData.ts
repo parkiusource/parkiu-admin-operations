@@ -31,7 +31,11 @@ export const useAdminProfileSettings = () => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
-    retry: 2,
+    retry: (failureCount, error: Error & { code?: string }) => {
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
+      return failureCount < 2;
+    },
+    enabled: typeof navigator !== 'undefined' && navigator.onLine,
   });
 };
 
@@ -78,7 +82,11 @@ export const useAdminParkingLotsSettings = () => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
-    retry: 2,
+    retry: (failureCount, error: Error & { code?: string }) => {
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
+      return failureCount < 2;
+    },
+    enabled: typeof navigator !== 'undefined' && navigator.onLine,
   });
 };
 
@@ -125,9 +133,12 @@ export const useParkingLotPricing = (parkingLotId: string | null) => {
       const token = await getAccessTokenSilently();
       return getParkingLotPricing(token, parkingLotId);
     },
-    enabled: !!parkingLotId,
+    enabled: !!parkingLotId && (typeof navigator === 'undefined' ? true : navigator.onLine),
     staleTime: 10 * 60 * 1000, // 10 minutos
-    retry: 2,
+    retry: (failureCount, error: Error & { code?: string }) => {
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
+      return failureCount < 2;
+    },
   });
 };
 
@@ -180,9 +191,12 @@ export const useParkingLotSchedule = (parkingLotId: string | null) => {
       const token = await getAccessTokenSilently();
       return getParkingLotSchedule(token, parkingLotId);
     },
-    enabled: !!parkingLotId,
+    enabled: !!parkingLotId && (typeof navigator === 'undefined' ? true : navigator.onLine),
     staleTime: 10 * 60 * 1000, // 10 minutos
-    retry: 2,
+    retry: (failureCount, error: Error & { code?: string }) => {
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
+      return failureCount < 2;
+    },
   });
 };
 

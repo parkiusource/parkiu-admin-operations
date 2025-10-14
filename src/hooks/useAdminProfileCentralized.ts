@@ -16,12 +16,13 @@ export const useAdminProfileCentralized = () => {
       const token = await getAccessTokenSilently();
       return getAdminProfile(token);
     },
-    enabled: isAuthenticated,
-    retry: false, // No retry para evitar loops infinitos
-    staleTime: 1000 * 60 * 5, // 5 minutos de cache
+    // Evitar fetch continuo cuando no hay conexión
+    enabled: isAuthenticated && typeof navigator !== 'undefined' && navigator.onLine,
+    retry: false,
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    refetchOnReconnect: false,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
   });
 };
 

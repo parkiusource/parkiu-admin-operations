@@ -19,7 +19,8 @@ export class VehicleService {
   static async registerEntry(
     token: string,
     parkingLotId: string,
-    entryData: VehicleEntry
+    entryData: VehicleEntry,
+    options?: { idempotencyKey?: string; clientTime?: string }
   ): Promise<{
     data?: VehicleEntryResponse;
     error?: string;
@@ -32,6 +33,10 @@ export class VehicleService {
       };
       if (entryData.space_number || entryData.parking_space_number || entryData.spot_number) {
         payload['space_number'] = entryData.space_number || entryData.parking_space_number || entryData.spot_number;
+      }
+      // Client timestamp for offline
+      if (options?.clientTime) {
+        payload['client_entry_time'] = options.clientTime;
       }
 
       // Agregar aliases si existen para cubrir backends que esperan otros nombres
@@ -47,6 +52,7 @@ export class VehicleService {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
+            ...(options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
           },
         }
       );
@@ -84,19 +90,28 @@ export class VehicleService {
   static async registerExit(
     token: string,
     parkingLotId: string,
-    exitData: VehicleExit
+    exitData: VehicleExit,
+    options?: { idempotencyKey?: string; clientTime?: string }
   ): Promise<{
     data?: VehicleExitResponse;
     error?: string;
   }> {
     try {
+      const payload: Record<string, unknown> = {
+        ...exitData,
+      };
+      if (options?.clientTime) {
+        payload['client_exit_time'] = options.clientTime;
+      }
+
       const response = await client.post(
         `/admin/parking-lots/${parkingLotId}/vehicles/exit`,
-        exitData,
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
+            ...(options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
           },
         }
       );

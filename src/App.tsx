@@ -12,6 +12,7 @@ import { BackendStatus } from './components/common/BackendStatus';
 import { RootRedirect } from './components/common/RootRedirect';
 import './index.css';
 import RoleGuard from './features/auth/components/RoleGuard';
+import OfflineBanner from './components/common/OfflineBanner';
 
 // Lazy load components
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
@@ -28,36 +29,15 @@ const CallbackPage = lazy(() => import('./features/auth/components/CallbackPage'
 const EnhancedOnboardingForm = lazy(() => import('./features/onboarding/components/EnhancedOnboardingForm'));
 
 // Loading component
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-  </div>
-);
+const LoadingSpinner = () => null;
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes
-      retry: (failureCount, error: Error & { code?: string }) => {
-        // No retry para errores de red cuando el backend no está disponible
-        if (error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_REFUSED') {
-          return false;
-        }
-        // Solo reintentar hasta 2 veces para otros errores
-        return failureCount < 2;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      refetchOnWindowFocus: false, // Evitar refetch automático
-      refetchOnMount: 'always', // Solo refetch al montar si es necesario
-      // ✅ OPTIMIZACIÓN: Configuración mejorada para performance
-      networkMode: 'offlineFirst', // Priorizar cache offline
-      refetchOnReconnect: 'always', // Refetch cuando se reconecte
+      retry: 2,
     },
     mutations: {
-      // ✅ OPTIMIZACIÓN: Configuración para mutaciones
-      networkMode: 'offlineFirst',
-      retry: 1, // Solo 1 reintento para mutaciones
+      retry: 1,
     },
   },
 });
@@ -119,6 +99,7 @@ function App() {
           </AuthProvider>
         </Router>
         <ToastContainer />
+        <OfflineBanner />
       </ToastProvider>
       <BackendStatus />
       <ReactQueryDevtools initialIsOpen={false} />

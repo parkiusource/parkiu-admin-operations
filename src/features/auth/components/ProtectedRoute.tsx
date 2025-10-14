@@ -7,8 +7,9 @@ export const ProtectedRoute = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth0();
   const { data: profileData, isLoading: isProfileLoading, error } = useAdminProfileCentralized();
 
-  // Mostrar loading mientras se verifica autenticación y perfil
-  if (isAuthLoading || (isAuthenticated && isProfileLoading)) {
+  // Mostrar loading mientras se verifica autenticación y perfil (solo si online)
+  const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+  if (isAuthLoading || (isAuthenticated && isProfileLoading && isOnline)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

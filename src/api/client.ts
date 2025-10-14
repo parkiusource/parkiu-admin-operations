@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Auth0Client } from '@auth0/auth0-spa-js';
+import { useStore } from '@/store/useStore';
 
 let auth0Client: Auth0Client | null = null;
 
@@ -73,12 +74,27 @@ const createClient = () => {
     }
   };
 
-  // Interceptor para manejar errores
+  // Interceptor para manejar éxito/errores y marcar estado offline/online
   client.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      try {
+        // Any successful response implies conectividad OK
+        const store = useStore.getState();
+        store.setOffline(false);
+      } catch { /* ignore */ }
+      return response;
+    },
     (error) => {
       const status = error?.response?.status;
       const url = error?.config?.url;
+      try {
+        const code: string | undefined = error?.code;
+        // Si es error de red (backend caído, CORS bloqueado, timeout), marcar offline
+        if (!status || code === 'ERR_NETWORK' || code === 'ECONNABORTED') {
+          const store = useStore.getState();
+          store.setOffline(true);
+        }
+      } catch { /* ignore */ }
 
       if (status === 401) {
         console.error('Error 401: Token inválido o expirado', {
