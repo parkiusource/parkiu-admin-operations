@@ -80,6 +80,21 @@ export interface ParkingLotAPI {
   available_bicycle_spaces?: number;
   distance?: number;
   is_active?: boolean;
+
+  // 🇨🇴 TARIFAS COLOMBIANAS POR MINUTO
+  car_rate_per_minute?: number;
+  motorcycle_rate_per_minute?: number;
+  bicycle_rate_per_minute?: number;
+  truck_rate_per_minute?: number;
+
+  // 🎯 TARIFAS FIJAS
+  fixed_rate_car?: number;
+  fixed_rate_motorcycle?: number;
+  fixed_rate_bicycle?: number;
+  fixed_rate_truck?: number;
+
+  // ⏰ UMBRAL DE TARIFA FIJA
+  fixed_rate_threshold_minutes?: number;
 }
 
 // ✅ Payload para CREAR parking lots (lo que enviamos al POST) - Actualizado según backend
@@ -352,18 +367,19 @@ export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
     contact_phone: api.contact_phone || '',
     tax_id: (api as unknown as { tax_id?: string })?.tax_id || '',
 
-    // 🇨🇴 TARIFAS COLOMBIANAS (valores por defecto desde hourly_rate)
-    car_rate_per_minute: (api.hourly_rate || 5000) / 60,
-    motorcycle_rate_per_minute: ((api.hourly_rate || 5000) / 60) * 0.3,
-    bicycle_rate_per_minute: ((api.hourly_rate || 5000) / 60) * 0.06,
-    truck_rate_per_minute: ((api.hourly_rate || 5000) / 60) * 1.5,
+    // 🇨🇴 TARIFAS COLOMBIANAS - Usar valores del backend o calcular desde hourly_rate
+    car_rate_per_minute: api.car_rate_per_minute ?? ((api.hourly_rate || 5000) / 60),
+    motorcycle_rate_per_minute: api.motorcycle_rate_per_minute ?? (((api.hourly_rate || 5000) / 60) * 0.3),
+    bicycle_rate_per_minute: api.bicycle_rate_per_minute ?? (((api.hourly_rate || 5000) / 60) * 0.06),
+    truck_rate_per_minute: api.truck_rate_per_minute ?? (((api.hourly_rate || 5000) / 60) * 1.5),
 
-    fixed_rate_car: (api.hourly_rate || 5000) * 10,
-    fixed_rate_motorcycle: ((api.hourly_rate || 5000) * 10) * 0.4,
-    fixed_rate_bicycle: ((api.hourly_rate || 5000) * 10) * 0.2,
-    fixed_rate_truck: ((api.hourly_rate || 5000) * 10) * 1.4,
+    fixed_rate_car: api.fixed_rate_car ?? ((api.hourly_rate || 5000) * 10),
+    fixed_rate_motorcycle: api.fixed_rate_motorcycle ?? (((api.hourly_rate || 5000) * 10) * 0.4),
+    fixed_rate_bicycle: api.fixed_rate_bicycle ?? (((api.hourly_rate || 5000) * 10) * 0.2),
+    fixed_rate_truck: api.fixed_rate_truck ?? (((api.hourly_rate || 5000) * 10) * 1.4),
 
-    fixed_rate_threshold_minutes: 720, // 12 horas
+    // ⏰ UMBRAL DE TARIFA FIJA - Usar valor del backend o default 12 horas
+    fixed_rate_threshold_minutes: api.fixed_rate_threshold_minutes ?? 720,
 
     // 📊 CAMPOS LEGACY
     price_per_hour: api.hourly_rate || 0,

@@ -386,7 +386,8 @@ export default function Settings() {
       try {
         await updatePricingMutation.mutateAsync({ parkingLotId: selectedParkingLot, updates: formData });
         addToast('✅ Tarifas actualizadas correctamente', 'success');
-      } catch {
+      } catch (error) {
+        console.error('Error actualizando tarifas:', error);
         addToast('❌ Error actualizando tarifas', 'error');
       }
     };
@@ -404,11 +405,26 @@ export default function Settings() {
     }
 
     return (
-      <div className="bg-white rounded-xl border p-6">
-        <h3 className="text-lg font-semibold mb-6">💰 Configuración de Tarifas</h3>
+      <div className="space-y-4">
+        {/* Selector de parqueadero */}
+        <div className="bg-white rounded-xl border p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Parqueadero</label>
+          <select
+            value={selectedParkingLot || ''}
+            onChange={(e) => setSelectedParkingLot(e.target.value)}
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-parkiu-500 focus:ring-parkiu-500"
+          >
+            {parkingLots?.map((lot: { id: string; name: string }) => (
+              <option key={lot.id} value={lot.id}>{lot.name}</option>
+            ))}
+          </select>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Tarifas por minuto */}
+        <div className="bg-white rounded-xl border p-6">
+          <h3 className="text-lg font-semibold mb-6">💰 Configuración de Tarifas</h3>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Tarifas por minuto */}
           <div>
             <h4 className="text-md font-medium mb-4">Tarifas por Minuto</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -499,6 +515,7 @@ export default function Settings() {
             </Button>
           </div>
         </form>
+        </div>
       </div>
     );
   };
@@ -611,10 +628,25 @@ export default function Settings() {
     }
 
     return (
-      <div className="bg-white rounded-xl border p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">⏰ Horarios de Operación</h3>
-          <div className="flex items-center gap-2 text-sm">
+      <div className="space-y-4">
+        {/* Selector de parqueadero */}
+        <div className="bg-white rounded-xl border p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Parqueadero</label>
+          <select
+            value={selectedParkingLot || ''}
+            onChange={(e) => setSelectedParkingLot(e.target.value)}
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-parkiu-500 focus:ring-parkiu-500"
+          >
+            {parkingLots?.map((lot: { id: string; name: string }) => (
+              <option key={lot.id} value={lot.id}>{lot.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">⏰ Horarios de Operación</h3>
+            <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-600">Configuración:</span>
             <select
               value={scheduleMode}
@@ -852,6 +884,7 @@ export default function Settings() {
             </Button>
           </div>
         </form>
+        </div>
       </div>
     );
   };

@@ -33,6 +33,7 @@ import {
   useRealParkingSpacesWithVehicles,
   useUpdateRealParkingSpaceStatus
 } from '@/hooks/parking';
+import { useParkingLotPricing } from '@/api/hooks/useSettingsData';
 import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
 
 // ✅ IMPORTAR TIPOS DEL BACKEND
@@ -43,6 +44,10 @@ import { ParkingLotCard } from './components/ParkingLotCard';
 
 // ✅ IMPORTAR HOOK PARA ESTADÍSTICAS REALES DEL OVERVIEW
 import { useRealParkingOverview } from './hooks/useRealParkingOverview';
+
+// ✅ IMPORTAR COMPONENTES MEJORADOS PARA VISTA DETALLADA
+import { PricingPanel } from './components/PricingPanel';
+import { ParkingGeneralInfo } from './components/ParkingGeneralInfo';
 
 // Función movida a ParkingLotCard.tsx
 
@@ -129,9 +134,17 @@ export default function AdminParkingDashboard() {
 
   // ✅ DETERMINAR QUE MOSTRAR SEGÚN LA RUTA
   const isListView = !parkingId; // Si no hay ID, mostrar lista
-  const currentParking = parkingId
+  const baseParkingLot = parkingId
     ? parkingLots?.find(lot => lot.id === parkingId)
     : null; // No necesitamos fallback para vista de lista
+
+  // ✅ OBTENER TARIFAS ACTUALIZADAS DEL ENDPOINT ESPECÍFICO
+  const { data: pricingData } = useParkingLotPricing(parkingId || null);
+
+  // ✅ COMBINAR DATOS DEL PARQUEADERO CON TARIFAS ACTUALIZADAS
+  const currentParking = baseParkingLot && pricingData
+    ? { ...baseParkingLot, ...pricingData }
+    : baseParkingLot;
 
   // ✅ REDIRIGIR SI EL :id NO PERTENECE A LOS LOTS DEL USUARIO
   useEffect(() => {
@@ -642,7 +655,7 @@ export default function AdminParkingDashboard() {
       <div className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Panel principal */}
-          <div className="xl:col-span-9 space-y-6">
+          <div className="xl:col-span-8 space-y-6">
 
             {/* ✅ MÉTRICAS MEJORADAS CON DISEÑO DINÁMICO */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -935,47 +948,13 @@ export default function AdminParkingDashboard() {
             </div>
           </div>
 
-          {/* Panel lateral de información del parqueadero */}
-          <div className="xl:col-span-3">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm sticky top-[88px]">
-              <div className="p-5 border-b border-slate-200">
-                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <div className="p-1 bg-indigo-50 rounded">
-                    <LuSettings className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  Información del Parqueadero
-                </h3>
-              </div>
-              <div className="p-5">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-700">Nombre</h4>
-                    <p className="text-slate-900">{currentParking.name}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-700">Dirección</h4>
-                    <p className="text-slate-900">{currentParking.address}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-700">Horarios</h4>
-                    <p className="text-slate-900">
-                      {currentParking.opening_time || '08:00'} - {currentParking.closing_time || '20:00'}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-700">Contacto</h4>
-                    <p className="text-slate-900">{currentParking.contact_name || 'Sin contacto'}</p>
-                    <p className="text-slate-600 text-sm">{currentParking.contact_phone || 'Sin teléfono'}</p>
-                  </div>
-                  {currentParking.description && (
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-700">Descripción</h4>
-                      <p className="text-slate-900 text-sm">{currentParking.description}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          {/* Panel lateral - Información y Tarifas */}
+          <div className="xl:col-span-4 space-y-6 sticky top-[88px]">
+            {/* Información General del Parqueadero */}
+            <ParkingGeneralInfo parkingLot={currentParking} />
+
+            {/* Tarifas por Tipo de Vehículo */}
+            <PricingPanel parkingLot={currentParking} />
           </div>
         </div>
       </div>

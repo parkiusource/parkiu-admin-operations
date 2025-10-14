@@ -101,9 +101,9 @@ export const useUpdateParkingLot = () => {
     },
     onSuccess: (updatedLot, { parkingLotId }) => {
       // Actualizar cache de la lista de parqueaderos
-      queryClient.setQueryData(['admin-parking-lots-settings'], (oldData: any) => {
+      queryClient.setQueryData(['admin-parking-lots-settings'], (oldData: unknown) => {
         if (!oldData || !Array.isArray(oldData)) return oldData;
-        return oldData.map((lot: any) =>
+        return oldData.map((lot: typeof updatedLot) =>
           lot.id === parkingLotId ? updatedLot : lot
         );
       });
@@ -155,8 +155,15 @@ export const useUpdateParkingLotPricing = () => {
       return updateParkingLotPricing(token, parkingLotId, updates);
     },
     onSuccess: (updatedPricing, { parkingLotId }) => {
-      // Actualizar cache de las tarifas
+      // Actualizar cache de las tarifas específicas
       queryClient.setQueryData(['parking-lot-pricing', parkingLotId], updatedPricing);
+
+      // Invalidar todos los caches relacionados para reflejar los cambios inmediatamente
+      queryClient.invalidateQueries({ queryKey: ['parking-lots'] });
+      queryClient.invalidateQueries({ queryKey: ['parkingLots'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-parking-lots-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['parking-spaces', parkingLotId] });
+      queryClient.invalidateQueries({ queryKey: ['parkingLot', parkingLotId] });
     },
   });
 };
