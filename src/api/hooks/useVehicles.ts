@@ -261,6 +261,29 @@ export const useRegisterVehicleEntry = (options?: {
         return oldData ? [...oldData, newActiveVehicle] : [newActiveVehicle];
       });
 
+      // 🚀 OPTIMIZACIÓN: Actualizar estado del espacio a 'occupied' en el cache
+      const spotNumber = data.spot_number || variables.vehicleData.space_number || variables.vehicleData.spot_number;
+      if (spotNumber) {
+        queryClient.setQueryData(['realParkingSpaces', variables.parkingLotId], (oldSpaces: unknown) => {
+          if (!oldSpaces || !Array.isArray(oldSpaces)) return oldSpaces;
+          return oldSpaces.map((space: { number?: string; status?: string }) =>
+            space.number === spotNumber
+              ? { ...space, status: 'occupied', last_status_change: new Date().toISOString() }
+              : space
+          );
+        });
+
+        // También actualizar cache de espacios con vehículos
+        queryClient.setQueryData(['realParkingSpacesWithVehicles', variables.parkingLotId], (oldSpaces: unknown) => {
+          if (!oldSpaces || !Array.isArray(oldSpaces)) return oldSpaces;
+          return oldSpaces.map((space: { number?: string; status?: string }) =>
+            space.number === spotNumber
+              ? { ...space, status: 'occupied', last_status_change: new Date().toISOString() }
+              : space
+          );
+        });
+      }
+
       const debounceKey = `vehicle-entry-${variables.parkingLotId}`;
       const globalDebounce = globalThis as unknown as Record<string, NodeJS.Timeout>;
       const timeoutId = globalDebounce[debounceKey];
@@ -276,9 +299,14 @@ export const useRegisterVehicleEntry = (options?: {
           queryKey: ['parkingLotStats', variables.parkingLotId],
           refetchType: 'none'
         });
+        // Refetch parking spaces to update occupied/available status and sync with backend
         queryClient.invalidateQueries({
           queryKey: ['realParkingSpaces', variables.parkingLotId],
-          refetchType: 'none'
+          refetchType: 'active'
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['realParkingSpacesWithVehicles', variables.parkingLotId],
+          refetchType: 'active'
         });
 
         delete globalDebounce[debounceKey];
@@ -361,10 +389,36 @@ export const useRegisterVehicleExit = (options?: {
       }
     },
     onSuccess: (data, variables) => {
-      // 🚀 OPTIMIZACIÓN: Remover vehículo del cache de activos directamente
+      // 🚀 OPTIMIZACIÓN: Remover vehículo del cache de activos directamente y obtener su espacio
+      let exitedVehicleSpot: string | undefined;
       queryClient.setQueryData(['vehicles', 'active', variables.parkingLotId], (oldData: ActiveVehicle[] | undefined) => {
-        return oldData ? oldData.filter(vehicle => vehicle.plate !== variables.vehicleData.plate) : [];
+        if (!oldData) return [];
+        const exitedVehicle = oldData.find(vehicle => vehicle.plate === variables.vehicleData.plate);
+        exitedVehicleSpot = exitedVehicle?.spot_number;
+        return oldData.filter(vehicle => vehicle.plate !== variables.vehicleData.plate);
       });
+
+      // 🚀 OPTIMIZACIÓN: Actualizar estado del espacio a 'available' en el cache
+      if (exitedVehicleSpot) {
+        queryClient.setQueryData(['realParkingSpaces', variables.parkingLotId], (oldSpaces: unknown) => {
+          if (!oldSpaces || !Array.isArray(oldSpaces)) return oldSpaces;
+          return oldSpaces.map((space: { number?: string; status?: string }) =>
+            space.number === exitedVehicleSpot
+              ? { ...space, status: 'available', last_status_change: new Date().toISOString() }
+              : space
+          );
+        });
+
+        // También actualizar cache de espacios con vehículos
+        queryClient.setQueryData(['realParkingSpacesWithVehicles', variables.parkingLotId], (oldSpaces: unknown) => {
+          if (!oldSpaces || !Array.isArray(oldSpaces)) return oldSpaces;
+          return oldSpaces.map((space: { number?: string; status?: string }) =>
+            space.number === exitedVehicleSpot
+              ? { ...space, status: 'available', last_status_change: new Date().toISOString() }
+              : space
+          );
+        });
+      }
 
       // Debounce para invalidaciones secundarias
       const debounceKey = `vehicle-exit-${variables.parkingLotId}`;
@@ -383,10 +437,14 @@ export const useRegisterVehicleExit = (options?: {
           refetchType: 'none'
         });
 
-        // Invalidar espacios para liberar el espacio ocupado
+        // Refetch parking spaces to update occupied/available status and sync with backend
         queryClient.invalidateQueries({
           queryKey: ['realParkingSpaces', variables.parkingLotId],
-          refetchType: 'none'
+          refetchType: 'active'
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['realParkingSpacesWithVehicles', variables.parkingLotId],
+          refetchType: 'active'
         });
 
         delete globalDebounce[debounceKey];
