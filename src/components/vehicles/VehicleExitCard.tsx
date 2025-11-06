@@ -190,6 +190,26 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     return () => clearInterval(interval);
   }, [searchedVehicle, costCalculator, paymentAmount, freezeCost, freezePlate, plate]);
 
+  // Congelar costo en cuanto se identifica el vehículo a sacar
+  useEffect(() => {
+    if (!searchedVehicle) return;
+    // Si aún no está congelado para esta placa, congelar ahora
+    const normalized = normalizePlate(plate);
+    const alreadyFrozenForThisPlate = freezeCost && freezePlate === normalized;
+    if (alreadyFrozenForThisPlate) return;
+
+    const snapshot = costCalculator.calculateCost(
+      searchedVehicle.entry_time,
+      searchedVehicle.vehicle_type
+    );
+    setCurrentCost(snapshot.calculated_cost);
+    if (!paymentAmount) {
+      setPaymentAmount(snapshot.calculated_cost.toString());
+    }
+    setFreezeCost(true);
+    setFreezePlate(normalized);
+  }, [searchedVehicle, plate, freezeCost, freezePlate, costCalculator, paymentAmount]);
+
   // Actualizar vehículo encontrado
   useEffect(() => {
     if (searchVehicle.data && searchVehicle.data.plate === plate.toUpperCase()) {
