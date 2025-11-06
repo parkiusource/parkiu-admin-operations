@@ -194,6 +194,12 @@ export const useRegisterVehicleEntry = (options?: {
   return useMutation({
     mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleEntry }) => {
       // Iniciando mutación
+      console.log('🚗 useRegisterVehicleEntry - Iniciando registro', {
+        isOnline: connectionService.isOnline(),
+        isOffline: connectionService.isOffline(),
+        parkingLotId,
+        plate: vehicleData.plate
+      });
 
       if (!isAuthenticated) {
         console.error('❌ useRegisterVehicleEntry - Usuario NO autenticado');
@@ -203,14 +209,16 @@ export const useRegisterVehicleEntry = (options?: {
       try {
         // OFFLINE: encolar y retornar respuesta temporal para permitir impresión de ticket
         if (!connectionService.isOnline()) {
+          console.log('📴 MODO OFFLINE - Encolando operación de entrada');
           const idempotencyKey = generateIdempotencyKey(`entry-${vehicleData.plate}`);
-          await enqueueOperation({
+          const queueId = await enqueueOperation({
             type: 'entry',
             parkingLotId,
             plate: vehicleData.plate,
             payload: { ...vehicleData, idempotencyKey },
             idempotencyKey,
           });
+          console.log('✅ Operación encolada con ID:', queueId);
           const now = new Date().toISOString();
           return {
             transaction_id: Date.now(),
@@ -219,6 +227,8 @@ export const useRegisterVehicleEntry = (options?: {
             estimated_cost: 0,
           } as VehicleEntryResponse;
         }
+
+        console.log('🌐 MODO ONLINE - Registrando en backend');
 
         const token = await getAccessTokenSilently({
           timeoutInSeconds: 10
@@ -294,6 +304,13 @@ export const useRegisterVehicleExit = (options?: {
 
   return useMutation({
     mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleExit }) => {
+      console.log('🚪 useRegisterVehicleExit - Iniciando registro', {
+        isOnline: connectionService.isOnline(),
+        isOffline: connectionService.isOffline(),
+        parkingLotId,
+        plate: vehicleData.plate
+      });
+
       if (!isAuthenticated) {
         throw new Error('Usuario no autenticado');
       }
@@ -301,14 +318,16 @@ export const useRegisterVehicleExit = (options?: {
       try {
         // OFFLINE: encolar y devolver respuesta temporal para permitir impresión del recibo
         if (!connectionService.isOnline()) {
+          console.log('📴 MODO OFFLINE - Encolando operación de salida');
           const idempotencyKey = generateIdempotencyKey(`exit-${vehicleData.plate}`);
-          await enqueueOperation({
+          const queueId = await enqueueOperation({
             type: 'exit',
             parkingLotId,
             plate: vehicleData.plate,
             payload: { ...vehicleData, idempotencyKey },
             idempotencyKey,
           });
+          console.log('✅ Operación de salida encolada con ID:', queueId);
           const now = new Date().toISOString();
           const tmp: VehicleExitResponse = {
             transaction_id: Date.now(),
@@ -322,6 +341,8 @@ export const useRegisterVehicleExit = (options?: {
           };
           return tmp;
         }
+
+        console.log('🌐 MODO ONLINE - Registrando salida en backend');
 
         const token = await getAccessTokenSilently({
           timeoutInSeconds: 10,

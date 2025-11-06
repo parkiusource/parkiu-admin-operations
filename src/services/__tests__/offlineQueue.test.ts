@@ -13,19 +13,30 @@ vi.mock('@/db/schema', () => {
       return id;
     };
     update = async (id: number, updates: Partial<T>): Promise<void> => {
-      const idx = this.items.findIndex((i) => (i as any).id === id);
+      const idx = this.items.findIndex((i) => (i as Record<string, unknown>).id === id);
       if (idx >= 0) this.items[idx] = { ...this.items[idx], ...updates } as T;
     };
     where = (field: keyof T & string) => ({
       equals: (value: unknown) => ({
-        toArray: async () => this.items.filter((i) => (i as any)[field] === value),
-        count: async () => this.items.filter((i) => (i as any)[field] === value).length,
+        toArray: async () => this.items.filter((i) => (i as Record<string, unknown>)[field] === value),
+        count: async () => this.items.filter((i) => (i as Record<string, unknown>)[field] === value).length,
       }),
     });
     toArray = async () => this.items.slice();
   }
+  interface OfflineOperation {
+    id?: number;
+    type: string;
+    parkingLotId: string;
+    plate: string;
+    payload: Record<string, unknown>;
+    idempotencyKey: string;
+    createdAt: string;
+    status: string;
+    errorMessage?: string;
+  }
   class ParkiuDB {
-    operations = new InMemoryTable<any>();
+    operations = new InMemoryTable<OfflineOperation>();
   }
   return { ParkiuDB };
 });

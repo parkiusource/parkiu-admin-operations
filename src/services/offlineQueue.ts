@@ -11,12 +11,20 @@ export function generateIdempotencyKey(seed?: string): string {
 }
 
 export async function enqueueOperation(op: Omit<OfflineOperation, 'id' | 'createdAt' | 'status'>): Promise<number> {
+  console.log('📝 enqueueOperation - Guardando en IndexedDB:', op);
   const record: OfflineOperation = {
     ...op,
     createdAt: new Date().toISOString(),
     status: 'pending',
   };
-  return db.operations.add(record);
+  try {
+    const id = await db.operations.add(record);
+    console.log('✅ Operación guardada en IndexedDB con ID:', id);
+    return id;
+  } catch (error) {
+    console.error('❌ Error guardando en IndexedDB:', error);
+    throw error;
+  }
 }
 
 export async function getPendingCount(): Promise<number> {

@@ -24,7 +24,9 @@ export function saveTariffs(parkingLotId: string, lot: ParkingLot): void {
       fixed_rate_threshold_minutes: lot.fixed_rate_threshold_minutes,
     };
     localStorage.setItem(KEY, JSON.stringify(cache));
-  } catch {}
+  } catch (error) {
+    console.error('Error saving tariffs to localStorage:', error);
+  }
 }
 
 export function getTariffs(parkingLotId: string): TariffsCache[string] | null {

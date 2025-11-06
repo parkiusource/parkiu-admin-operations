@@ -45,9 +45,10 @@ class ConnectionService {
 
   /**
    * Get current connection status
+   * Uses store state as source of truth (synced with navigator.onLine)
    */
   isOnline(): boolean {
-    return navigator.onLine;
+    return !useStore.getState().isOffline;
   }
 
   /**
@@ -56,7 +57,20 @@ class ConnectionService {
   isOffline(): boolean {
     return useStore.getState().isOffline;
   }
+
+  /**
+   * Manually set offline status (useful for testing)
+   */
+  setOffline(offline: boolean): void {
+    console.log(`🔧 Manually setting offline status to: ${offline}`);
+    useStore.getState().setOffline(offline);
+  }
 }
 
 // Export singleton instance
 export const connectionService = new ConnectionService();
+
+// Expose to window for debugging
+if (typeof window !== 'undefined') {
+  (window as unknown as { connectionService: ConnectionService }).connectionService = connectionService;
+}
