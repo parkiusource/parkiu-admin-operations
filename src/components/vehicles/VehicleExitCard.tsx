@@ -158,8 +158,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   // Actualizar costo actual cada minuto (optimizado)
   useEffect(() => {
     if (!searchedVehicle) return;
+    // No actualizar si está congelado o si el diálogo de confirmación está abierto
     const isFrozenForCurrent = freezeCost && normalizePlate(plate) === freezePlate;
-    if (isFrozenForCurrent) return;
+    if (isFrozenForCurrent || confirmOpen) return;
     const updateCost = () => {
         // Use requestIdleCallback for non-critical updates to avoid blocking main thread
         const performUpdate = () => {
@@ -188,7 +189,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     const interval = setInterval(updateCost, 60000);
 
     return () => clearInterval(interval);
-  }, [searchedVehicle, costCalculator, paymentAmount, freezeCost, freezePlate, plate]);
+  }, [searchedVehicle, costCalculator, paymentAmount, freezeCost, freezePlate, plate, confirmOpen]);
 
   // Congelar costo en cuanto se identifica el vehículo a sacar
   useEffect(() => {
@@ -774,7 +775,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               parkingLotId: selectedParkingLot!.id!,
               vehicleData: {
                 plate: normalizePlate(plate),
-                payment_amount: parseFloat(paymentAmount),
+                payment_amount: Math.max(0, parseFloat(paymentAmount) || 0),
                 payment_method: paymentMethod as 'cash' | 'card' | 'digital'
               }
             });
@@ -1151,7 +1152,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               parkingLotId: selectedParkingLot!.id!,
               vehicleData: {
                 plate: normalizePlate(plate),
-                payment_amount: parseFloat(paymentAmount),
+                payment_amount: Math.max(0, parseFloat(paymentAmount) || 0),
                 payment_method: paymentMethod as 'cash' | 'card' | 'digital'
               }
             });
