@@ -1,11 +1,14 @@
 import { useStore } from '../store/useStore';
+import { syncPendingOperations } from './offlineSync';
 
 /**
  * Connection status service that monitors network connectivity
  * This runs outside of React's context to avoid hook call issues
+ * ✅ CON SINCRONIZACIÓN AUTOMÁTICA AL VOLVER ONLINE
  */
 class ConnectionService {
   private initialized = false;
+  private syncTimeoutId: NodeJS.Timeout | null = null;
 
   /**
    * Initialize the connection status monitoring
@@ -18,12 +21,39 @@ class ConnectionService {
 
     const store = useStore.getState();
 
-    const handleOnline = () => {
+    const handleOnline = async () => {
+      console.log('🌐 Conexión restablecida - Actualizando estado...');
       store.setOffline(false);
+
+      // 🔄 SINCRONIZACIÓN AUTOMÁTICA con debounce de 2 segundos
+      // (esperar a que la conexión se estabilice)
+      if (this.syncTimeoutId) {
+        clearTimeout(this.syncTimeoutId);
+      }
+
+      this.syncTimeoutId = setTimeout(async () => {
+        try {
+          console.log('🔄 Iniciando sincronización automática de operaciones offline...');
+          store.setSyncing(true);
+          await syncPendingOperations();
+          console.log('✅ Sincronización automática completada');
+        } catch (error) {
+          console.error('❌ Error en sincronización automática:', error);
+        } finally {
+          store.setSyncing(false);
+          this.syncTimeoutId = null;
+        }
+      }, 2000);
     };
 
     const handleOffline = () => {
+      console.log('📡 Conexión perdida - Activando modo offline...');
       store.setOffline(true);
+      // Cancelar sincronización pendiente si hay una
+      if (this.syncTimeoutId) {
+        clearTimeout(this.syncTimeoutId);
+        this.syncTimeoutId = null;
+      }
     };
 
     // Set initial state
@@ -39,6 +69,9 @@ class ConnectionService {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (this.syncTimeoutId) {
+        clearTimeout(this.syncTimeoutId);
+      }
       this.initialized = false;
     };
   }

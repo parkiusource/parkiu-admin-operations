@@ -5,6 +5,7 @@ import {
   ParkingLot,
   ParkingLotFilters
 } from '@/services/parking/types';
+import { saveTariffs } from '@/services/offlineTariffs';
 
 // ===============================
 // QUERY HOOKS
@@ -32,6 +33,15 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
 
       if (response.error) {
         throw new Error(response.error);
+      }
+
+      // 💾 OFFLINE: Cachear tarifas en localStorage para cálculos offline
+      if (response.data && Array.isArray(response.data)) {
+        response.data.forEach(lot => {
+          if (lot.id) {
+            saveTariffs(lot.id, lot);
+          }
+        });
       }
 
       return response.data;
@@ -74,6 +84,11 @@ export const useParkingLot = (id: string, options?: {
 
       if (response.error) {
         throw new Error(response.error);
+      }
+
+      // 💾 OFFLINE: Cachear tarifas en localStorage
+      if (response.data && response.data.id) {
+        saveTariffs(response.data.id, response.data);
       }
 
       return response.data;

@@ -10,6 +10,66 @@ import {
   VehicleType,
   ParkingLot
 } from '@/types/parking';
+import { getTariffs } from '@/services/offlineTariffs';
+
+// ===============================
+// 🛡️ HELPERS PRIVADOS CON VALIDACIÓN
+// ===============================
+
+/**
+ * Obtener tarifas con fallback a localStorage y validación
+ * @private
+ */
+function getTariffsWithFallback(
+  parkingLot: ParkingLot,
+  parkingLotId?: string
+): {
+  car_rate_per_minute: number;
+  motorcycle_rate_per_minute: number;
+  bicycle_rate_per_minute: number;
+  truck_rate_per_minute: number;
+  fixed_rate_car: number;
+  fixed_rate_motorcycle: number;
+  fixed_rate_bicycle: number;
+  fixed_rate_truck: number;
+  fixed_rate_threshold_minutes: number;
+} {
+  // Intentar obtener de localStorage si las tarifas no están en memoria
+  let tariffs = parkingLot;
+
+  // Si las tarifas no están definidas o son inválidas, buscar en localStorage
+  const needsFallback = !tariffs ||
+    !tariffs.car_rate_per_minute ||
+    tariffs.car_rate_per_minute <= 0;
+
+  if (needsFallback && parkingLotId) {
+    const cached = getTariffs(parkingLotId);
+    if (cached) {
+      console.log(`💾 Usando tarifas cacheadas de localStorage para parking lot ${parkingLotId}`);
+      tariffs = { ...parkingLot, ...cached };
+    }
+  }
+
+  // Validar y retornar con valores por defecto si es necesario
+  const validated = {
+    car_rate_per_minute: Math.max(0, tariffs?.car_rate_per_minute || 0),
+    motorcycle_rate_per_minute: Math.max(0, tariffs?.motorcycle_rate_per_minute || 0),
+    bicycle_rate_per_minute: Math.max(0, tariffs?.bicycle_rate_per_minute || 0),
+    truck_rate_per_minute: Math.max(0, tariffs?.truck_rate_per_minute || 0),
+    fixed_rate_car: Math.max(0, tariffs?.fixed_rate_car || 0),
+    fixed_rate_motorcycle: Math.max(0, tariffs?.fixed_rate_motorcycle || 0),
+    fixed_rate_bicycle: Math.max(0, tariffs?.fixed_rate_bicycle || 0),
+    fixed_rate_truck: Math.max(0, tariffs?.fixed_rate_truck || 0),
+    fixed_rate_threshold_minutes: Math.max(0, tariffs?.fixed_rate_threshold_minutes || 720), // Default: 12 horas
+  };
+
+  // Advertir si no hay tarifas configuradas
+  if (validated.car_rate_per_minute === 0 && validated.motorcycle_rate_per_minute === 0) {
+    console.warn('⚠️ No hay tarifas configuradas para este parqueadero. Los cálculos retornarán $0.');
+  }
+
+  return validated;
+}
 
 export class VehicleService {
   /**
@@ -264,6 +324,7 @@ export class VehicleService {
   /**
    * 💰 Calcular costo actual de un vehículo
    * Implementa la lógica de tarifas colombianas del backend
+   * ✅ CON FALLBACK A LOCALSTORAGE Y VALIDACIÓN
    */
   static calculateCurrentCost(
     entryTime: string,
@@ -274,31 +335,34 @@ export class VehicleService {
     const entry = new Date(entryTime);
     const durationMinutes = Math.floor((now.getTime() - entry.getTime()) / (1000 * 60));
 
+    // 🛡️ Obtener tarifas con fallback y validación
+    const tariffs = getTariffsWithFallback(parkingLot, parkingLot.id);
+
     // Obtener tarifa por minuto según tipo de vehículo
     const getRatePerMinute = (): number => {
       switch (vehicleType) {
-        case 'car': return parkingLot.car_rate_per_minute;
-        case 'motorcycle': return parkingLot.motorcycle_rate_per_minute;
-        case 'bicycle': return parkingLot.bicycle_rate_per_minute;
-        case 'truck': return parkingLot.truck_rate_per_minute;
-        default: return parkingLot.car_rate_per_minute;
+        case 'car': return tariffs.car_rate_per_minute;
+        case 'motorcycle': return tariffs.motorcycle_rate_per_minute;
+        case 'bicycle': return tariffs.bicycle_rate_per_minute;
+        case 'truck': return tariffs.truck_rate_per_minute;
+        default: return tariffs.car_rate_per_minute;
       }
     };
 
     // Obtener tarifa fija según tipo de vehículo
     const getFixedRate = (): number => {
       switch (vehicleType) {
-        case 'car': return parkingLot.fixed_rate_car;
-        case 'motorcycle': return parkingLot.fixed_rate_motorcycle;
-        case 'bicycle': return parkingLot.fixed_rate_bicycle;
-        case 'truck': return parkingLot.fixed_rate_truck;
-        default: return parkingLot.fixed_rate_car;
+        case 'car': return tariffs.fixed_rate_car;
+        case 'motorcycle': return tariffs.fixed_rate_motorcycle;
+        case 'bicycle': return tariffs.fixed_rate_bicycle;
+        case 'truck': return tariffs.fixed_rate_truck;
+        default: return tariffs.fixed_rate_car;
       }
     };
 
     const ratePerMinute = getRatePerMinute();
     const fixedRate = getFixedRate();
-    const thresholdMinutes = parkingLot.fixed_rate_threshold_minutes;
+    const thresholdMinutes = tariffs.fixed_rate_threshold_minutes;
 
     // Verificar si aplica tarifa fija
     const isFixedRate = durationMinutes >= thresholdMinutes;
@@ -318,35 +382,39 @@ export class VehicleService {
   /**
    * 💵 Estimar costo por duración
    * Para mostrar estimaciones al usuario antes de confirmar
+   * ✅ CON FALLBACK A LOCALSTORAGE Y VALIDACIÓN
    */
   static estimateCost(
     durationMinutes: number,
     vehicleType: VehicleType,
     parkingLot: ParkingLot
   ): CostCalculation {
+    // 🛡️ Obtener tarifas con fallback y validación
+    const tariffs = getTariffsWithFallback(parkingLot, parkingLot.id);
+
     const getRatePerMinute = (): number => {
       switch (vehicleType) {
-        case 'car': return parkingLot.car_rate_per_minute;
-        case 'motorcycle': return parkingLot.motorcycle_rate_per_minute;
-        case 'bicycle': return parkingLot.bicycle_rate_per_minute;
-        case 'truck': return parkingLot.truck_rate_per_minute;
-        default: return parkingLot.car_rate_per_minute;
+        case 'car': return tariffs.car_rate_per_minute;
+        case 'motorcycle': return tariffs.motorcycle_rate_per_minute;
+        case 'bicycle': return tariffs.bicycle_rate_per_minute;
+        case 'truck': return tariffs.truck_rate_per_minute;
+        default: return tariffs.car_rate_per_minute;
       }
     };
 
     const getFixedRate = (): number => {
       switch (vehicleType) {
-        case 'car': return parkingLot.fixed_rate_car;
-        case 'motorcycle': return parkingLot.fixed_rate_motorcycle;
-        case 'bicycle': return parkingLot.fixed_rate_bicycle;
-        case 'truck': return parkingLot.fixed_rate_truck;
-        default: return parkingLot.fixed_rate_car;
+        case 'car': return tariffs.fixed_rate_car;
+        case 'motorcycle': return tariffs.fixed_rate_motorcycle;
+        case 'bicycle': return tariffs.fixed_rate_bicycle;
+        case 'truck': return tariffs.fixed_rate_truck;
+        default: return tariffs.fixed_rate_car;
       }
     };
 
     const ratePerMinute = getRatePerMinute();
     const fixedRate = getFixedRate();
-    const thresholdMinutes = parkingLot.fixed_rate_threshold_minutes;
+    const thresholdMinutes = tariffs.fixed_rate_threshold_minutes;
 
     const isFixedRate = durationMinutes >= thresholdMinutes;
     const calculatedCost = isFixedRate ? fixedRate : (durationMinutes * ratePerMinute);
