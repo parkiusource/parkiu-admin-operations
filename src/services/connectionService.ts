@@ -1,5 +1,6 @@
 import { useStore } from '../store/useStore';
 import { syncPendingOperations } from './offlineSync';
+import { getToken } from '@/api/client';
 
 /**
  * Connection status service that monitors network connectivity
@@ -35,7 +36,15 @@ class ConnectionService {
         try {
           console.log('🔄 Iniciando sincronización automática de operaciones offline...');
           store.setSyncing(true);
-          await syncPendingOperations();
+          await syncPendingOperations({
+            getToken: async () => {
+              const token = await getToken();
+              if (!token) {
+                throw new Error('No se pudo obtener el token de autenticación');
+              }
+              return token;
+            }
+          });
           console.log('✅ Sincronización automática completada');
         } catch (error) {
           console.error('❌ Error en sincronización automática:', error);

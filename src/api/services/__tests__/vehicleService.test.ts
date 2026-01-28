@@ -14,6 +14,10 @@ describe('VehicleService - Calculadora de Tarifas', () => {
     id: 'test-parking-lot-1',
     name: 'Parking Test',
     address: 'Calle 123',
+    location: {
+      latitude: 4.6097,
+      longitude: -74.0817,
+    },
     car_rate_per_minute: 50, // $50/minuto
     motorcycle_rate_per_minute: 25, // $25/minuto
     bicycle_rate_per_minute: 10, // $10/minuto

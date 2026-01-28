@@ -317,194 +317,178 @@ export default function AdminParkingDashboard() {
       );
     }
 
-    // ✅ LISTA DE PARQUEADEROS MEJORADA
+    // ✅ LISTA DE PARQUEADEROS - Optimizada para móvil
     return (
       <>
         <div className="min-h-screen bg-slate-50">
           {isTempAdmin && (
-            <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
-                <span className="font-semibold">Cuenta en verificación.</span> Tu parqueadero estará inactivo hasta la aprobación.
+            <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-4 text-amber-800 text-xs sm:text-sm">
+                <span className="font-semibold">Cuenta en verificación.</span> <span className="hidden xs:inline">Tu parqueadero estará inactivo hasta la aprobación.</span>
               </div>
             </div>
           )}
-          {/* Header elegante y limpio */}
+          {/* Header responsive */}
           <div className="bg-white border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-              <div className="flex flex-col gap-6">
+            <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+              <div className="flex flex-col gap-4 sm:gap-6">
                 {/* Título y descripción */}
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-parkiu-600 rounded-xl shadow-sm">
-                    <LuBuilding className="w-8 h-8 text-white" />
+                <div className="flex items-center gap-2.5 sm:gap-4">
+                  <div className="p-2 sm:p-3 bg-parkiu-600 rounded-lg sm:rounded-xl shadow-sm flex-shrink-0">
+                    <LuBuilding className="w-5 h-5 sm:w-8 sm:h-8 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                    <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900">
                       Mis Parqueaderos
                     </h1>
-                    <p className="text-slate-600 text-base md:text-lg">
-                      Gestiona todos tus parqueaderos desde un solo lugar
+                    <p className="text-slate-600 text-xs sm:text-base md:text-lg hidden xs:block">
+                      Gestiona todos tus parqueaderos
                     </p>
                   </div>
                 </div>
 
-                {/* Estadísticas y acciones en layout separado */}
-                <div className="flex flex-col xl:flex-row gap-6">
-                  <div className="flex-1">
-                    {/* Estadísticas reales */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
-                    <div className="bg-white rounded-lg p-3 lg:p-4 border border-slate-200 shadow-sm min-w-0">
-                      <div className="flex items-center gap-2 lg:gap-3">
-                        <div className="p-1.5 lg:p-2 bg-slate-100 rounded-lg flex-shrink-0">
-                          <LuBuilding className="w-4 h-4 lg:w-5 lg:h-5 text-slate-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs lg:text-sm text-slate-600 truncate">Total</p>
-                          <p className="text-lg lg:text-xl font-bold text-slate-900">{overviewStats.totalParkingLots}</p>
-                        </div>
+                {/* Estadísticas - Grid 2x2 en móvil */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+                  <div className="bg-white rounded-lg p-2.5 sm:p-3 lg:p-4 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-slate-100 rounded-lg flex-shrink-0">
+                        <LuBuilding className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-slate-600" />
                       </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-3 lg:p-4 border border-slate-200 shadow-sm min-w-0">
-                      <div className="flex items-center gap-2 lg:gap-3">
-                        <div className="p-1.5 lg:p-2 bg-emerald-50 rounded-lg flex-shrink-0">
-                          <div className="w-4 h-4 lg:w-5 lg:h-5 bg-emerald-500 rounded-full"></div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs lg:text-sm text-slate-600 truncate">Activos</p>
-                          <p className="text-lg lg:text-xl font-bold text-slate-900">
-                            {overviewStats.activeParkingLots}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-3 lg:p-4 border border-slate-200 shadow-sm min-w-0">
-                      <div className="flex items-center gap-2 lg:gap-3">
-                        <div className="p-1.5 lg:p-2 bg-slate-100 rounded-lg flex-shrink-0">
-                          <LuMapPin className="w-4 h-4 lg:w-5 lg:h-5 text-slate-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1">
-                            <p className="text-xs lg:text-sm text-slate-600 truncate">Espacios</p>
-                            {overviewStats.loadingSpaces && (
-                              <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
-                            )}
-                            {!overviewStats.loadingSpaces && overviewStats.hasRealSpaceData && (
-                              <div className="w-2 h-2 bg-emerald-500 rounded-full" title="Datos reales"></div>
-                            )}
-                          </div>
-                          <p className="text-lg lg:text-xl font-bold text-slate-900">
-                            {overviewStats.totalSpaces}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-3 lg:p-4 border border-slate-200 shadow-sm min-w-0">
-                      <div className="flex items-center gap-2 lg:gap-3">
-                        <div className="p-1.5 lg:p-2 bg-slate-100 rounded-lg flex-shrink-0">
-                          <span className="text-slate-600 text-sm lg:text-lg font-bold">$</span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs lg:text-sm text-slate-600 truncate">Promedio</p>
-                          <p className="text-lg lg:text-xl font-bold text-slate-900">
-                            ${overviewStats.averagePrice}
-                          </p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] sm:text-xs lg:text-sm text-slate-600">Total</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900">{overviewStats.totalParkingLots}</p>
                       </div>
                     </div>
                   </div>
+
+                  <div className="bg-white rounded-lg p-2.5 sm:p-3 lg:p-4 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-50 rounded-lg flex-shrink-0">
+                        <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 bg-emerald-500 rounded-full"></div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] sm:text-xs lg:text-sm text-slate-600">Activos</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900">{overviewStats.activeParkingLots}</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Acciones del header */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div className="relative">
-                      <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="text"
-                        placeholder="Buscar parqueaderos..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:border-parkiu-500 w-full sm:w-72"
-                      />
+                  <div className="bg-white rounded-lg p-2.5 sm:p-3 lg:p-4 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-slate-100 rounded-lg flex-shrink-0">
+                        <LuMapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-slate-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] sm:text-xs lg:text-sm text-slate-600 flex items-center gap-1">
+                          Espacios
+                          {overviewStats.loadingSpaces && <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse"></span>}
+                        </p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900">{overviewStats.totalSpaces}</p>
+                      </div>
                     </div>
-                    {isAdminRole && (
-                      <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors shadow-sm whitespace-nowrap"
-                      >
-                        <LuPlus className="w-5 h-5" />
-                        Nuevo Parqueadero
-                      </button>
-                    )}
                   </div>
+
+                  <div className="bg-white rounded-lg p-2.5 sm:p-3 lg:p-4 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-slate-100 rounded-lg flex-shrink-0">
+                        <span className="text-slate-600 text-xs sm:text-sm lg:text-lg font-bold">$</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] sm:text-xs lg:text-sm text-slate-600">Prom.</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900">${overviewStats.averagePrice}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Acciones - Stack en móvil */}
+                <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
+                  <div className="relative flex-1">
+                    <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                    <input
+                      type="text"
+                      placeholder="Buscar..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:border-parkiu-500 w-full text-sm"
+                    />
+                  </div>
+                  {isAdminRole && (
+                    <button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex-shrink-0"
+                    >
+                      <LuPlus className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden xs:inline">Nuevo</span> Parqueadero
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Lista de parqueaderos con filtro */}
-          <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+          {/* Lista de parqueaderos - Grid responsive */}
+          <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
             {isLoadingLots ? (
-              /* Loading state mejorado */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              /* Loading skeleton responsive */
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
                     <div className="animate-pulse">
-                      <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start justify-between mb-3 sm:mb-4">
                         <div className="flex-1">
-                          <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-2"></div>
-                          <div className="h-4 bg-gray-200 rounded-lg w-full"></div>
+                          <div className="h-5 sm:h-6 bg-gray-200 rounded-lg w-3/4 mb-2"></div>
+                          <div className="h-3 sm:h-4 bg-gray-200 rounded-lg w-full"></div>
                         </div>
-                        <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+                        <div className="h-5 sm:h-6 bg-gray-200 rounded-full w-14 sm:w-16"></div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="h-12 bg-gray-200 rounded-lg"></div>
-                        <div className="h-12 bg-gray-200 rounded-lg"></div>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
+                        <div className="h-10 sm:h-12 bg-gray-200 rounded-lg"></div>
+                        <div className="h-10 sm:h-12 bg-gray-200 rounded-lg"></div>
                       </div>
-                      <div className="h-8 bg-gray-200 rounded-lg"></div>
+                      <div className="h-8 sm:h-10 bg-gray-200 rounded-lg"></div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : lotsError ? (
-              /* Error state mejorado */
-              <div className="text-center py-16">
-                <div className="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6">
-                  <LuSettings className="w-12 h-12 text-red-600" />
+              /* Error state responsive */
+              <div className="text-center py-10 sm:py-16 px-4">
+                <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-red-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                  <LuSettings className="w-8 h-8 sm:w-12 sm:h-12 text-red-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar parqueaderos</h3>
-                <p className="text-gray-600 mb-6">Hubo un problema al obtener tus parqueaderos.</p>
+                <h3 className="text-base sm:text-xl font-semibold text-gray-900 mb-2">Error al cargar</h3>
+                <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">Problema al obtener parqueaderos.</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="bg-parkiu-600 text-white px-6 py-2 rounded-lg hover:bg-parkiu-700"
+                  className="bg-parkiu-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-parkiu-700 text-sm sm:text-base"
                 >
                   Reintentar
                 </button>
               </div>
             ) : parkingLots.length === 0 ? (
-              /* Empty state mejorado */
-              <div className="text-center py-16">
-                <div className="mx-auto w-24 h-24 bg-parkiu-100 rounded-full flex items-center justify-center mb-6">
-                  <LuBuilding className="w-12 h-12 text-parkiu-600" />
+              /* Empty state responsive */
+              <div className="text-center py-10 sm:py-16 px-4">
+                <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-parkiu-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                  <LuBuilding className="w-8 h-8 sm:w-12 sm:h-12 text-parkiu-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">¡Comienza creando tu primer parqueadero!</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Aún no tienes parqueaderos registrados. Crea uno para comenzar a gestionar tus espacios de estacionamiento.
+                <h3 className="text-base sm:text-xl font-semibold text-gray-900 mb-2">Crea tu primer parqueadero</h3>
+                <p className="text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
+                  Comienza a gestionar tus espacios de estacionamiento.
                 </p>
                 {isAdminRole && !isTempAdmin && (
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto font-medium transition-colors shadow-sm"
+                    className="bg-parkiu-600 hover:bg-parkiu-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg flex items-center gap-2 mx-auto font-medium transition-colors shadow-sm text-sm sm:text-base"
                   >
-                    <LuPlus className="w-5 h-5" />
-                    Crear mi primer parqueadero
+                    <LuPlus className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Crear parqueadero
                   </button>
                 )}
               </div>
             ) : (
-              /* Cards de parqueaderos con datos reales */
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              /* Cards grid responsive */
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {filteredParkingLots.map((parking) => (
                   <ParkingLotCard key={parking.id} parking={parking} />
                 ))}
@@ -569,76 +553,78 @@ export default function AdminParkingDashboard() {
   return (
     <>
       <div className="min-h-screen bg-slate-50">
-      {/* Header del parqueadero específico */}
+      {/* Header del parqueadero específico - Optimizado para móvil */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
 
-          {/* ✅ BREADCRUMBS */}
-          <div className="mb-4">
-            <nav className="flex items-center space-x-2 text-sm text-gray-500">
+          {/* ✅ BREADCRUMBS - Ocultos en móvil muy pequeño */}
+          <div className="mb-2 sm:mb-4 hidden xs:block">
+            <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
               <button
                 onClick={() => navigate('/parking')}
                 className="hover:text-gray-700 flex items-center gap-1"
               >
-                <LuBuilding className="w-4 h-4" />
-                Mis Parqueaderos
+                <LuBuilding className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Mis Parqueaderos</span>
+                <span className="sm:hidden">Parqueaderos</span>
               </button>
               <span>/</span>
-              <span className="text-gray-900 font-medium">{currentParking.name}</span>
+              <span className="text-gray-900 font-medium truncate max-w-[120px] sm:max-w-none">{currentParking.name}</span>
             </nav>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => navigate('/parking')}
-                  className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Volver a mis parqueaderos"
-                >
-                  <LuChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div className="flex-shrink-0 p-2 bg-parkiu-50 rounded-lg">
-                  <CircleParking className="w-6 h-6 text-parkiu-600" />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="text-xl font-semibold text-slate-900 truncate">
-                    Panel de Control - {currentParking.name}
-                  </h1>
-                  <div className="flex items-center gap-4 mt-1">
-                    <p className="text-sm text-slate-600 flex items-center min-w-0">
-                      <LuMapPin className="flex-shrink-0 mr-1.5 h-4 w-4" />
-                      <span className="truncate">{currentParking.address}</span>
-                    </p>
-                    <p className="text-sm text-slate-600 hidden sm:flex items-center flex-shrink-0">
-                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>
-                      {currentParking.status === 'active' ? 'Activo' : 'Conectado'}
-                    </p>
-                  </div>
+          <div className="flex flex-col gap-3">
+            {/* Título y estado */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => navigate('/parking')}
+                className="flex-shrink-0 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Volver a mis parqueaderos"
+              >
+                <LuChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+              </button>
+              <div className="flex-shrink-0 p-1.5 sm:p-2 bg-parkiu-50 rounded-lg">
+                <CircleParking className="w-5 h-5 sm:w-6 sm:h-6 text-parkiu-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-xl font-semibold text-slate-900 truncate">
+                  <span className="hidden sm:inline">Panel de Control - </span>{currentParking.name}
+                </h1>
+                <div className="flex items-center gap-2 sm:gap-4 mt-0.5 sm:mt-1">
+                  <p className="text-xs sm:text-sm text-slate-600 flex items-center min-w-0">
+                    <LuMapPin className="flex-shrink-0 mr-1 sm:mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate max-w-[150px] sm:max-w-none">{currentParking.address}</span>
+                  </p>
+                  <p className="text-xs sm:text-sm text-slate-600 flex items-center flex-shrink-0">
+                    <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mr-1 sm:mr-1.5"></span>
+                    <span className="hidden sm:inline">{currentParking.status === 'active' ? 'Activo' : 'Conectado'}</span>
+                  </p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
+
+            {/* Botones de acción - Scroll horizontal en móvil */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
               <button
                 onClick={() => refetchSpots()}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+                className="inline-flex items-center px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap flex-shrink-0"
               >
-                <LuSettings className="h-4 w-4 mr-2" />
-                Actualizar
+                <LuSettings className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Actualizar</span>
               </button>
               <button
                 onClick={() => navigate(`/parking/${currentParking.id}/history`)}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
               >
                 Historial
               </button>
               <button
                 onClick={() => setIsCreateSpaceModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
                 disabled={!currentParking?.id || !isAdminRole}
               >
-                <LuPlus className="h-4 w-4 mr-2" />
-                Nuevo Espacio
+                <LuPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Nuevo</span> Espacio
               </button>
             </div>
           </div>
@@ -652,134 +638,125 @@ export default function AdminParkingDashboard() {
           </div>
         </div>
       )}
-      <div className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="max-w-[1600px] mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
           {/* Panel principal */}
-          <div className="xl:col-span-8 space-y-6">
+          <div className="xl:col-span-8 space-y-4 sm:space-y-6 order-2 xl:order-1">
 
-            {/* ✅ MÉTRICAS MEJORADAS CON DISEÑO DINÁMICO */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 shadow-lg p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-                      <LuBuilding className="w-6 h-6 text-white" />
+            {/* ✅ MÉTRICAS MEJORADAS CON DISEÑO RESPONSIVE */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              {/* Card principal de métricas */}
+              <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl sm:rounded-2xl border border-slate-200 shadow-lg p-4 sm:p-6">
+                {/* Header con nombre y estado */}
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex-shrink-0">
+                      <LuBuilding className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900">{currentParking.name}</h3>
+                    <h3 className="text-base sm:text-xl font-bold text-slate-900 truncate">{currentParking.name}</h3>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-green-700">En Vivo</span>
+                  <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 bg-green-100 rounded-full flex-shrink-0">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs sm:text-sm font-medium text-green-700">En Vivo</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
+                {/* Grid de estadísticas - 2x2 siempre, más compacto en móvil */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-4">
                   {/* Total Espacios */}
-                  <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-100 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium text-slate-600 mb-1">Total Espacios</p>
-                        <span className="text-2xl font-bold text-slate-900">
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-slate-600 mb-0.5 sm:mb-1 truncate">Total</p>
+                        <span className="text-xl sm:text-2xl font-bold text-slate-900">
                           {currentParking.total_spots || finalOccupancyStats.total}
                         </span>
                       </div>
-                      <div className="p-3 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl">
-                        <CircleParking className="w-6 h-6 text-slate-700" />
+                      <div className="p-2 sm:p-3 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg sm:rounded-xl flex-shrink-0">
+                        <CircleParking className="w-4 h-4 sm:w-6 sm:h-6 text-slate-700" />
                       </div>
                     </div>
                   </div>
 
                   {/* Disponibles */}
-                  <div className="bg-white rounded-xl p-4 border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-emerald-100 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium text-slate-600 mb-1">Disponibles</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-emerald-600">
-                            {finalOccupancyStats.available}
-                          </span>
-                          <div className="flex items-center text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                            <span>✓</span>
-                          </div>
-                        </div>
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-slate-600 mb-0.5 sm:mb-1 truncate">Disponibles</p>
+                        <span className="text-xl sm:text-2xl font-bold text-emerald-600">
+                          {finalOccupancyStats.available}
+                        </span>
                       </div>
-                      <div className="p-3 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-xl">
-                        <CircleParking className="w-6 h-6 text-emerald-600" />
+                      <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-lg sm:rounded-xl flex-shrink-0">
+                        <CircleParking className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-600" />
                       </div>
                     </div>
                   </div>
 
                   {/* Ocupados */}
-                  <div className="bg-white rounded-xl p-4 border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-amber-100 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium text-slate-600 mb-1">Ocupados</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-amber-600">
-                            {finalOccupancyStats.occupied}
-                          </span>
-                          <div className="flex items-center text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                            <span>🚗</span>
-                          </div>
-                        </div>
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-slate-600 mb-0.5 sm:mb-1 truncate">Ocupados</p>
+                        <span className="text-xl sm:text-2xl font-bold text-amber-600">
+                          {finalOccupancyStats.occupied}
+                        </span>
                       </div>
-                      <div className="p-3 bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl">
-                        <LuCar className="w-6 h-6 text-amber-600" />
+                      <div className="p-2 sm:p-3 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg sm:rounded-xl flex-shrink-0">
+                        <LuCar className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Tarifa con mejor diseño */}
-                  <div className="bg-white rounded-xl p-4 border border-parkiu-100 shadow-sm hover:shadow-md transition-shadow">
+                  {/* Tarifa */}
+                  <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-parkiu-100 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium text-slate-600 mb-1">Tarifa/Hora</p>
-                        <div className="flex items-center gap-1">
-                          <span className="text-lg font-semibold text-parkiu-600">$</span>
-                          <span className="text-2xl font-bold text-parkiu-600">
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-slate-600 mb-0.5 sm:mb-1 truncate">$/Hora</p>
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-sm sm:text-lg font-semibold text-parkiu-600">$</span>
+                          <span className="text-xl sm:text-2xl font-bold text-parkiu-600">
                             {currentParking.price_per_hour || 0}
                           </span>
                         </div>
                       </div>
-                      <div className="p-3 bg-gradient-to-br from-parkiu-100 to-parkiu-200 rounded-xl">
-                        <span className="text-parkiu-600 text-xl">💰</span>
+                      <div className="p-2 sm:p-3 bg-gradient-to-br from-parkiu-100 to-parkiu-200 rounded-lg sm:rounded-xl flex-shrink-0">
+                        <span className="text-parkiu-600 text-lg sm:text-xl">💰</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Gráfico de Ocupación Mejorado */}
+                {/* Gráfico de Ocupación - Más compacto en móvil */}
                 {occupancyStats && (
-                  <div className="mt-6 bg-white rounded-xl p-4 border border-slate-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-semibold text-slate-700">Tasa de Ocupación</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-slate-900">
-                          {occupancyStats.occupancyRate.toFixed(1)}%
+                  <div className="mt-4 sm:mt-6 bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-100">
+                    <div className="flex items-center justify-between mb-2 sm:mb-4">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-700">Ocupación</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-lg sm:text-2xl font-bold text-slate-900">
+                          {occupancyStats.occupancyRate.toFixed(0)}%
                         </span>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${
                           occupancyStats.occupancyRate < 50
                             ? 'bg-green-100 text-green-700'
                             : occupancyStats.occupancyRate < 80
                             ? 'bg-yellow-100 text-yellow-700'
                             : 'bg-red-100 text-red-700'
                         }`}>
-                          {occupancyStats.occupancyRate < 50 ? '🟢 Bajo' :
-                           occupancyStats.occupancyRate < 80 ? '🟡 Medio' : '🔴 Alto'}
+                          {occupancyStats.occupancyRate < 50 ? 'Bajo' :
+                           occupancyStats.occupancyRate < 80 ? 'Medio' : 'Alto'}
                         </div>
                       </div>
                     </div>
 
-                    <div className="relative w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+                    <div className="relative w-full bg-slate-100 rounded-full h-2.5 sm:h-4 overflow-hidden">
                       <div
                         className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 via-yellow-500 to-red-500 rounded-full transition-all duration-1000 ease-out"
                         style={{ width: `${Math.min(occupancyStats.occupancyRate, 100)}%` }}
-                      >
-                        <div className="absolute top-0 right-0 w-1 h-full bg-white/50 animate-pulse"></div>
-                      </div>
+                      />
                     </div>
 
-                    <div className="flex justify-between text-xs text-slate-500 mt-2">
+                    <div className="flex justify-between text-[10px] sm:text-xs text-slate-500 mt-1 sm:mt-2">
                       <span>0%</span>
                       <span>50%</span>
                       <span>100%</span>
@@ -789,32 +766,30 @@ export default function AdminParkingDashboard() {
               </div>
 
               {/* Búsqueda y filtros */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                <div className="flex flex-col gap-4">
-                  <div className="relative">
+              <div className="bg-white rounded-lg sm:rounded-xl border border-slate-200 shadow-sm p-3 sm:p-5">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                  <div className="relative flex-1">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <LuSearch className="h-4 w-4 text-slate-400" />
                     </div>
                     <input
                       type="text"
-                      className="block w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white placeholder-slate-400"
-                      placeholder="Buscar por número de espacio..."
+                      className="block w-full pl-9 sm:pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white placeholder-slate-400"
+                      placeholder="Buscar espacio..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <div className="flex gap-3">
-                    <select
-                      className="flex-1 py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-slate-700"
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                    >
-                      <option value="all">Todos los estados</option>
-                      <option value="available">Disponibles</option>
-                      <option value="occupied">Ocupados</option>
-                      <option value="maintenance">En mantenimiento</option>
-                    </select>
-                  </div>
+                  <select
+                    className="py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-slate-700 sm:w-48"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="available">Disponibles</option>
+                    <option value="occupied">Ocupados</option>
+                    <option value="maintenance">Mantenimiento</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -827,13 +802,13 @@ export default function AdminParkingDashboard() {
               viewMode="realistic"
             />
 
-            {/* Grid de espacios */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="border-b border-slate-200 px-5 py-4">
+            {/* Grid de espacios - Optimizado para móvil */}
+            <div className="bg-white rounded-lg sm:rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="border-b border-slate-200 px-3 py-3 sm:px-5 sm:py-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                    <LuCar className="w-5 h-5 text-slate-500" />
-                    Espacios de Parqueo ({filteredSpots.length})
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
+                    <LuCar className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                    Espacios ({filteredSpots.length})
                   </h3>
                 </div>
               </div>
@@ -841,17 +816,17 @@ export default function AdminParkingDashboard() {
               <div className="divide-y divide-slate-200">
                 {/* Sección de Automóviles */}
                 {carSpots.length > 0 && (
-                  <div className="p-5">
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <LuCar className="w-4 h-4 text-slate-500" />
+                  <div className="p-3 sm:p-5">
+                    <div className="mb-3 sm:mb-4">
+                      <h4 className="text-xs sm:text-sm font-medium text-slate-900 flex items-center gap-2">
+                        <LuCar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
                         Automóviles
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                          {carSpots.length} espacios
+                        <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-slate-100 text-slate-600">
+                          {carSpots.length}
                         </span>
                       </h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
                       {carSpots.map((spot) => (
                         <div key={spot.id} className="overflow-hidden">
                           <SpotCard
@@ -869,17 +844,17 @@ export default function AdminParkingDashboard() {
 
                 {/* Sección de Motocicletas */}
                 {motorcycleSpots.length > 0 && (
-                  <div className="p-5">
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <FaMotorcycle className="w-4 h-4 text-slate-500" />
+                  <div className="p-3 sm:p-5">
+                    <div className="mb-3 sm:mb-4">
+                      <h4 className="text-xs sm:text-sm font-medium text-slate-900 flex items-center gap-2">
+                        <FaMotorcycle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
                         Motocicletas
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                          {motorcycleSpots.length} espacios
+                        <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-slate-100 text-slate-600">
+                          {motorcycleSpots.length}
                         </span>
                       </h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
                       {motorcycleSpots.map((spot) => (
                         <div key={spot.id} className="overflow-hidden">
                           <SpotCard
@@ -895,19 +870,19 @@ export default function AdminParkingDashboard() {
                   </div>
                 )}
 
-                {/* ✅ Sección de Bicicletas */}
+                {/* Sección de Bicicletas */}
                 {bicycleSpots.length > 0 && (
-                  <div className="p-5">
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <FaMotorcycle className="w-4 h-4 text-green-500" />
+                  <div className="p-3 sm:p-5">
+                    <div className="mb-3 sm:mb-4">
+                      <h4 className="text-xs sm:text-sm font-medium text-slate-900 flex items-center gap-2">
+                        <FaMotorcycle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
                         Bicicletas
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-                          {bicycleSpots.length} espacios
+                        <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-slate-100 text-slate-600">
+                          {bicycleSpots.length}
                         </span>
                       </h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
                       {bicycleSpots.map((spot) => (
                         <div key={spot.id} className="overflow-hidden">
                           <SpotCard
@@ -925,21 +900,21 @@ export default function AdminParkingDashboard() {
 
                 {/* Estado vacío */}
                 {filteredSpots.length === 0 && (
-                  <div className="p-8 text-center">
-                    <CircleParking className="mx-auto h-12 w-12 text-slate-400" />
-                    <h3 className="mt-2 text-sm font-medium text-slate-900">No hay espacios</h3>
-                    <p className="mt-1 text-sm text-slate-500">
+                  <div className="p-6 sm:p-8 text-center">
+                    <CircleParking className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-slate-400" />
+                    <h3 className="mt-2 text-xs sm:text-sm font-medium text-slate-900">No hay espacios</h3>
+                    <p className="mt-1 text-xs sm:text-sm text-slate-500">
                       {parkingSpots.length === 0 ?
-                        'No se han encontrado espacios de parqueo en IndexedDB.' :
-                        'No se encontraron espacios que coincidan con tu búsqueda.'
+                        'No se encontraron espacios.' :
+                        'Sin resultados para tu búsqueda.'
                       }
                     </p>
                     {parkingSpots.length === 0 && (
                       <button
                         onClick={() => refetchSpots()}
-                        className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+                        className="mt-3 sm:mt-4 bg-indigo-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg hover:bg-indigo-700"
                       >
-                        Recargar datos
+                        Recargar
                       </button>
                     )}
                   </div>
@@ -948,8 +923,8 @@ export default function AdminParkingDashboard() {
             </div>
           </div>
 
-          {/* Panel lateral - Información y Tarifas */}
-          <div className="xl:col-span-4 space-y-6 sticky top-[88px]">
+          {/* Panel lateral - Información y Tarifas - Primero en móvil, sticky en desktop */}
+          <div className="xl:col-span-4 space-y-4 sm:space-y-6 order-1 xl:order-2 xl:sticky xl:top-[88px]">
             {/* Información General del Parqueadero */}
             <ParkingGeneralInfo parkingLot={currentParking} />
 
@@ -1002,14 +977,14 @@ export default function AdminParkingDashboard() {
         formatShortcut={formatShortcut}
       />
 
-      {/* ✅ BOTÓN DE AYUDA FLOTANTE - Posicionado encima de los controles de entrada/salida/buscar */}
-        <button
-          onClick={() => setShowKeyboardHelp(true)}
-          className="fixed bottom-40 right-6 w-12 h-12 bg-gray-800/60 backdrop-blur-sm text-white rounded-full shadow-lg hover:bg-gray-700/80 transition-all duration-200 z-50 flex items-center justify-center group"
-          title="Atajos de teclado (Shift + ?)"
-        >
-        <LuKeyboard className="w-5 h-5" />
-        <span className="absolute -top-8 right-0 bg-gray-800/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap">
+      {/* Botón de ayuda flotante - Oculto en móvil muy pequeño */}
+      <button
+        onClick={() => setShowKeyboardHelp(true)}
+        className="hidden sm:flex fixed bottom-40 right-4 sm:right-6 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/60 backdrop-blur-sm text-white rounded-full shadow-lg hover:bg-gray-700/80 transition-all duration-200 z-50 items-center justify-center group"
+        title="Atajos de teclado (Shift + ?)"
+      >
+        <LuKeyboard className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span className="absolute -top-8 right-0 bg-gray-800/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap hidden lg:block">
           Atajos (Shift + ?)
         </span>
       </button>
@@ -1030,33 +1005,33 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
   const IconComponent = spot.type === 'car' ? LuCar : FaMotorcycle;
   const [forceOpen, setForceOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const FORCE_PHRASE = 'QUIERO LIBERAR ESTE ESPACIO';
+  const FORCE_PHRASE = 'LIBERAR';
 
   // Configuración de estilos por estado
   const statusConfig = {
     available: {
-      card: 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200 hover:border-emerald-300 hover:shadow-emerald-100',
+      card: 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200 hover:border-emerald-300',
       icon: 'bg-gradient-to-br from-emerald-100 to-emerald-200',
       iconColor: 'text-emerald-600',
-      badge: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+      badge: 'bg-emerald-100 text-emerald-700',
       pulse: 'bg-emerald-500',
-      label: '✅ Disponible'
+      label: 'Disponible'
     },
     occupied: {
-      card: 'bg-gradient-to-br from-red-50 to-white border-red-200 hover:border-red-300 hover:shadow-red-100',
+      card: 'bg-gradient-to-br from-red-50 to-white border-red-200 hover:border-red-300',
       icon: 'bg-gradient-to-br from-red-100 to-red-200',
       iconColor: 'text-red-600',
-      badge: 'bg-red-100 text-red-700 border border-red-200',
+      badge: 'bg-red-100 text-red-700',
       pulse: 'bg-red-500',
-      label: '🚗 Ocupado'
+      label: 'Ocupado'
     },
     maintenance: {
-      card: 'bg-gradient-to-br from-amber-50 to-white border-amber-200 hover:border-amber-300 hover:shadow-amber-100',
+      card: 'bg-gradient-to-br from-amber-50 to-white border-amber-200 hover:border-amber-300',
       icon: 'bg-gradient-to-br from-amber-100 to-amber-200',
       iconColor: 'text-amber-600',
-      badge: 'bg-amber-100 text-amber-700 border border-amber-200',
+      badge: 'bg-amber-100 text-amber-700',
       pulse: 'bg-amber-500',
-      label: '🔧 Mantenimiento'
+      label: 'Mant.'
     }
   };
 
@@ -1066,62 +1041,52 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
   const canReleaseDirectly = spot.status === 'occupied' ? !hasActiveVehicle : true;
 
   return (
-    <div className={`group relative rounded-2xl border-2 p-5 transition-all duration-300 hover:shadow-lg ${
+    <div className={`group relative rounded-xl sm:rounded-2xl border-2 p-3 sm:p-4 transition-all duration-300 hover:shadow-lg ${
       config.card
     } ${isUpdating ? 'opacity-50' : ''}`} style={{ isolation: 'isolate' }}>
 
       {/* Indicador de estado (pulso) */}
-      <div className="absolute top-3 right-3">
-        <div className={`w-3 h-3 rounded-full ${config.pulse} animate-pulse shadow-sm`}></div>
+      <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+        <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${config.pulse} animate-pulse shadow-sm`}></div>
       </div>
 
-      {/* Header de la tarjeta */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`flex-shrink-0 p-3 rounded-xl ${config.icon} shadow-sm`}>
-            <IconComponent className={`w-6 h-6 ${config.iconColor}`} />
-          </div>
-          <div className="min-w-0">
-            <h4 className="text-lg font-bold text-slate-900 mb-1">
-              Espacio {spot.number}
-            </h4>
-            <p className="text-xs text-slate-500 font-medium">
-              #{spot.id} • {spot.type === 'car' ? 'Automóvil' : 'Motocicleta'}
-            </p>
-          </div>
+      {/* Header compacto */}
+      <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+        <div className={`flex-shrink-0 p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${config.icon}`}>
+          <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${config.iconColor}`} />
         </div>
-      </div>
-
-      {/* Estado visual mejorado */}
-      <div className="mb-4">
-        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold ${config.badge} shadow-sm`}>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+            {spot.number}
+          </h4>
+          <p className="text-[10px] sm:text-xs text-slate-500">
+            {spot.type === 'car' ? 'Auto' : 'Moto'}
+          </p>
+        </div>
+        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${config.badge}`}>
           {config.label}
         </span>
-        {hasActiveVehicle && (
-          <span className="inline-flex items-center gap-2 ml-2 px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            Placa: <span className="font-mono">{spot.active_vehicle!.plate.toUpperCase()}</span>
-          </span>
-        )}
       </div>
 
-      {/* Información adicional */}
-      <div className="mb-4 p-3 bg-slate-50/50 rounded-lg">
-        <div className="flex items-center justify-between text-xs text-slate-600">
-          <span>Última actualización</span>
-          <span className="font-medium">Hace 2 min</span>
+      {/* Placa del vehículo si está ocupado */}
+      {hasActiveVehicle && (
+        <div className="mb-2 sm:mb-3 px-2 py-1.5 bg-slate-100 rounded-lg">
+          <p className="text-[10px] sm:text-xs text-slate-600">
+            Placa: <span className="font-mono font-bold">{spot.active_vehicle!.plate.toUpperCase()}</span>
+          </p>
         </div>
-      </div>
+      )}
 
-      {/* Acciones mejoradas */}
-      <div className="flex items-center gap-2">
+      {/* Acciones compactas */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {spot.status === 'available' && (
           <button
             onClick={() => onOccupy(spot.id!)}
             disabled={isUpdating}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50"
           >
-            <LuPlus className="w-4 h-4" />
-            Ocupar
+            <LuPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Ocupar</span>
           </button>
         )}
 
@@ -1130,21 +1095,19 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
             <button
               onClick={() => onRelease(spot.id!)}
               disabled={isUpdating || !canReleaseDirectly}
-              title={hasActiveVehicle ? 'Hay un vehículo activo. Procese la salida o use Forzar liberación.' : undefined}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50"
             >
-              <LuArrowRight className="w-4 h-4" />
-              Liberar
+              <LuArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Liberar</span>
             </button>
             {hasActiveVehicle && (
               <button
                 onClick={() => setForceOpen(true)}
                 disabled={isUpdating}
-                className="inline-flex items-center justify-center px-4 py-3 text-sm font-semibold rounded-xl bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 transition-all duration-200 shadow-sm disabled:opacity-50"
-                title="Forzar liberación"
+                className="inline-flex items-center justify-center p-2 sm:px-3 sm:py-2.5 text-xs font-semibold rounded-lg sm:rounded-xl bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 transition-all disabled:opacity-50"
+                title="Forzar"
               >
-                <LuTriangle className="w-4 h-4 mr-1" />
-                Forzar
+                <LuTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             )}
           </>
@@ -1154,62 +1117,64 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
           <button
             onClick={() => onMaintenanceToggle(spot.id!, spot.status)}
             disabled={isUpdating}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50"
           >
-            <LuSettings className="w-4 h-4" />
-            Reactivar
+            <LuSettings className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Reactivar</span>
           </button>
         )}
 
         <button
           onClick={() => onMaintenanceToggle(spot.id!, spot.status)}
           disabled={isUpdating}
-          className="inline-flex items-center justify-center px-3 py-3 text-sm font-medium rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
-          title="Alternar mantenimiento"
+          className="inline-flex items-center justify-center p-2 sm:p-2.5 text-xs rounded-lg sm:rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 transition-all disabled:opacity-50"
+          title="Mantenimiento"
         >
-          <LuSettings className="w-4 h-4" />
+          <LuSettings className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
       </div>
 
-      {/* Loading overlay mejorado */}
+      {/* Loading overlay */}
       {isUpdating && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-2xl">
-          <div className="flex flex-col items-center gap-3">
-            <LuLoader className="h-8 w-8 animate-spin text-parkiu-600" />
-            <span className="text-sm font-medium text-slate-700">Actualizando...</span>
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl">
+          <LuLoader className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-parkiu-600" />
         </div>
       )}
 
-      {/* Dialogo de forzar liberación */}
+      {/* Dialogo de forzar liberación - Simplificado para móvil */}
       <Dialog open={forceOpen} onOpenChange={(open) => { setForceOpen(open); if (!open) setConfirmText(''); }}>
-        <DialogContent>
+        <DialogContent className="max-w-[90vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-700">
-              <LuTriangle className="w-5 h-5" />
-              Forzar liberación del espacio
+            <DialogTitle className="flex items-center gap-2 text-red-700 text-sm sm:text-base">
+              <LuTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+              Forzar liberación
             </DialogTitle>
-            <DialogDescription>
-              Este espacio tiene un vehículo activo con placa <strong>{spot.active_vehicle?.plate?.toUpperCase()}</strong>.
-              Para continuar, escriba exactamente: <span className="font-semibold">{FORCE_PHRASE}</span>
+            <DialogDescription className="text-xs sm:text-sm">
+              Vehículo: <strong>{spot.active_vehicle?.plate?.toUpperCase()}</strong>.
+              Escriba "{FORCE_PHRASE}" para confirmar.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-2">
-            <Input value={confirmText} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmText(e.target.value)} placeholder={FORCE_PHRASE} />
+            <Input
+              value={confirmText}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmText(e.target.value)}
+              placeholder={FORCE_PHRASE}
+              className="text-sm"
+            />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <button
               onClick={() => setForceOpen(false)}
-              className="px-4 py-2 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="w-full sm:w-auto px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50"
             >
               Cancelar
             </button>
             <button
               onClick={() => { onRelease(spot.id!); setForceOpen(false); setConfirmText(''); }}
               disabled={confirmText.trim().toUpperCase() !== FORCE_PHRASE}
-              className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              className="w-full sm:w-auto px-3 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
             >
-              Confirmar liberación
+              Confirmar
             </button>
           </DialogFooter>
         </DialogContent>

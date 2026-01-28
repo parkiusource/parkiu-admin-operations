@@ -13,6 +13,14 @@ export default {
         '2xl': '1400px',
       },
     },
+    screens: {
+      'xs': '480px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       fontFamily: {
         sans: ['Poppins', 'sans-serif'],
@@ -138,6 +146,18 @@ export default {
         }
       }
       addUtilities(textShadowUtilities);
+    }),
+    // Utilidad para ocultar scrollbar manteniendo scroll funcional
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+        },
+      });
     }),
   ],
 }
