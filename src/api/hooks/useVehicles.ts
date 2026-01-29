@@ -129,6 +129,7 @@ export const useTransactionHistory = (
 
 /**
  * 🔍 Hook para buscar un vehículo específico por placa (con debounce)
+ * ✅ Con soporte offline: busca en caché local cuando el backend no responde
  */
 export const useSearchVehicle = (
   parkingLotId: string,
@@ -152,21 +153,62 @@ export const useSearchVehicle = (
         console.log('🔍 Searching vehicle with plate:', debouncedPlate);
       }
 
-      const token = await getAccessTokenSilently();
-      const response = await VehicleService.searchVehicle(token, parkingLotId, debouncedPlate);
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await VehicleService.searchVehicle(token, parkingLotId, debouncedPlate);
 
-      if (response.error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Vehicle search error:', response.error);
+        if (response.error) {
+          throw new Error(response.error);
         }
-        throw new Error(response.error);
-      }
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Vehicle found:', response.data);
-      }
+        // 💾 Si encontramos vehículo, cachearlo para uso offline
+        if (response.data) {
+          const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
+          await cacheVehicleEntry(
+            parkingLotId,
+            response.data.plate,
+            response.data.vehicle_type,
+            response.data.spot_number
+          );
+        }
 
-      return response.data;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Vehicle found:', response.data);
+        }
+
+        return response.data;
+      } catch (error) {
+        // 📦 FALLBACK: Buscar en caché local en estos casos:
+        // 1. Error de red (backend no disponible)
+        // 2. 404 (vehículo no encontrado en backend, pero podría estar en caché local)
+        // 3. Cualquier error si estamos offline
+        const { isNetworkError } = await import('@/services/offlineCache');
+        const { connectionService } = await import('@/services/connectionService');
+
+        const is404 = (error as any)?.response?.status === 404;
+        const shouldCheckCache = isNetworkError(error) || is404 || connectionService.isOffline();
+
+        if (shouldCheckCache) {
+          const reason = is404 ? 'Vehículo no en backend' : 'Backend no disponible';
+          console.log(`🔄 ${reason}, buscando vehículo en caché...`);
+
+          const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
+          const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
+
+          if (cached) {
+            console.log(`✅ Vehículo encontrado en caché: ${cached.plate}`);
+            return cached;
+          } else {
+            console.log('❌ Vehículo no encontrado en caché');
+          }
+        }
+
+        // Si no es un caso para buscar en caché o no hay caché, propagar error
+        if (process.env.NODE_ENV === 'development') {
+          console.log('❌ Vehicle search error:', error);
+        }
+        throw new Error('Error buscando vehículo');
+      }
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId && !!debouncedPlate && debouncedPlate.length >= 3,
     staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto para búsquedas
@@ -183,6 +225,7 @@ export const useSearchVehicle = (
 
 /**
  * 🚗 Hook para registrar entrada de vehículo
+ * ✅ Funciona completamente offline: cachea vehículo y encola para sincronizar
  */
 export const useRegisterVehicleEntry = (options?: {
   onSuccess?: (data: VehicleEntryResponse, entryData: { parkingLotId: string; vehicleData: VehicleEntry }) => void;
@@ -198,25 +241,47 @@ export const useRegisterVehicleEntry = (options?: {
       }
 
       try {
-        // OFFLINE: encolar y retornar respuesta temporal para permitir impresión de ticket
+        const now = new Date().toISOString();
+        const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
+
+        // OFFLINE: funcionar completamente sin conexión
         if (!connectionService.isOnline()) {
+          console.log('📴 Modo offline: Registrando entrada localmente');
+
           const idempotencyKey = generateIdempotencyKey(`entry-${vehicleData.plate}`);
+
+          // 1. Encolar operación para sincronizar después
           await enqueueOperation({
             type: 'entry',
             parkingLotId,
             plate: vehicleData.plate,
-            payload: { ...vehicleData, idempotencyKey },
+            payload: {
+              ...vehicleData,
+              client_entry_time: now,
+              idempotencyKey
+            },
             idempotencyKey,
           });
-          const now = new Date().toISOString();
+
+          // 2. Cachear vehículo activo localmente
+          const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
+          await cacheVehicleEntry(
+            parkingLotId,
+            vehicleData.plate,
+            vehicleData.vehicle_type,
+            spotNumber
+          );
+
+          // 3. Retornar respuesta temporal para que la UI funcione
           return {
-            transaction_id: Date.now(),
+            transaction_id: Date.now(), // ID temporal
             entry_time: now,
-            spot_number: vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '',
+            spot_number: spotNumber,
             estimated_cost: 0,
           } as VehicleEntryResponse;
         }
 
+        // ONLINE: intentar registrar en backend
         const token = await getAccessTokenSilently({
           timeoutInSeconds: 10
         });
@@ -227,8 +292,54 @@ export const useRegisterVehicleEntry = (options?: {
           throw new Error(response.error);
         }
 
+        // ✅ Cachear vehículo para uso offline posterior
+        const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
+        await cacheVehicleEntry(
+          parkingLotId,
+          vehicleData.plate,
+          vehicleData.vehicle_type,
+          response.data!.spot_number,
+          response.data!.transaction_id
+        );
+
         return response.data!;
       } catch (error) {
+        // Si falla por error de red, intentar offline
+        const { isNetworkError } = await import('@/services/offlineCache');
+        if (isNetworkError(error)) {
+          console.log('🔄 Error de red, usando modo offline...');
+          const now = new Date().toISOString();
+          const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
+          const idempotencyKey = generateIdempotencyKey(`entry-${vehicleData.plate}`);
+
+          await enqueueOperation({
+            type: 'entry',
+            parkingLotId,
+            plate: vehicleData.plate,
+            payload: {
+              ...vehicleData,
+              client_entry_time: now,
+              idempotencyKey
+            },
+            idempotencyKey,
+          });
+
+          const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
+          await cacheVehicleEntry(
+            parkingLotId,
+            vehicleData.plate,
+            vehicleData.vehicle_type,
+            spotNumber
+          );
+
+          return {
+            transaction_id: Date.now(),
+            entry_time: now,
+            spot_number: spotNumber,
+            estimated_cost: 0,
+          } as VehicleEntryResponse;
+        }
+
         throw error as Error;
       }
     },
@@ -308,6 +419,7 @@ export const useRegisterVehicleEntry = (options?: {
 
 /**
  * 🚪 Hook para registrar salida de vehículo
+ * ✅ Funciona completamente offline: calcula costo, elimina del caché, encola
  */
 export const useRegisterVehicleExit = (options?: {
   onSuccess?: (data: VehicleExitResponse, exitData: { parkingLotId: string; vehicleData: VehicleExit }) => void;
@@ -322,41 +434,118 @@ export const useRegisterVehicleExit = (options?: {
         throw new Error('Usuario no autenticado');
       }
 
-      // OFFLINE: encolar y devolver respuesta temporal para permitir impresión del recibo
+      const now = new Date().toISOString();
+
+      // OFFLINE: funcionar completamente sin conexión
       if (!connectionService.isOnline()) {
+        console.log('📴 Modo offline: Registrando salida localmente');
+
         const idempotencyKey = generateIdempotencyKey(`exit-${vehicleData.plate}`);
+
+        // 1. Obtener vehículo del caché para calcular duración
+        const { findCachedVehicle, removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
+        const cachedVehicle = await findCachedVehicle(parkingLotId, vehicleData.plate);
+
+        const durationMinutes = cachedVehicle
+          ? Math.floor((new Date().getTime() - new Date(cachedVehicle.entry_time).getTime()) / (1000 * 60))
+          : 0;
+
+        // 2. Encolar operación para sincronizar después
         await enqueueOperation({
           type: 'exit',
           parkingLotId,
           plate: vehicleData.plate,
-          payload: { ...vehicleData, idempotencyKey },
+          payload: {
+            ...vehicleData,
+            client_exit_time: now,
+            idempotencyKey
+          },
           idempotencyKey,
         });
-        const now = new Date().toISOString();
-        const tmp: VehicleExitResponse = {
+
+        // 3. Eliminar vehículo del caché local
+        await removeVehicleFromCache(parkingLotId, vehicleData.plate);
+
+        // 4. Retornar respuesta temporal
+        return {
           transaction_id: Date.now(),
           total_cost: vehicleData.payment_amount,
-          duration_minutes: 0,
+          duration_minutes: durationMinutes,
           receipt: JSON.stringify({
             plate: vehicleData.plate,
             exit_time: now,
+            entry_time: cachedVehicle?.entry_time || now,
             total_cost: vehicleData.payment_amount,
+            duration_minutes: durationMinutes,
+            payment_method: vehicleData.payment_method,
+            offline: true
           })
-        };
-        return tmp;
+        } as VehicleExitResponse;
       }
 
-      const token = await getAccessTokenSilently({
-        timeoutInSeconds: 10,
-      });
+      // ONLINE: intentar registrar en backend
+      try {
+        const token = await getAccessTokenSilently({
+          timeoutInSeconds: 10,
+        });
 
-      const response = await VehicleService.registerExit(token, parkingLotId, vehicleData);
+        const response = await VehicleService.registerExit(token, parkingLotId, vehicleData);
 
-      if (response.error) {
-        throw new Error(response.error);
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // ✅ Eliminar vehículo del caché tras salida exitosa
+        const { removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
+        await removeVehicleFromCache(parkingLotId, vehicleData.plate);
+
+        return response.data!;
+      } catch (error) {
+        // Si falla por error de red, intentar offline
+        const { isNetworkError } = await import('@/services/offlineCache');
+        if (isNetworkError(error)) {
+          console.log('🔄 Error de red, usando modo offline para salida...');
+
+          const idempotencyKey = generateIdempotencyKey(`exit-${vehicleData.plate}`);
+          const { findCachedVehicle, removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
+          const cachedVehicle = await findCachedVehicle(parkingLotId, vehicleData.plate);
+
+          const durationMinutes = cachedVehicle
+            ? Math.floor((new Date().getTime() - new Date(cachedVehicle.entry_time).getTime()) / (1000 * 60))
+            : 0;
+
+          await enqueueOperation({
+            type: 'exit',
+            parkingLotId,
+            plate: vehicleData.plate,
+            payload: {
+              ...vehicleData,
+              client_exit_time: now,
+              idempotencyKey
+            },
+            idempotencyKey,
+          });
+
+          await removeVehicleFromCache(parkingLotId, vehicleData.plate);
+
+          return {
+            transaction_id: Date.now(),
+            total_cost: vehicleData.payment_amount,
+            duration_minutes: durationMinutes,
+            receipt: JSON.stringify({
+              plate: vehicleData.plate,
+              exit_time: now,
+              entry_time: cachedVehicle?.entry_time || now,
+              total_cost: vehicleData.payment_amount,
+              duration_minutes: durationMinutes,
+              payment_method: vehicleData.payment_method,
+              offline: true
+            })
+          } as VehicleExitResponse;
+        }
+
+        throw error;
       }
-
-      return response.data!;
     },
     onSuccess: (data, variables) => {
       // 🚀 OPTIMIZACIÓN: Remover vehículo del cache de activos directamente y obtener su espacio

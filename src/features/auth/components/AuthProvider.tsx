@@ -1,8 +1,59 @@
-import { Auth0Provider } from '@auth0/auth0-react';
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { setAuth0Client } from '@/api/client';
 
 interface AuthProviderProps {
   children: React.ReactNode;
+}
+
+/**
+ * Internal component to register Auth0 client with axios interceptor
+ * This must be inside Auth0Provider to access the client
+ */
+const Auth0ClientRegistrar = ({ children }: { children: React.ReactNode }) => {
+  const auth0 = useAuth0();
+
+  useEffect(() => {
+    // Register the Auth0 client as soon as it's available
+    // Use getAuth0ClientFromAuth0Context to access internal client
+    const registerClient = async () => {
+      try {
+        // The useAuth0 hook provides access to getAccessTokenSilently
+        // We need to register a way to get tokens with our axios client
+        // We'll pass a function that calls getAccessTokenSilently
+        const tokenGetter = async () => {
+          try {
+            return await auth0.getAccessTokenSilently({
+              authorizationParams: {
+                audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+                scope: 'openid profile email offline_access'
+              }
+            });
+          } catch (error) {
+            console.error('Error getting token silently:', error);
+            return null;
+          }
+        };
+
+        // Register a mock Auth0 client that uses the token getter
+        const mockClient = {
+          getTokenSilently: tokenGetter
+        } as any;
+
+        setAuth0Client(mockClient);
+        console.log('✅ Auth0 client registered with axios');
+      } catch (error) {
+        console.error('Error registering Auth0 client:', error);
+      }
+    };
+
+    if (!auth0.isLoading) {
+      registerClient();
+    }
+  }, [auth0, auth0.isLoading]);
+
+  return <>{children}</>;
 }
 
 export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
@@ -70,7 +121,9 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
       onRedirectCallback={onRedirectCallback}
       skipRedirectCallback={window.location.pathname === '/callback'}
     >
-      {children}
+      <Auth0ClientRegistrar>
+        {children}
+      </Auth0ClientRegistrar>
     </Auth0Provider>
   );
 };

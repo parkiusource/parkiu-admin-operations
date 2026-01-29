@@ -1,10 +1,17 @@
 import { useQuery, useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useState } from 'react';
 import { parkingLotService } from '@/services/parking/parkingLotService';
 import {
   ParkingLot,
   ParkingLotFilters
 } from '@/services/parking/types';
+import { saveTariffs } from '@/services/offlineTariffs';
+import {
+  cacheParkingLots,
+  getCachedParkingLots,
+  isNetworkError
+} from '@/services/offlineCache';
 
 // ===============================
 // QUERY HOOKS
@@ -12,7 +19,7 @@ import {
 
 /**
  * Hook para obtener parking lots del administrador autenticado
- * Consolida funcionalidad de src/api/hooks/useParkingSpots.ts
+ * ✅ Con soporte offline: guarda en caché y hace fallback cuando el backend no responde
  */
 export const useParkingLots = (filters?: ParkingLotFilters, options?: {
   enabled?: boolean;
@@ -20,6 +27,7 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
   refetchOnWindowFocus?: boolean;
 }) => {
   const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const [isFromCache, setIsFromCache] = useState(false);
 
   const query = useQuery({
     queryKey: ['parkingLots', filters],
@@ -27,21 +35,52 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
       if (!isAuthenticated) {
         return [];
       }
-      const token = await getAccessTokenSilently();
-      const response = await parkingLotService.getParkingLots(token, filters);
 
-      if (response.error) {
-        throw new Error(response.error);
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await parkingLotService.getParkingLots(token, filters);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // 💾 OFFLINE: Cachear en IndexedDB para fallback offline
+        if (response.data && Array.isArray(response.data)) {
+          await cacheParkingLots(response.data);
+
+          // También guardar tarifas en localStorage (legacy)
+          response.data.forEach(lot => {
+            if (lot.id) {
+              saveTariffs(lot.id, lot);
+            }
+          });
+        }
+
+        setIsFromCache(false);
+        return response.data;
+      } catch (error) {
+        // 📦 FALLBACK: Si hay error de red, intentar obtener del caché
+        if (isNetworkError(error)) {
+          console.log('🔄 Backend no disponible, intentando caché offline...');
+          const cached = await getCachedParkingLots();
+
+          if (cached && cached.length > 0) {
+            console.log(`✅ Usando ${cached.length} parking lots del caché`);
+            setIsFromCache(true);
+            return cached;
+          }
+        }
+
+        // Si no hay caché o no es error de red, propagar el error
+        throw error;
       }
-
-      return response.data;
     },
     enabled: isAuthenticated && (options?.enabled ?? true),
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutos por defecto
     refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
     retry: (failureCount, error) => {
-      // No reintentar errores de red
-      if (error.message.includes('ERR_NETWORK') || error.message.includes('ERR_CONNECTION_REFUSED')) {
+      // No reintentar errores de red (ya usamos caché)
+      if (isNetworkError(error)) {
         return false;
       }
       return failureCount < 2;
@@ -53,7 +92,8 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
     parkingLots: query.data || [],
     isLoading: query.isLoading,
     error: query.error,
-    refetch: query.refetch
+    refetch: query.refetch,
+    isFromCache // ✅ Nuevo: indica si los datos vienen del caché
   };
 };
 
@@ -74,6 +114,11 @@ export const useParkingLot = (id: string, options?: {
 
       if (response.error) {
         throw new Error(response.error);
+      }
+
+      // 💾 OFFLINE: Cachear tarifas en localStorage
+      if (response.data && response.data.id) {
+        saveTariffs(response.data.id, response.data);
       }
 
       return response.data;

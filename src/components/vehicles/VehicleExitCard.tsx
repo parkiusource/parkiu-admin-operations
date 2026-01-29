@@ -83,6 +83,17 @@ const vehicleLabels = {
   truck: 'Camión 🚛',
 } as const;
 
+// 🐛 FIX: Safe date formatting helper
+const formatTimeOnly = (dateStr: string): string => {
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Hora inválida';
+    return date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
+  } catch {
+    return 'Hora inválida';
+  }
+};
+
 export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   parkingLots,
   parkingLot,
@@ -155,61 +166,69 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     }
   });
 
-  // Actualizar costo actual cada minuto (optimizado)
+  // 🐛 FIX: Consolidated cost calculation to prevent race conditions
+  // This single effect handles both initial freeze and periodic updates
   useEffect(() => {
-    if (!searchedVehicle) return;
-    // No actualizar si está congelado o si el diálogo de confirmación está abierto
-    const isFrozenForCurrent = freezeCost && normalizePlate(plate) === freezePlate;
-    if (isFrozenForCurrent || confirmOpen) return;
-    const updateCost = () => {
-        // Use requestIdleCallback for non-critical updates to avoid blocking main thread
-        const performUpdate = () => {
-          const costInfo = costCalculator.calculateCost(
-            searchedVehicle.entry_time,
-            searchedVehicle.vehicle_type
-          );
-          setCurrentCost(costInfo.calculated_cost);
-          // Solo auto-llenar si el campo está vacío (primera vez)
-          if (!paymentAmount) {
-            setPaymentAmount(costInfo.calculated_cost.toString());
-          }
-        };
+    if (!searchedVehicle) {
+      // Reset freeze state when no vehicle
+      if (freezeCost) {
+        setFreezeCost(false);
+        setFreezePlate(null);
+      }
+      return;
+    }
 
-        if ('requestIdleCallback' in window) {
-          window.requestIdleCallback(performUpdate);
-        } else {
-          performUpdate();
+    const normalized = normalizePlate(plate);
+    const alreadyFrozenForThisPlate = freezeCost && freezePlate === normalized;
+
+    // If not frozen for this plate yet, freeze immediately
+    if (!alreadyFrozenForThisPlate) {
+      const snapshot = costCalculator.calculateCost(
+        searchedVehicle.entry_time,
+        searchedVehicle.vehicle_type
+      );
+      setCurrentCost(snapshot.calculated_cost);
+      if (!paymentAmount) {
+        setPaymentAmount(snapshot.calculated_cost.toString());
+      }
+      setFreezeCost(true);
+      setFreezePlate(normalized);
+      return; // Don't set up interval on first freeze
+    }
+
+    // If already frozen for this plate and confirm dialog is open, don't update
+    if (confirmOpen) return;
+
+    // Set up periodic updates only if frozen for this plate but dialog not open
+    const updateCost = () => {
+      // Use requestIdleCallback for non-critical updates to avoid blocking main thread
+      const performUpdate = () => {
+        const costInfo = costCalculator.calculateCost(
+          searchedVehicle.entry_time,
+          searchedVehicle.vehicle_type
+        );
+        setCurrentCost(costInfo.calculated_cost);
+        // Only auto-fill if field is empty
+        if (!paymentAmount) {
+          setPaymentAmount(costInfo.calculated_cost.toString());
         }
       };
 
-    // Initial update
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(performUpdate);
+      } else {
+        performUpdate();
+      }
+    };
+
+    // Update immediately if not frozen or dialog not open
     updateCost();
 
-    // Update every minute, but use a more efficient approach
+    // Update every minute
     const interval = setInterval(updateCost, 60000);
 
     return () => clearInterval(interval);
   }, [searchedVehicle, costCalculator, paymentAmount, freezeCost, freezePlate, plate, confirmOpen]);
-
-  // Congelar costo en cuanto se identifica el vehículo a sacar
-  useEffect(() => {
-    if (!searchedVehicle) return;
-    // Si aún no está congelado para esta placa, congelar ahora
-    const normalized = normalizePlate(plate);
-    const alreadyFrozenForThisPlate = freezeCost && freezePlate === normalized;
-    if (alreadyFrozenForThisPlate) return;
-
-    const snapshot = costCalculator.calculateCost(
-      searchedVehicle.entry_time,
-      searchedVehicle.vehicle_type
-    );
-    setCurrentCost(snapshot.calculated_cost);
-    if (!paymentAmount) {
-      setPaymentAmount(snapshot.calculated_cost.toString());
-    }
-    setFreezeCost(true);
-    setFreezePlate(normalized);
-  }, [searchedVehicle, plate, freezeCost, freezePlate, costCalculator, paymentAmount]);
 
   // Actualizar vehículo encontrado
   useEffect(() => {
@@ -239,6 +258,14 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 
     if (!searchedVehicle || !paymentMethod || !paymentAmount) {
       onError?.('Por favor complete todos los campos');
+      return;
+    }
+
+    // 🐛 FIX: Validate payment amount is a valid positive number
+    const amount = parseFloat(paymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      onError?.('Por favor ingrese un monto válido');
+      addToast('El monto de pago debe ser un número válido mayor a $0', 'error');
       return;
     }
 
@@ -272,14 +299,21 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     }
   }, [plate, freezeCost, freezePlate]);
 
+  // 🐛 FIX: Validate payment amount is a valid number before parsing
   const calculateChange = (): number => {
     if (!currentCost || !paymentAmount) return 0;
-    return Math.max(0, parseFloat(paymentAmount) - currentCost);
+    const amount = parseFloat(paymentAmount);
+    // If parsing fails, NaN is returned - treat as 0 change
+    if (!Number.isFinite(amount)) return 0;
+    return Math.max(0, amount - currentCost);
   };
 
   const isUnderpaid = (): boolean => {
     if (!currentCost || !paymentAmount) return false;
-    return parseFloat(paymentAmount) < currentCost;
+    const amount = parseFloat(paymentAmount);
+    // If parsing fails (NaN), treat as underpaid to prevent invalid submissions
+    if (!Number.isFinite(amount)) return true;
+    return amount < currentCost;
   };
 
   const VehicleIcon = searchedVehicle ? vehicleIcons[searchedVehicle.vehicle_type] : Car;
@@ -644,7 +678,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs text-blue-600">
                   <div>Espacio: {searchedVehicle.spot_number}</div>
-                  <div>Entrada: {new Date(searchedVehicle.entry_time).toLocaleTimeString()}</div>
+                  <div>Entrada: {formatTimeOnly(searchedVehicle.entry_time)}</div>
                   <div>Duración: {Math.floor(searchedVehicle.duration_minutes / 60)}h {searchedVehicle.duration_minutes % 60}m</div>
                 </div>
                 {currentCost && (
@@ -770,12 +804,20 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           calculatedCost={currentCost || 0}
           paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
           onConfirm={() => {
+            // 🐛 FIX: Double-check payment amount is valid before submitting
+            const amount = parseFloat(paymentAmount);
+            if (!Number.isFinite(amount) || amount <= 0) {
+              addToast('Error: Monto de pago inválido', 'error');
+              setConfirmOpen(false);
+              return;
+            }
+
             setConfirmOpen(false);
             registerExit.mutate({
               parkingLotId: selectedParkingLot!.id!,
               vehicleData: {
                 plate: normalizePlate(plate),
-                payment_amount: Math.max(0, parseFloat(paymentAmount) || 0),
+                payment_amount: amount,
                 payment_method: paymentMethod as 'cash' | 'card' | 'digital'
               }
             });
@@ -1147,12 +1189,20 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           calculatedCost={currentCost || 0}
           paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
           onConfirm={() => {
+            // 🐛 FIX: Double-check payment amount is valid before submitting
+            const amount = parseFloat(paymentAmount);
+            if (!Number.isFinite(amount) || amount <= 0) {
+              addToast('Error: Monto de pago inválido', 'error');
+              setConfirmOpen(false);
+              return;
+            }
+
             setConfirmOpen(false);
             registerExit.mutate({
               parkingLotId: selectedParkingLot!.id!,
               vehicleData: {
                 plate: normalizePlate(plate),
-                payment_amount: Math.max(0, parseFloat(paymentAmount) || 0),
+                payment_amount: amount,
                 payment_method: paymentMethod as 'cash' | 'card' | 'digital'
               }
             });
