@@ -1,9 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth0 } from '@auth0/auth0-react'; // ✅ Agregar para espacios reales
+import { useAuth0 } from '@auth0/auth0-react';
+import { useState } from 'react';
 import { ParkingSpot } from '@/db/schema';
-import { ParkingSpot as BackendParkingSpot } from '@/services/parking/types'; // ✅ Usar tipos del backend para espacios reales
+import { ParkingSpot as BackendParkingSpot } from '@/services/parking/types';
 import { parkingSpotService, ParkingSpotFilters } from '@/services/parking/parkingSpotService';
-import { parkingLotService } from '@/services/parking/parkingLotService'; // ✅ Agregar para espacios reales
+import { parkingLotService } from '@/services/parking/parkingLotService';
+import {
+  cacheParkingSpaces,
+  getCachedParkingSpaces,
+  isNetworkError
+} from '@/services/offlineCache';
 
 // ===============================
 // QUERY HOOKS
@@ -434,6 +440,7 @@ export const useSyncParkingSpots = (options?: {
 
 /**
  * ✅ Hook para obtener espacios REALES de un parking lot específico desde el backend
+ * ✅ Con soporte offline: guarda en caché y hace fallback cuando el backend no responde
  * Endpoint: GET /parking-spaces/lot/{id}
  */
 export const useRealParkingSpaces = (
@@ -445,56 +452,69 @@ export const useRealParkingSpaces = (
   }
 ) => {
   const { getAccessTokenSilently } = useAuth0();
+  const [isFromCache, setIsFromCache] = useState(false);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['realParkingSpaces', parkingLotId],
     queryFn: async () => {
       if (!parkingLotId) {
         throw new Error('Parking lot ID is required');
       }
-      // Offline fallback: leer de IndexedDB sin llamar al backend
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        const local = await parkingSpotService.listSpots();
-        if (local.error) return [] as BackendParkingSpot[];
-        // Map de Dexie ParkingSpot -> BackendParkingSpot minimal
-        return (local.data as unknown as Array<{
-          id: number | string;
-          number?: string;
-          status: string;
-          type?: string;
-        }>).map((s) => ({
-          id: s.id,
-          number: s.number,
-          status: s.status,
-          type: s.type,
-        })) as BackendParkingSpot[];
+
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await parkingLotService.getParkingSpaces(token, parkingLotId);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // 💾 OFFLINE: Cachear espacios en IndexedDB
+        if (response.data && Array.isArray(response.data)) {
+          await cacheParkingSpaces(parkingLotId, response.data);
+        }
+
+        setIsFromCache(false);
+        return response.data;
+      } catch (error) {
+        // 📦 FALLBACK: Si hay error de red, intentar obtener del caché
+        if (isNetworkError(error)) {
+          console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
+          const cached = await getCachedParkingSpaces(parkingLotId);
+
+          if (cached && cached.length > 0) {
+            console.log(`✅ Usando ${cached.length} espacios del caché`);
+            setIsFromCache(true);
+            return cached as BackendParkingSpot[];
+          }
+        }
+
+        // Si no hay caché o no es error de red, propagar el error
+        throw error;
       }
-
-      const token = await getAccessTokenSilently();
-      const response = await parkingLotService.getParkingSpaces(token, parkingLotId);
-
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      return response.data;
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId,
-    staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto - espacios cambian frecuentemente
-    refetchInterval: options?.refetchInterval ?? 1000 * 30, // Refrescar cada 30 segundos
-    retry: (failureCount, error: Error & { code?: string }) => {
-      // No retry en errores de autenticación o conexión
-      if (error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_REFUSED') {
+    staleTime: options?.staleTime ?? 1000 * 60 * 1,
+    refetchInterval: options?.refetchInterval ?? 1000 * 30,
+    retry: (failureCount, error) => {
+      // No reintentar errores de red (ya usamos caché)
+      if (isNetworkError(error)) {
         return false;
       }
       return failureCount < 2;
     },
   });
+
+  return {
+    ...query,
+    isFromCache // ✅ Nuevo: indica si los datos vienen del caché
+  };
 };
 
 /**
  * ✅ Hook para obtener espacios con vehículo activo incluido
- * Endpoint: GET /parking-spaces/lot/{id}/with-vehicles (público)
+ * ✅ Con soporte offline: guarda en caché y hace fallback cuando el backend no responde
+ * Endpoint: GET /parking-spaces/lot/{id}/with-vehicles
  */
 export const useRealParkingSpacesWithVehicles = (
   parkingLotId: string | undefined,
@@ -505,37 +525,61 @@ export const useRealParkingSpacesWithVehicles = (
   }
 ) => {
   const { getAccessTokenSilently } = useAuth0();
+  const [isFromCache, setIsFromCache] = useState(false);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['realParkingSpacesWithVehicles', parkingLotId],
     queryFn: async () => {
       if (!parkingLotId) throw new Error('Parking lot ID is required');
-      // Offline fallback: usar IndexedDB sin vehículos activos
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        const local = await parkingSpotService.listSpots();
-        if (local.error) return [] as BackendParkingSpot[];
-        return (local.data as unknown as Array<{
-          id: number | string;
-          number?: string;
-          status: string;
-          type?: string;
-        }>).map((s) => ({
-          id: s.id,
-          number: s.number,
-          status: s.status,
-          type: s.type,
-        })) as BackendParkingSpot[];
+
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await parkingLotService.getParkingSpacesWithVehicles(token, parkingLotId);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // 💾 OFFLINE: Cachear espacios en IndexedDB
+        if (response.data && Array.isArray(response.data)) {
+          await cacheParkingSpaces(parkingLotId, response.data);
+        }
+
+        setIsFromCache(false);
+        return response.data;
+      } catch (error) {
+        // 📦 FALLBACK: Si hay error de red, intentar obtener del caché
+        if (isNetworkError(error)) {
+          console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
+          const cached = await getCachedParkingSpaces(parkingLotId);
+
+          if (cached && cached.length > 0) {
+            console.log(`✅ Usando ${cached.length} espacios del caché`);
+            setIsFromCache(true);
+            return cached as BackendParkingSpot[];
+          }
+        }
+
+        // Si no hay caché o no es error de red, propagar el error
+        throw error;
       }
-      const token = await getAccessTokenSilently();
-      const response = await parkingLotService.getParkingSpacesWithVehicles(token, parkingLotId);
-      if (response.error) throw new Error(response.error);
-      return response.data;
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId,
     staleTime: options?.staleTime ?? 1000 * 30,
     refetchInterval: options?.refetchInterval ?? 1000 * 30,
-    retry: false,
+    retry: (failureCount, error) => {
+      // No reintentar errores de red (ya usamos caché)
+      if (isNetworkError(error)) {
+        return false;
+      }
+      return failureCount < 1;
+    },
   });
+
+  return {
+    ...query,
+    isFromCache // ✅ Nuevo: indica si los datos vienen del caché
+  };
 };
 
 /**

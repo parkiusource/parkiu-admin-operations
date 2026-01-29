@@ -17,7 +17,7 @@ export interface ParkingSpot {
   type: 'car' | 'motorcycle' | 'truck' | 'bicycle';
   status: 'available' | 'occupied' | 'maintenance';
   floor: number;
-  parking_lot_id?: string | number; // ✅ Agregado para asociar con parqueadero
+  parking_lot_id?: string | number;
   syncStatus: 'synced' | 'pending' | 'error';
 }
 
@@ -31,11 +31,47 @@ export interface Transaction {
   syncStatus: 'synced' | 'pending' | 'error';
 }
 
+// ===============================
+// CACHÉ OFFLINE - PARKING LOTS
+// ===============================
+export interface CachedParkingLot {
+  id: string; // Primary key
+  data: Record<string, unknown>; // ParkingLot completo serializado
+  cachedAt: string; // ISO timestamp
+}
+
+// ===============================
+// CACHÉ OFFLINE - PARKING SPACES
+// ===============================
+export interface CachedParkingSpaces {
+  parkingLotId: string; // Primary key
+  spaces: Record<string, unknown>[]; // Array de ParkingSpot serializados
+  cachedAt: string; // ISO timestamp
+}
+
+// ===============================
+// CACHÉ OFFLINE - VEHÍCULOS ACTIVOS
+// ===============================
+export interface ActiveVehicleCache {
+  id: string; // Primary key: `${parkingLotId}-${plate}`
+  parkingLotId: string;
+  plate: string;
+  vehicleType: 'car' | 'motorcycle' | 'bicycle' | 'truck';
+  spotNumber: string;
+  entryTime: string; // ISO timestamp
+  transactionId?: number; // Del backend si se sincronizó
+  syncStatus: 'local' | 'synced'; // 'local' = solo offline, 'synced' = en backend
+  cachedAt: string; // Cuándo se guardó localmente
+}
+
 export class ParkiuDB extends Dexie {
   vehicles!: Table<Vehicle>;
   parkingSpots!: Table<ParkingSpot>;
   transactions!: Table<Transaction>;
   operations!: Table<OfflineOperation>;
+  cachedParkingLots!: Table<CachedParkingLot>;
+  cachedParkingSpaces!: Table<CachedParkingSpaces>;
+  activeVehicles!: Table<ActiveVehicleCache>;
 
   constructor() {
     super('ParkiuDB');
@@ -52,6 +88,27 @@ export class ParkiuDB extends Dexie {
       parkingSpots: '++id, number, type, status, floor, syncStatus',
       transactions: '++id, vehicleId, status, syncStatus',
       operations: '++id, type, plate, status, createdAt'
+    });
+
+    // v3: add offline cache tables for admin dashboard
+    this.version(3).stores({
+      vehicles: '++id, plate, status, parkingSpotId, syncStatus',
+      parkingSpots: '++id, number, type, status, floor, syncStatus',
+      transactions: '++id, vehicleId, status, syncStatus',
+      operations: '++id, type, plate, status, createdAt',
+      cachedParkingLots: 'id, cachedAt',
+      cachedParkingSpaces: 'parkingLotId, cachedAt'
+    });
+
+    // v4: add active vehicles cache for offline entry/exit
+    this.version(4).stores({
+      vehicles: '++id, plate, status, parkingSpotId, syncStatus',
+      parkingSpots: '++id, number, type, status, floor, syncStatus',
+      transactions: '++id, vehicleId, status, syncStatus',
+      operations: '++id, type, plate, status, createdAt',
+      cachedParkingLots: 'id, cachedAt',
+      cachedParkingSpaces: 'parkingLotId, cachedAt',
+      activeVehicles: 'id, parkingLotId, plate, syncStatus, cachedAt'
     });
   }
 }

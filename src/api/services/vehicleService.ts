@@ -50,7 +50,11 @@ function getTariffsWithFallback(
     }
   }
 
-  // Validar y retornar con valores por defecto si es necesario
+  // 🐛 FIX: Improved validation with safer defaults
+  // Use Infinity for threshold if not configured to prevent unintended fixed rate application
+  const hasValidThreshold = tariffs?.fixed_rate_threshold_minutes != null &&
+                            tariffs.fixed_rate_threshold_minutes > 0;
+
   const validated = {
     car_rate_per_minute: Math.max(0, tariffs?.car_rate_per_minute || 0),
     motorcycle_rate_per_minute: Math.max(0, tariffs?.motorcycle_rate_per_minute || 0),
@@ -60,12 +64,20 @@ function getTariffsWithFallback(
     fixed_rate_motorcycle: Math.max(0, tariffs?.fixed_rate_motorcycle || 0),
     fixed_rate_bicycle: Math.max(0, tariffs?.fixed_rate_bicycle || 0),
     fixed_rate_truck: Math.max(0, tariffs?.fixed_rate_truck || 0),
-    fixed_rate_threshold_minutes: Math.max(0, tariffs?.fixed_rate_threshold_minutes || 720), // Default: 12 horas
+    // If threshold not configured, use Infinity so fixed rate never applies
+    // This is safer than assuming a default like 12 hours
+    fixed_rate_threshold_minutes: hasValidThreshold
+      ? Math.max(0, tariffs.fixed_rate_threshold_minutes)
+      : Infinity,
   };
 
-  // Advertir si no hay tarifas configuradas
+  // Warnings for configuration issues
   if (validated.car_rate_per_minute === 0 && validated.motorcycle_rate_per_minute === 0) {
     console.warn('⚠️ No hay tarifas configuradas para este parqueadero. Los cálculos retornarán $0.');
+  }
+
+  if (!hasValidThreshold && (validated.fixed_rate_car > 0 || validated.fixed_rate_motorcycle > 0)) {
+    console.warn('⚠️ Tarifas fijas configuradas pero sin threshold. La tarifa fija nunca se aplicará.');
   }
 
   return validated;
@@ -368,12 +380,15 @@ export class VehicleService {
     const isFixedRate = durationMinutes >= thresholdMinutes;
     const calculatedCost = isFixedRate ? fixedRate : (durationMinutes * ratePerMinute);
 
+    // 🐛 FIX: Use Math.floor() instead of Math.round() for consistent, conservative rounding
+    // This matches financial best practices and reduces discrepancies with backend
+    // Note: This is an ESTIMATE - the backend has the final say on cost
     return {
       duration_minutes: durationMinutes,
       vehicle_type: vehicleType,
       rate_per_minute: ratePerMinute,
       is_fixed_rate: isFixedRate,
-      calculated_cost: Math.round(calculatedCost),
+      calculated_cost: Math.floor(calculatedCost),
       equivalent_hours: parseFloat((durationMinutes / 60).toFixed(1)),
       rate_description: isFixedRate ? 'Tarifa fija' : 'Tarifa por minuto'
     };
@@ -419,12 +434,13 @@ export class VehicleService {
     const isFixedRate = durationMinutes >= thresholdMinutes;
     const calculatedCost = isFixedRate ? fixedRate : (durationMinutes * ratePerMinute);
 
+    // 🐛 FIX: Use Math.floor() for conservative rounding (matches calculateCurrentCost)
     return {
       duration_minutes: durationMinutes,
       vehicle_type: vehicleType,
       rate_per_minute: ratePerMinute,
       is_fixed_rate: isFixedRate,
-      calculated_cost: Math.round(calculatedCost),
+      calculated_cost: Math.floor(calculatedCost),
       equivalent_hours: parseFloat((durationMinutes / 60).toFixed(1)),
       rate_description: isFixedRate ? 'Tarifa fija' : 'Tarifa por minuto'
     };

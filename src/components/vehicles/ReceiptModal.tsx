@@ -20,6 +20,48 @@ function safeLocaleString(value: number | undefined): string {
   }
 }
 
+// 🐛 FIX: Safe date formatting with error handling
+function formatDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return 'Fecha no disponible';
+
+  try {
+    const date = new Date(dateStr);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+
+    return date.toLocaleString('es-CO', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Fecha inválida';
+  }
+}
+
+// 🐛 FIX: Format duration with better handling of edge cases
+function formatDuration(minutes: number | undefined): string {
+  if (!Number.isFinite(minutes)) return '-';
+
+  const mins = minutes as number;
+
+  // Handle zero or very short durations
+  if (mins === 0) return 'Menos de 1 min';
+  if (mins < 1) return 'Menos de 1 min';
+
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${remainingMins}m`;
+  }
+  return `${remainingMins}m`;
+}
+
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, transaction, parkingLot }) => {
   if (!transaction) return null;
 
@@ -31,8 +73,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
     }
   })();
 
-  const ticketNo = transaction.transaction_id ?? transaction.transaction_id;
-  const plate = transaction.plate?.toUpperCase() || '';
+  // 🐛 FIX: Use fallback value 'PENDIENTE' if transaction_id is null/undefined
+  const ticketNo = transaction.transaction_id ?? 'PENDIENTE';
+  const plate = transaction.plate?.toUpperCase() || 'SIN-PLACA';
   const entry = transaction.entry_time || (parsed && (parsed['entry_time'] as string)) || '';
   const exitT = transaction.exit_time || (parsed && (parsed['exit_time'] as string)) || '';
   const space = (parsed && 'space_number' in parsed) ? String(parsed['space_number']) : (transaction.spot_number || '');
@@ -104,9 +147,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
       <div class="row"><div>Placa:</div><div class="mono">${plate}</div></div>
       ${vt ? `<div class="row"><div>Tipo:</div><div>${vt}</div></div>` : ''}
       ${space ? `<div class="row"><div>Espacio:</div><div class="mono">${space}</div></div>` : ''}
-      ${entry ? `<div class="row"><div>Entrada:</div><div>${new Date(entry).toLocaleString('es-CO')}</div></div>` : ''}
-      ${exitT ? `<div class="row"><div>Salida:</div><div>${new Date(exitT).toLocaleString('es-CO')}</div></div>` : ''}
-      ${Number.isFinite(duration as number) ? `<div class="row"><div>Tiempo:</div><div>${Math.floor((duration as number)/60)}h ${(duration as number)%60}m</div></div>` : ''}
+      ${entry ? `<div class="row"><div>Entrada:</div><div>${formatDate(entry)}</div></div>` : ''}
+      ${exitT ? `<div class="row"><div>Salida:</div><div>${formatDate(exitT)}</div></div>` : ''}
+      ${Number.isFinite(duration as number) ? `<div class="row"><div>Tiempo:</div><div>${formatDuration(duration as number)}</div></div>` : ''}
       ${Number.isFinite(total as number) ? `<hr /><div class="row"><div><strong>TOTAL:</strong></div><div><strong>$${(total as number).toLocaleString('es-CO')}</strong></div></div>` : ''}
       <hr />
       <div class="center">¡Gracias por su preferencia!<br/>Powered by ParkiU</div>
@@ -166,19 +209,19 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
             {entry && (
               <>
                 <div className="text-gray-600">Entrada:</div>
-                <div className="text-right">{new Date(entry).toLocaleString('es-CO')}</div>
+                <div className="text-right">{formatDate(entry)}</div>
               </>
             )}
             {exitT && (
               <>
                 <div className="text-gray-600">Salida:</div>
-                <div className="text-right">{new Date(exitT).toLocaleString('es-CO')}</div>
+                <div className="text-right">{formatDate(exitT)}</div>
               </>
             )}
             {Number.isFinite(duration as number) && (
               <>
                 <div className="text-gray-600">Tiempo:</div>
-                <div className="text-right">{Math.floor((duration as number)/60)}h {(duration as number)%60}m</div>
+                <div className="text-right">{formatDuration(duration as number)}</div>
               </>
             )}
             {Number.isFinite(total as number) && (

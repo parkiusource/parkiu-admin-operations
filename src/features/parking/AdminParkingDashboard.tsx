@@ -60,11 +60,12 @@ export default function AdminParkingDashboard() {
   const [isCreateSpaceModalOpen, setIsCreateSpaceModalOpen] = useState(false); // ✅ Estado para modal de espacios
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false); // ✅ Estado para ayuda de atajos
 
-  // ✅ OBTENER PARKING LOTS REALES DEL ADMINISTRADOR
+  // ✅ OBTENER PARKING LOTS REALES DEL ADMINISTRADOR (con soporte offline)
   const {
     parkingLots,
     isLoading: isLoadingLots,
-    error: lotsError
+    error: lotsError,
+    isFromCache: lotsFromCache
   } = useParkingLots();
 
   // ✅ INFO DE PERFIL PARA GATING DE UI
@@ -160,16 +161,20 @@ export default function AdminParkingDashboard() {
     }
   }, [parkingId, parkingLots, isLoadingLots, navigate]);
 
-  // ✅ OBTENER ESPACIOS REALES DEL BACKEND - SOLO para vista individual
+  // ✅ OBTENER ESPACIOS REALES DEL BACKEND - SOLO para vista individual (con soporte offline)
   const {
     data: parkingSpots = [],
     isLoading: isLoadingSpaces,
     error: spacesError,
-    refetch: refetchSpaces
+    refetch: refetchSpaces,
+    isFromCache: spacesFromCache
   } = useRealParkingSpacesWithVehicles(currentParking?.id, {
     enabled: !isListView && !!currentParking?.id,
     refetchInterval: 1000 * 60 // Refrescar cada minuto
   });
+
+  // ✅ Determinar si estamos usando datos del caché
+  const isUsingCachedData = lotsFromCache || spacesFromCache;
   // ✅ OPTIMIZACIÓN: Memoizar cálculos costosos para evitar re-renders innecesarios
   const occupancyStats = useMemo(() => {
     const available = parkingSpots.filter(spot => spot.status === 'available');
@@ -260,8 +265,13 @@ export default function AdminParkingDashboard() {
     );
   }
 
-  // ✅ ERROR STATE
-  if (lotsError || (!isListView && spacesError)) {
+  // ✅ ERROR STATE - Solo mostrar si hay error Y no tenemos datos (ni del servidor ni del caché)
+  const hasLotsData = parkingLots && parkingLots.length > 0;
+  const hasSpacesData = parkingSpots && parkingSpots.length > 0;
+  const showLotsError = lotsError && !hasLotsData;
+  const showSpacesError = !isListView && spacesError && !hasSpacesData;
+
+  if (showLotsError || showSpacesError) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
@@ -284,6 +294,37 @@ export default function AdminParkingDashboard() {
       </div>
     );
   }
+
+  // ✅ BANNER DE DATOS OFFLINE - Componente reutilizable
+  const OfflineBanner = () => {
+    if (!isUsingCachedData) return null;
+
+    return (
+      <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 sm:p-4 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex-shrink-0">
+            <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-800">
+              Modo offline - Datos en caché
+            </p>
+            <p className="text-xs text-amber-600 hidden sm:block">
+              No hay conexión con el servidor. Los datos mostrados pueden no estar actualizados.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex-shrink-0 text-xs sm:text-sm font-medium text-amber-700 hover:text-amber-900 underline"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   // ✅ VISTA DE LISTA - MOSTRAR TODOS LOS PARQUEADEROS
   if (isListView) {
@@ -321,6 +362,12 @@ export default function AdminParkingDashboard() {
     return (
       <>
         <div className="min-h-screen bg-slate-50">
+          {/* Banner de datos offline */}
+          {isUsingCachedData && (
+            <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
+              <OfflineBanner />
+            </div>
+          )}
           {isTempAdmin && (
             <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-4 text-amber-800 text-xs sm:text-sm">
@@ -553,6 +600,12 @@ export default function AdminParkingDashboard() {
   return (
     <>
       <div className="min-h-screen bg-slate-50">
+      {/* ✅ Banner de datos offline */}
+      {isUsingCachedData && (
+        <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
+          <OfflineBanner />
+        </div>
+      )}
       {/* Header del parqueadero específico - Optimizado para móvil */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">

@@ -1,6 +1,6 @@
 import { useStore } from '../store/useStore';
 import { syncPendingOperations } from './offlineSync';
-import { getToken } from '@/api/client';
+import { getToken, getAuth0Client } from '@/api/client';
 
 /**
  * Connection status service that monitors network connectivity
@@ -10,6 +10,65 @@ import { getToken } from '@/api/client';
 class ConnectionService {
   private initialized = false;
   private syncTimeoutId: NodeJS.Timeout | null = null;
+  private syncRetryCount = 0;
+  private maxSyncRetries = 3;
+
+  /**
+   * Check if Auth0 client is ready
+   */
+  private isAuth0Ready(): boolean {
+    return getAuth0Client() !== null;
+  }
+
+  /**
+   * Attempt to sync with exponential backoff retry
+   */
+  private async attemptSync(store: ReturnType<typeof useStore.getState>): Promise<void> {
+    // Check if Auth0 is ready
+    if (!this.isAuth0Ready()) {
+      console.log('⏳ Auth0 not ready yet, will retry sync...');
+
+      // Retry with exponential backoff
+      if (this.syncRetryCount < this.maxSyncRetries) {
+        this.syncRetryCount++;
+        const retryDelay = Math.min(2000 * Math.pow(2, this.syncRetryCount - 1), 10000); // Max 10s
+        console.log(`⏱️ Retrying sync in ${retryDelay}ms (attempt ${this.syncRetryCount}/${this.maxSyncRetries})`);
+
+        this.syncTimeoutId = setTimeout(() => {
+          this.attemptSync(store);
+        }, retryDelay);
+        return;
+      } else {
+        console.warn('⚠️ Max sync retries reached. Auth0 still not ready. Will try again on next online event.');
+        this.syncRetryCount = 0;
+        return;
+      }
+    }
+
+    // Auth0 is ready, proceed with sync
+    this.syncRetryCount = 0; // Reset retry count
+    try {
+      console.log('🔄 Iniciando sincronización automática de operaciones offline...');
+      store.setSyncing(true);
+
+      const result = await syncPendingOperations({
+        getToken: async () => {
+          const token = await getToken();
+          if (!token) {
+            throw new Error('No se pudo obtener el token de autenticación');
+          }
+          return token;
+        }
+      });
+
+      console.log(`✅ Sincronización completada: ${result.synced} sincronizadas, ${result.failed} fallidas`);
+    } catch (error) {
+      console.error('❌ Error en sincronización automática:', error);
+    } finally {
+      store.setSyncing(false);
+      this.syncTimeoutId = null;
+    }
+  }
 
   /**
    * Initialize the connection status monitoring
@@ -32,26 +91,8 @@ class ConnectionService {
         clearTimeout(this.syncTimeoutId);
       }
 
-      this.syncTimeoutId = setTimeout(async () => {
-        try {
-          console.log('🔄 Iniciando sincronización automática de operaciones offline...');
-          store.setSyncing(true);
-          await syncPendingOperations({
-            getToken: async () => {
-              const token = await getToken();
-              if (!token) {
-                throw new Error('No se pudo obtener el token de autenticación');
-              }
-              return token;
-            }
-          });
-          console.log('✅ Sincronización automática completada');
-        } catch (error) {
-          console.error('❌ Error en sincronización automática:', error);
-        } finally {
-          store.setSyncing(false);
-          this.syncTimeoutId = null;
-        }
+      this.syncTimeoutId = setTimeout(() => {
+        this.attemptSync(store);
       }, 2000);
     };
 

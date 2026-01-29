@@ -53,7 +53,11 @@ export const ExitConfirmationDialog: React.FC<ExitConfirmationDialogProps> = ({
 
   const entryTime = vehicle.entry_time ? new Date(vehicle.entry_time) : null;
   const now = new Date();
-  const durationMinutes = entryTime ? Math.floor((now.getTime() - entryTime.getTime()) / 60000) : 0;
+
+  // 🐛 FIX: Use vehicle.duration_minutes if available to match the frozen cost calculation
+  // Otherwise calculate it locally (fallback for offline scenarios)
+  const durationMinutes = vehicle.duration_minutes ??
+    (entryTime ? Math.floor((now.getTime() - entryTime.getTime()) / 60000) : 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
