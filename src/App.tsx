@@ -13,6 +13,8 @@ import { RootRedirect } from './components/common/RootRedirect';
 import './index.css';
 import RoleGuard from './features/auth/components/RoleGuard';
 import OfflineBanner from './components/common/OfflineBanner';
+import SyncErrorBanner from './components/common/SyncErrorBanner';
+import { SyncResultNotifier } from './components/common/SyncResultNotifier';
 
 // Lazy load components
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
@@ -100,6 +102,8 @@ function App() {
         </Router>
         <ToastContainer />
         <OfflineBanner />
+        <SyncErrorBanner />
+        <SyncResultNotifier />
       </ToastProvider>
       <BackendStatus />
       <ReactQueryDevtools initialIsOpen={false} />

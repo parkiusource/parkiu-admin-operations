@@ -36,7 +36,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="ml-4 flex items-center md:ml-6">
           {isOffline && (
             <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-              Offline
+              Sin conexión
             </span>
           )}
         </div>
