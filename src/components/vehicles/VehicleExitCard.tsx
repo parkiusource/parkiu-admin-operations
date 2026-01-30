@@ -134,6 +134,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const [receiptParsed, setReceiptParsed] = useState<Record<string, unknown> | null>(null);
   const [freezeCost, setFreezeCost] = useState(false);
   const [freezePlate, setFreezePlate] = useState<string | null>(null);
+  const [frozenExitTime, setFrozenExitTime] = useState<string | null>(null);
+  const [frozenDuration, setFrozenDuration] = useState<number | null>(null);
 
   // Caso "entrada con internet → salida sin conexión": si offline y tenemos vehículo en caché
   // (entró antes con internet), permitir salida aunque no carguemos perfil/permisos.
@@ -193,11 +195,14 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     const alreadyFrozenForThisPlate = freezeCost && freezePlate === normalized;
 
     if (!alreadyFrozenForThisPlate) {
+      const exitTimestamp = new Date().toISOString();
       const snapshot = costCalculator.calculateCost(
         searchedVehicle.entry_time,
         searchedVehicle.vehicle_type
       );
       setCurrentCost(snapshot.calculated_cost);
+      setFrozenDuration(snapshot.duration_minutes);
+      setFrozenExitTime(exitTimestamp);
       if (!paymentAmount) {
         setPaymentAmount(snapshot.calculated_cost.toString());
       }
@@ -275,12 +280,15 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       return;
     }
 
-    // Congelar costo al iniciar checkout
+    // Congelar costo y tiempo al iniciar checkout
+    const exitTimestamp = new Date().toISOString();
     const snapshot = costCalculator.calculateCost(
       searchedVehicle.entry_time,
       searchedVehicle.vehicle_type
     );
     setCurrentCost(snapshot.calculated_cost);
+    setFrozenDuration(snapshot.duration_minutes);
+    setFrozenExitTime(exitTimestamp);
     if (!paymentAmount) {
       setPaymentAmount(snapshot.calculated_cost.toString());
     }
@@ -294,6 +302,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     if (!confirmOpen && freezeCost && !showReceipt) {
       setFreezeCost(false);
       setFreezePlate(null);
+      setFrozenExitTime(null);
+      setFrozenDuration(null);
     }
   }, [confirmOpen, freezeCost, showReceipt]);
 
@@ -302,6 +312,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     if (freezeCost && freezePlate && normalizePlate(plate) !== freezePlate) {
       setFreezeCost(false);
       setFreezePlate(null);
+      setFrozenExitTime(null);
+      setFrozenDuration(null);
     }
   }, [plate, freezeCost, freezePlate]);
 
@@ -656,10 +668,60 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           )}
           {hasPendingExit && (
             <Alert className="border-amber-200 bg-amber-50 p-2">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-700 text-xs">
-                Salida pendiente de sincronizar. Use &quot;Reintentar&quot; en el banner.
-              </AlertDescription>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <div className="flex-1">
+                  <AlertDescription className="text-amber-700 text-xs">
+                    Salida pendiente de sincronizar. Esta operación ya fue procesada localmente.
+                  </AlertDescription>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { connectionService } = await import('@/services/connectionService');
+                        await connectionService.retrySync();
+                        addToast('Reintentando sincronización...', 'success');
+                      } catch (e) {
+                        console.error('Error al reintentar sync:', e);
+                      }
+                    }}
+                    className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700"
+                  >
+                    Reintentar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm('¿Seguro que deseas limpiar esta operación pendiente? Solo hazlo si ya fue procesada en el servidor.')) {
+                        try {
+                          const { ParkiuDB } = await import('@/db/schema');
+                          const database = new ParkiuDB();
+                          const pending = await database.operations
+                            .where('status').equals('pending')
+                            .and(op => op.type === 'exit' && op.plate === normalizePlate(plate))
+                            .toArray();
+                          for (const op of pending) {
+                            await database.operations.delete(op.id!);
+                          }
+                          addToast('Operación pendiente eliminada', 'success');
+                          // Refrescar la búsqueda
+                          setPlate('');
+                          setTimeout(() => setPlate(plate), 100);
+                        } catch (e) {
+                          console.error('Error al limpiar operación:', e);
+                          addToast('Error al limpiar operación', 'error');
+                        }
+                      }
+                    }}
+                    className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                    title="Limpiar operación pendiente (solo si ya fue procesada)"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              </div>
             </Alert>
           )}
 
@@ -825,6 +887,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           vehicle={searchedVehicle}
           calculatedCost={currentCost || 0}
           paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
+          frozenDuration={frozenDuration}
           onConfirm={() => {
             const amount = parseFloat(paymentAmount);
             if (!Number.isFinite(amount) || amount <= 0) {
@@ -842,7 +905,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 plate: normalizePlate(plate),
                 payment_amount: amount,
                 payment_method: paymentMethod as 'cash' | 'card' | 'digital'
-              }
+              },
+              // Enviar el tiempo de salida congelado para que backend use ese timestamp
+              frozenExitTime: frozenExitTime || undefined
             });
           }}
           isProcessing={registerExit.isPending}
@@ -888,10 +953,63 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
         )}
         {hasPendingExit && (
           <Alert className="border-amber-200 bg-amber-50">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-700">
-              Este vehículo tiene una salida pendiente de sincronizar. Use &quot;Reintentar&quot; en el banner o espere a que se sincronice.
-            </AlertDescription>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-1" />
+              <div className="flex-1">
+                <AlertDescription className="text-amber-700">
+                  Este vehículo tiene una salida pendiente de sincronizar. Esta operación ya fue procesada localmente.
+                </AlertDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { connectionService } = await import('@/services/connectionService');
+                      await connectionService.retrySync();
+                      addToast('Reintentando sincronización...', 'success');
+                    } catch (e) {
+                      console.error('Error al reintentar sync:', e);
+                    }
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Reintentar
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (window.confirm('¿Seguro que deseas limpiar esta operación pendiente? Solo hazlo si ya fue procesada en el servidor.')) {
+                      try {
+                        const { ParkiuDB } = await import('@/db/schema');
+                        const database = new ParkiuDB();
+                        const pending = await database.operations
+                          .where('status').equals('pending')
+                          .and(op => op.type === 'exit' && op.plate === normalizePlate(plate))
+                          .toArray();
+                        for (const op of pending) {
+                          await database.operations.delete(op.id!);
+                        }
+                        addToast('Operación pendiente eliminada', 'success');
+                        // Refrescar la búsqueda
+                        setPlate('');
+                        setTimeout(() => setPlate(plate), 100);
+                      } catch (e) {
+                        console.error('Error al limpiar operación:', e);
+                        addToast('Error al limpiar operación', 'error');
+                      }
+                    }
+                  }}
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                  title="Limpiar operación pendiente (solo si ya fue procesada)"
+                >
+                  Limpiar
+                </Button>
+              </div>
+            </div>
           </Alert>
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -1226,6 +1344,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           vehicle={searchedVehicle}
           calculatedCost={currentCost || 0}
           paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
+          frozenDuration={frozenDuration}
           onConfirm={() => {
             const amount = parseFloat(paymentAmount);
             if (!Number.isFinite(amount) || amount <= 0) {
@@ -1242,7 +1361,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 plate: normalizePlate(plate),
                 payment_amount: amount,
                 payment_method: paymentMethod as 'cash' | 'card' | 'digital'
-              }
+              },
+              // Enviar el tiempo de salida congelado para que backend use ese timestamp
+              frozenExitTime: frozenExitTime || undefined
             });
           }}
           isProcessing={registerExit.isPending}

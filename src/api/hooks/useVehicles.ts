@@ -467,19 +467,30 @@ export const useRegisterVehicleExit = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleExit }) => {
+    mutationFn: async ({
+      parkingLotId,
+      vehicleData,
+      frozenExitTime
+    }: {
+      parkingLotId: string;
+      vehicleData: VehicleExit;
+      frozenExitTime?: string;
+    }) => {
       if (!isAuthenticated) {
         throw new Error('Usuario no autenticado');
       }
 
-      const now = new Date().toISOString();
+      // Usar el tiempo de salida congelado si está disponible, o la hora actual
+      const now = frozenExitTime || new Date().toISOString();
 
       const runOfflineExit = async (): Promise<VehicleExitResponse> => {
         const idempotencyKey = generateIdempotencyKey(`exit-${vehicleData.plate}`);
         const { findCachedVehicle, removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
         const cachedVehicle = await findCachedVehicle(parkingLotId, vehicleData.plate);
+        // Calcular duración usando el tiempo congelado, no la hora actual
+        const exitTimestamp = new Date(now).getTime();
         const durationMinutes = cachedVehicle
-          ? Math.floor((new Date().getTime() - new Date(cachedVehicle.entry_time).getTime()) / (1000 * 60))
+          ? Math.floor((exitTimestamp - new Date(cachedVehicle.entry_time).getTime()) / (1000 * 60))
           : 0;
         await enqueueOperation({
           type: 'exit',
@@ -520,7 +531,13 @@ export const useRegisterVehicleExit = (options?: {
               if (connectionService.considerOffline()) return runOfflineExit();
               const token = await getAccessTokenSilently({ timeoutInSeconds: AUTH_TIMEOUT_SECONDS });
               if (connectionService.considerOffline()) return runOfflineExit();
-              const response = await VehicleService.registerExit(token, parkingLotId, vehicleData);
+              // Enviar el timestamp congelado al backend para que use ese momento exacto
+              const response = await VehicleService.registerExit(
+                token,
+                parkingLotId,
+                vehicleData,
+                { clientTime: now }
+              );
               if (response.error) throw new Error(response.error);
               const { removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
               await removeVehicleFromCache(parkingLotId, vehicleData.plate);

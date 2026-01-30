@@ -12,6 +12,7 @@ interface ExitConfirmationDialogProps {
   paymentMethod: 'cash' | 'card' | 'digital' | 'transfer';
   onConfirm: () => void;
   isProcessing?: boolean;
+  frozenDuration?: number | null; // Duración congelada al momento de abrir el diálogo
 }
 
 const paymentMethodLabels = {
@@ -35,7 +36,8 @@ export const ExitConfirmationDialog: React.FC<ExitConfirmationDialogProps> = ({
   calculatedCost,
   paymentMethod,
   onConfirm,
-  isProcessing = false
+  isProcessing = false,
+  frozenDuration
 }) => {
   if (!vehicle) return null;
 
@@ -54,9 +56,10 @@ export const ExitConfirmationDialog: React.FC<ExitConfirmationDialogProps> = ({
   const entryTime = vehicle.entry_time ? new Date(vehicle.entry_time) : null;
   const now = new Date();
 
-  // 🐛 FIX: Use vehicle.duration_minutes if available to match the frozen cost calculation
-  // Otherwise calculate it locally (fallback for offline scenarios)
-  const durationMinutes = vehicle.duration_minutes ??
+  // 🐛 FIX: Use frozenDuration (captured when dialog opened) to prevent time discrepancies
+  // This ensures the displayed duration matches exactly what was used for cost calculation
+  const durationMinutes = frozenDuration ??
+    vehicle.duration_minutes ??
     (entryTime ? Math.floor((now.getTime() - entryTime.getTime()) / 60000) : 0);
 
   return (
