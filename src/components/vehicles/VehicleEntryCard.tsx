@@ -141,6 +141,9 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
       const spot = response.spot_number || vehicleData.space_number || vehicleData.parking_space_number || vehicleData.spot_number || 'espacio asignado';
       onSuccess?.(vehicleData.plate, spot);
       addToast(`Entrada registrada: ${vehicleData.plate} en ${spot}`, 'success');
+      if ((response as { __offline?: boolean }).__offline) {
+        addToast('Guardado localmente. Se sincronizará al reconectar.', 'success');
+      }
       setEntryResponse(response);
       setEntrySpot(spot);
       setEntryPlate(vehicleData.plate);

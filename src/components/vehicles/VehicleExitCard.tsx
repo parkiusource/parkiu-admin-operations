@@ -34,6 +34,8 @@ import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
 import { PrinterSelector } from '@/components/common/PrinterSelector';
 import ExitConfirmationDialog from './ExitConfirmationDialog';
 import { useOperationPermissions } from '@/hooks';
+import { useStore } from '@/store/useStore';
+import { connectionService } from '@/services/connectionService';
 
 interface VehicleExitCardProps {
   parkingLots?: ParkingLot[];
@@ -105,6 +107,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const { addToast } = useToast();
   const { profile } = useAdminProfileStatus();
   const { canRegisterExit } = useOperationPermissions();
+  const isOffline = useStore((s) => s.isOffline);
 
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
@@ -114,12 +117,10 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     }
     return authorized;
   }, [profile]);
+
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 VehicleExitCard - Parking lots data:', { parkingLots, parkingLot, lots });
-  }
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingLot | null>(lots[0] || null);
   const [plate, setPlate] = useState('');
   const [searchedVehicle, setSearchedVehicle] = useState<ActiveVehicle | null>(null);
@@ -133,6 +134,12 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   const [receiptParsed, setReceiptParsed] = useState<Record<string, unknown> | null>(null);
   const [freezeCost, setFreezeCost] = useState(false);
   const [freezePlate, setFreezePlate] = useState<string | null>(null);
+
+  // Caso "entrada con internet → salida sin conexión": si offline y tenemos vehículo en caché
+  // (entró antes con internet), permitir salida aunque no carguemos perfil/permisos.
+  const allowExitOffline = isOffline && !!searchedVehicle;
+  const hasPendingExit = (searchedVehicle as { __pendingExit?: boolean } | null)?.__pendingExit === true;
+  const canExit = (canRegisterExit || allowExitOffline) && !hasPendingExit;
 
   // Always call the hook but conditionally use the result
   const costCalculator = useCostCalculator(selectedParkingLot || (lots[0] as ParkingLot || ({} as ParkingLot)));
@@ -149,8 +156,12 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 
   const registerExit = useRegisterVehicleExit({
     onSuccess: (response, { vehicleData }) => {
+      setConfirmOpen(false); // Cerrar modal al completar (evita quedar en "Procesando..." si algo falla después)
       onSuccess?.(vehicleData.plate, response.total_cost);
       addToast(`Salida registrada: ${vehicleData.plate} - $${response.total_cost.toLocaleString()}`, 'success');
+      if ((response as { __offline?: boolean }).__offline) {
+        addToast('Guardado localmente. Se sincronizará al reconectar.', 'success');
+      }
       setExitResponse(response);
       try {
         const parsed = response.receipt ? JSON.parse(response.receipt) : null;
@@ -162,15 +173,15 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       setShowReceipt(true);
     },
     onError: (error) => {
+      setConfirmOpen(false);
       onError?.(error.message);
     }
   });
 
-  // 🐛 FIX: Consolidated cost calculation to prevent race conditions
-  // This single effect handles both initial freeze and periodic updates
+  // 🐛 FIX: Consolidated cost calculation. No incluir paymentAmount/freezeCost/freezePlate en deps:
+  // el efecto los actualiza; incluirlos provocaba "Maximum update depth exceeded".
   useEffect(() => {
     if (!searchedVehicle) {
-      // Reset freeze state when no vehicle
       if (freezeCost) {
         setFreezeCost(false);
         setFreezePlate(null);
@@ -181,7 +192,6 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     const normalized = normalizePlate(plate);
     const alreadyFrozenForThisPlate = freezeCost && freezePlate === normalized;
 
-    // If not frozen for this plate yet, freeze immediately
     if (!alreadyFrozenForThisPlate) {
       const snapshot = costCalculator.calculateCost(
         searchedVehicle.entry_time,
@@ -193,22 +203,18 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       }
       setFreezeCost(true);
       setFreezePlate(normalized);
-      return; // Don't set up interval on first freeze
+      return;
     }
 
-    // If already frozen for this plate and confirm dialog is open, don't update
     if (confirmOpen) return;
 
-    // Set up periodic updates only if frozen for this plate but dialog not open
     const updateCost = () => {
-      // Use requestIdleCallback for non-critical updates to avoid blocking main thread
       const performUpdate = () => {
         const costInfo = costCalculator.calculateCost(
           searchedVehicle.entry_time,
           searchedVehicle.vehicle_type
         );
         setCurrentCost(costInfo.calculated_cost);
-        // Only auto-fill if field is empty
         if (!paymentAmount) {
           setPaymentAmount(costInfo.calculated_cost.toString());
         }
@@ -221,23 +227,23 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
       }
     };
 
-    // Update immediately if not frozen or dialog not open
     updateCost();
-
-    // Update every minute
     const interval = setInterval(updateCost, 60000);
-
     return () => clearInterval(interval);
-  }, [searchedVehicle, costCalculator, paymentAmount, freezeCost, freezePlate, plate, confirmOpen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- costCalculator y freeze/paymentAmount omitidos para evitar loop
+  }, [searchedVehicle, plate, confirmOpen]);
 
-  // Actualizar vehículo encontrado
+  // Actualizar vehículo encontrado (deps primitivas para evitar loop: searchVehicle.data puede ser ref nueva cada vez desde caché)
+  const dataPlate = searchVehicle.data?.plate;
+  const dataEntryTime = searchVehicle.data?.entry_time;
   useEffect(() => {
     if (searchVehicle.data && searchVehicle.data.plate === plate.toUpperCase()) {
       setSearchedVehicle(searchVehicle.data);
     } else if (!searchVehicle.data && plate.length >= 3) {
       setSearchedVehicle(null);
     }
-  }, [searchVehicle.data, plate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- searchVehicle.data como dep provocaba "Maximum update depth exceeded"
+  }, [plate, dataPlate, dataEntryTime]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -632,11 +638,27 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           <div className="mb-2">
             <PrinterSelector />
           </div>
-          {!isOperatorAuthorized && (
+          {!isOperatorAuthorized && !allowExitOffline && (
             <Alert className="border-red-200 bg-red-50 p-2">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-700 text-xs">
                 No tiene permisos para registrar salidas. Contacte al administrador.
+              </AlertDescription>
+            </Alert>
+          )}
+          {allowExitOffline && (
+            <Alert className="border-amber-200 bg-amber-50 p-2">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700 text-xs">
+                Sin conexión. La salida se registrará localmente y se sincronizará al reconectar.
+              </AlertDescription>
+            </Alert>
+          )}
+          {hasPendingExit && (
+            <Alert className="border-amber-200 bg-amber-50 p-2">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700 text-xs">
+                Salida pendiente de sincronizar. Use &quot;Reintentar&quot; en el banner.
               </AlertDescription>
             </Alert>
           )}
@@ -785,9 +807,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
 
                 <Button
                   type="submit"
-                  disabled={!canRegisterExit || !searchedVehicle || !paymentMethod || !paymentAmount || isUnderpaid()}
+                  disabled={!canExit || !searchedVehicle || !paymentMethod || !paymentAmount || isUnderpaid()}
                   className="w-full bg-red-600 hover:bg-red-700 text-white py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={!canRegisterExit ? 'No tienes permisos para registrar salidas' : undefined}
+                  title={!canExit ? 'No tienes permisos para registrar salidas' : undefined}
                 >
                   ✓ Confirmar Salida - ${currentCost?.toLocaleString() || 0}
                 </Button>
@@ -804,15 +826,16 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           calculatedCost={currentCost || 0}
           paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
           onConfirm={() => {
-            // 🐛 FIX: Double-check payment amount is valid before submitting
             const amount = parseFloat(paymentAmount);
             if (!Number.isFinite(amount) || amount <= 0) {
               addToast('Error: Monto de pago inválido', 'error');
               setConfirmOpen(false);
               return;
             }
-
-            setConfirmOpen(false);
+            // En offline: cerrar modal al instante y mutar en segundo plano (evita "Procesando..." eterno)
+            if (connectionService.considerOffline()) {
+              setConfirmOpen(false);
+            }
             registerExit.mutate({
               parkingLotId: selectedParkingLot!.id!,
               vehicleData: {
@@ -847,11 +870,27 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
         <div className="mb-4">
           <PrinterSelector />
         </div>
-        {!isOperatorAuthorized && (
+        {!isOperatorAuthorized && !allowExitOffline && (
           <Alert variant="destructive">
             <ShieldAlert className="h-4 w-4" />
             <AlertDescription>
               No tiene permisos para operar salidas. Contacte al administrador.
+            </AlertDescription>
+          </Alert>
+        )}
+        {allowExitOffline && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700">
+              Sin conexión. La salida se registrará localmente y se sincronizará al reconectar.
+            </AlertDescription>
+          </Alert>
+        )}
+        {hasPendingExit && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700">
+              Este vehículo tiene una salida pendiente de sincronizar. Use &quot;Reintentar&quot; en el banner o espere a que se sincronice.
             </AlertDescription>
           </Alert>
         )}
@@ -1146,15 +1185,14 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               <Button
                 type="submit"
                 disabled={
-                  !canRegisterExit ||
+                  !canExit ||
                   registerExit.isPending ||
                   !searchedVehicle ||
                   !paymentMethod ||
-                  isUnderpaid() ||
-                  !isOperatorAuthorized
+                  isUnderpaid()
                 }
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!canRegisterExit ? 'No tienes permisos para registrar salidas' : undefined}
+                title={!canExit ? 'No tienes permisos para registrar salidas' : undefined}
               >
                 {registerExit.isPending ? (
                   <>
@@ -1189,15 +1227,15 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           calculatedCost={currentCost || 0}
           paymentMethod={paymentMethod as 'cash' | 'card' | 'digital' | 'transfer'}
           onConfirm={() => {
-            // 🐛 FIX: Double-check payment amount is valid before submitting
             const amount = parseFloat(paymentAmount);
             if (!Number.isFinite(amount) || amount <= 0) {
               addToast('Error: Monto de pago inválido', 'error');
               setConfirmOpen(false);
               return;
             }
-
-            setConfirmOpen(false);
+            if (connectionService.considerOffline()) {
+              setConfirmOpen(false);
+            }
             registerExit.mutate({
               parkingLotId: selectedParkingLot!.id!,
               vehicleData: {

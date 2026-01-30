@@ -33,6 +33,13 @@ export async function listPending(): Promise<OfflineOperation[]> {
   return db.operations.where('status').equals('pending').toArray();
 }
 
+/** Placas con salida pendiente de sincronizar (por lot opcional) para no mostrarlas como activas desde backend */
+export async function getPendingExitPlates(parkingLotId?: string): Promise<Set<string>> {
+  const all = await db.operations.where('status').equals('pending').toArray();
+  const exits = all.filter(op => op.type === 'exit' && (!parkingLotId || op.parkingLotId === parkingLotId));
+  return new Set(exits.map(op => (op.plate || '').toUpperCase()).filter(Boolean));
+}
+
 export async function markAsSynced(id: number): Promise<void> {
   await db.operations.update(id, { status: 'synced', errorMessage: undefined });
 }

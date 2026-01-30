@@ -48,13 +48,13 @@ export const BackendStatus = () => {
             <h3 className={`text-sm font-medium ${
               backendError ? 'text-yellow-800' : 'text-green-800'
             }`}>
-              {backendError ? 'Modo Offline' : 'Conectado'}
+              {backendError ? 'Se necesita conexión a internet' : 'Conectado'}
             </h3>
             <p className={`text-sm ${
               backendError ? 'text-yellow-700' : 'text-green-700'
             }`}>
               {backendError
-                ? 'Backend no disponible. Trabajando con datos locales.'
+                ? 'Conecta a internet para usar la aplicación.'
                 : 'Conectado al servidor correctamente.'
               }
             </p>

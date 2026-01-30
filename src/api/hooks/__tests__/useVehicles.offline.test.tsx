@@ -8,6 +8,8 @@ vi.mock('@/services/connectionService', () => ({
   connectionService: {
     isOnline: () => false,
     isOffline: () => true,
+    considerOffline: () => true,
+    setOffline: () => {},
     initialize: () => () => void 0,
   }
 }));

@@ -89,12 +89,6 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
   }, [operations]);
 
   const renderModalContent = () => {
-    // Debug logging (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 QuickVehicleOperations - selectedParkingLot:', selectedParkingLot);
-      console.log('🔍 QuickVehicleOperations - activeOperation:', activeOperation);
-    }
-
     // Verificar que tenemos datos del parqueadero
     if (!selectedParkingLot) {
       return (

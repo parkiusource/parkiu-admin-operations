@@ -10,6 +10,8 @@ import {
   getCachedParkingSpaces,
   isNetworkError
 } from '@/services/offlineCache';
+import { useStore } from '@/store/useStore';
+import { connectionService } from '@/services/connectionService';
 
 // ===============================
 // QUERY HOOKS
@@ -453,12 +455,24 @@ export const useRealParkingSpaces = (
 ) => {
   const { getAccessTokenSilently } = useAuth0();
   const [isFromCache, setIsFromCache] = useState(false);
+  const isOffline = useStore((s) => s.isOffline);
 
   const query = useQuery({
     queryKey: ['realParkingSpaces', parkingLotId],
     queryFn: async () => {
       if (!parkingLotId) {
         throw new Error('Parking lot ID is required');
+      }
+
+      // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché
+      if (connectionService.considerOffline()) {
+        const cached = await getCachedParkingSpaces(parkingLotId);
+        if (cached && cached.length > 0) {
+          console.log(`✅ Usando ${cached.length} espacios del caché (offline)`);
+          setIsFromCache(true);
+          return cached as BackendParkingSpot[];
+        }
+        throw new Error('No hay datos en caché para este parqueadero');
       }
 
       try {
@@ -469,7 +483,6 @@ export const useRealParkingSpaces = (
           throw new Error(response.error);
         }
 
-        // 💾 OFFLINE: Cachear espacios en IndexedDB
         if (response.data && Array.isArray(response.data)) {
           await cacheParkingSpaces(parkingLotId, response.data);
         }
@@ -477,7 +490,6 @@ export const useRealParkingSpaces = (
         setIsFromCache(false);
         return response.data;
       } catch (error) {
-        // 📦 FALLBACK: Si hay error de red, intentar obtener del caché
         if (isNetworkError(error)) {
           console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
           const cached = await getCachedParkingSpaces(parkingLotId);
@@ -489,15 +501,13 @@ export const useRealParkingSpaces = (
           }
         }
 
-        // Si no hay caché o no es error de red, propagar el error
         throw error;
       }
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId,
     staleTime: options?.staleTime ?? 1000 * 60 * 1,
-    refetchInterval: options?.refetchInterval ?? 1000 * 30,
+    refetchInterval: isOffline ? false : (options?.refetchInterval ?? 1000 * 30),
     retry: (failureCount, error) => {
-      // No reintentar errores de red (ya usamos caché)
       if (isNetworkError(error)) {
         return false;
       }
@@ -507,7 +517,7 @@ export const useRealParkingSpaces = (
 
   return {
     ...query,
-    isFromCache // ✅ Nuevo: indica si los datos vienen del caché
+    isFromCache
   };
 };
 
@@ -526,11 +536,23 @@ export const useRealParkingSpacesWithVehicles = (
 ) => {
   const { getAccessTokenSilently } = useAuth0();
   const [isFromCache, setIsFromCache] = useState(false);
+  const isOffline = useStore((s) => s.isOffline);
 
   const query = useQuery({
     queryKey: ['realParkingSpacesWithVehicles', parkingLotId],
     queryFn: async () => {
       if (!parkingLotId) throw new Error('Parking lot ID is required');
+
+      // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché
+      if (connectionService.considerOffline()) {
+        const cached = await getCachedParkingSpaces(parkingLotId);
+        if (cached && cached.length > 0) {
+          console.log(`✅ Usando ${cached.length} espacios del caché (offline)`);
+          setIsFromCache(true);
+          return cached as BackendParkingSpot[];
+        }
+        throw new Error('No hay datos en caché para este parqueadero');
+      }
 
       try {
         const token = await getAccessTokenSilently();
@@ -540,7 +562,6 @@ export const useRealParkingSpacesWithVehicles = (
           throw new Error(response.error);
         }
 
-        // 💾 OFFLINE: Cachear espacios en IndexedDB
         if (response.data && Array.isArray(response.data)) {
           await cacheParkingSpaces(parkingLotId, response.data);
         }
@@ -548,7 +569,6 @@ export const useRealParkingSpacesWithVehicles = (
         setIsFromCache(false);
         return response.data;
       } catch (error) {
-        // 📦 FALLBACK: Si hay error de red, intentar obtener del caché
         if (isNetworkError(error)) {
           console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
           const cached = await getCachedParkingSpaces(parkingLotId);
@@ -560,15 +580,13 @@ export const useRealParkingSpacesWithVehicles = (
           }
         }
 
-        // Si no hay caché o no es error de red, propagar el error
         throw error;
       }
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId,
     staleTime: options?.staleTime ?? 1000 * 30,
-    refetchInterval: options?.refetchInterval ?? 1000 * 30,
+    refetchInterval: isOffline ? false : (options?.refetchInterval ?? 1000 * 30),
     retry: (failureCount, error) => {
-      // No reintentar errores de red (ya usamos caché)
       if (isNetworkError(error)) {
         return false;
       }

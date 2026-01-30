@@ -61,15 +61,18 @@ const createClient = () => {
     } catch (error) {
       console.error('Error getting token:', error);
 
-      // If we haven't retried yet and it's a refresh token error, try one more time
-      if (retryCount === 0 && error instanceof Error && error.message.includes('refresh token')) {
-        console.log('Retrying token acquisition...');
-        // Wait a bit before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Un reintento con espera (útil tras reconectar: red o refresh pueden no estar listos)
+      if (retryCount === 0) {
+        const isRefreshError = error instanceof Error && error.message.includes('refresh token');
+        if (isRefreshError) {
+          console.log('Reintentando obtención de token (refresh)...');
+        } else {
+          console.log('Reintentando obtención de token en 2s...');
+        }
+        await new Promise((r) => setTimeout(r, isRefreshError ? 1000 : 2000));
         return getToken(retryCount + 1);
       }
 
-      // Do not redirect here. Caller decides how to handle a missing token.
       return null;
     }
   };
@@ -89,8 +92,9 @@ const createClient = () => {
       const url = error?.config?.url;
       try {
         const code: string | undefined = error?.code;
-        // Si es error de red (backend caído, CORS bloqueado, timeout), marcar offline
-        if (!status || code === 'ERR_NETWORK' || code === 'ECONNABORTED') {
+        const isNetworkError = !status || code === 'ERR_NETWORK' || code === 'ECONNABORTED';
+        // Solo marcar offline si el navegador reporta sin conexión (evita "Modo Offline" falso al recargar)
+        if (isNetworkError && typeof navigator !== 'undefined' && !navigator.onLine) {
           const store = useStore.getState();
           store.setOffline(true);
         }

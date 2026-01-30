@@ -12,6 +12,7 @@ import {
   getCachedParkingLots,
   isNetworkError
 } from '@/services/offlineCache';
+import { connectionService } from '@/services/connectionService';
 
 // ===============================
 // QUERY HOOKS
@@ -36,6 +37,17 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
         return [];
       }
 
+      // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché
+      if (connectionService.considerOffline()) {
+        const cached = await getCachedParkingLots();
+        if (cached && cached.length > 0) {
+          console.log(`✅ Usando ${cached.length} parking lots del caché (offline)`);
+          setIsFromCache(true);
+          return cached;
+        }
+        throw new Error('No hay datos en caché');
+      }
+
       try {
         const token = await getAccessTokenSilently();
         const response = await parkingLotService.getParkingLots(token, filters);
@@ -44,11 +56,9 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
           throw new Error(response.error);
         }
 
-        // 💾 OFFLINE: Cachear en IndexedDB para fallback offline
         if (response.data && Array.isArray(response.data)) {
           await cacheParkingLots(response.data);
 
-          // También guardar tarifas en localStorage (legacy)
           response.data.forEach(lot => {
             if (lot.id) {
               saveTariffs(lot.id, lot);
@@ -59,7 +69,6 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
         setIsFromCache(false);
         return response.data;
       } catch (error) {
-        // 📦 FALLBACK: Si hay error de red, intentar obtener del caché
         if (isNetworkError(error)) {
           console.log('🔄 Backend no disponible, intentando caché offline...');
           const cached = await getCachedParkingLots();
@@ -71,7 +80,6 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
           }
         }
 
-        // Si no hay caché o no es error de red, propagar el error
         throw error;
       }
     },

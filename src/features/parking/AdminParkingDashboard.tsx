@@ -35,9 +35,11 @@ import {
 } from '@/hooks/parking';
 import { useParkingLotPricing } from '@/api/hooks/useSettingsData';
 import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
+import { useStore } from '@/store/useStore';
+import { getCachedParkingLot } from '@/services/offlineCache';
 
 // ✅ IMPORTAR TIPOS DEL BACKEND
-import { ParkingSpot } from '@/services/parking/types';
+import { ParkingLot, ParkingSpot } from '@/services/parking/types';
 
 // ✅ IMPORTAR COMPONENTE DE CARD CON DATOS REALES
 import { ParkingLotCard } from './components/ParkingLotCard';
@@ -59,6 +61,9 @@ export default function AdminParkingDashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // ✅ Estado para modal de parqueaderos
   const [isCreateSpaceModalOpen, setIsCreateSpaceModalOpen] = useState(false); // ✅ Estado para modal de espacios
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false); // ✅ Estado para ayuda de atajos
+  const [fallbackParking, setFallbackParking] = useState<ParkingLot | null>(null);
+
+  const isOffline = useStore(s => s.isOffline);
 
   // ✅ OBTENER PARKING LOTS REALES DEL ADMINISTRADOR (con soporte offline)
   const {
@@ -142,14 +147,28 @@ export default function AdminParkingDashboard() {
   // ✅ OBTENER TARIFAS ACTUALIZADAS DEL ENDPOINT ESPECÍFICO
   const { data: pricingData } = useParkingLotPricing(parkingId || null);
 
-  // ✅ COMBINAR DATOS DEL PARQUEADERO CON TARIFAS ACTUALIZADAS
-  const currentParking = baseParkingLot && pricingData
+  // ✅ COMBINAR DATOS DEL PARQUEADERO CON TARIFAS ACTUALIZADAS (offline: usar base o fallback desde caché)
+  const currentParking = (baseParkingLot && pricingData
     ? { ...baseParkingLot, ...pricingData }
-    : baseParkingLot;
+    : baseParkingLot) || fallbackParking;
 
-  // ✅ REDIRIGIR SI EL :id NO PERTENECE A LOS LOTS DEL USUARIO
+  // ✅ OFFLINE: si hay parkingId pero no baseParkingLot (query colgada/vacía), hidratar desde caché
+  useEffect(() => {
+    if (!isOffline || !parkingId || baseParkingLot) {
+      if (!isOffline && fallbackParking) setFallbackParking(null);
+      return;
+    }
+    let cancelled = false;
+    getCachedParkingLot(parkingId).then((lot) => {
+      if (!cancelled && lot) setFallbackParking(lot);
+    });
+    return () => { cancelled = true; };
+  }, [isOffline, parkingId, baseParkingLot, fallbackParking]);
+
+  // ✅ REDIRIGIR SI EL :id NO PERTENECE A LOS LOTS DEL USUARIO (no redirigir si offline y tenemos fallback de caché)
   useEffect(() => {
     if (!parkingId) return;
+    if (isOffline && fallbackParking?.id === parkingId) return;
     if (isLoadingLots) return;
     const belongs = parkingLots.some(lot => lot.id === parkingId);
     if (!belongs) {
@@ -159,7 +178,7 @@ export default function AdminParkingDashboard() {
         navigate('/parking', { replace: true });
       }
     }
-  }, [parkingId, parkingLots, isLoadingLots, navigate]);
+  }, [parkingId, parkingLots, isLoadingLots, navigate, isOffline, fallbackParking?.id]);
 
   // ✅ OBTENER ESPACIOS REALES DEL BACKEND - SOLO para vista individual (con soporte offline)
   const {
@@ -295,7 +314,7 @@ export default function AdminParkingDashboard() {
     );
   }
 
-  // ✅ BANNER DE DATOS OFFLINE - Componente reutilizable
+  // ✅ BANNER SIN CONEXIÓN - Mensaje claro para MVP
   const OfflineBanner = () => {
     if (!isUsingCachedData) return null;
 
@@ -307,14 +326,9 @@ export default function AdminParkingDashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-800">
-              Modo offline - Datos en caché
-            </p>
-            <p className="text-xs text-amber-600 hidden sm:block">
-              No hay conexión con el servidor. Los datos mostrados pueden no estar actualizados.
-            </p>
-          </div>
+          <p className="text-sm font-medium text-amber-800 flex-1">
+            Se necesita conexión a internet
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="flex-shrink-0 text-xs sm:text-sm font-medium text-amber-700 hover:text-amber-900 underline"
@@ -1014,8 +1028,7 @@ export default function AdminParkingDashboard() {
 
       {/* ✅ OPERACIONES RÁPIDAS DE VEHÍCULOS */}
       {!isListView && currentParking && (
-        <>
-          {process.env.NODE_ENV === 'development' && console.log('🔍 Renderizando QuickVehicleOperations con:', { isListView, currentParking })}
+          <>
           <QuickVehicleOperations
             selectedParkingLot={currentParking}
           />
