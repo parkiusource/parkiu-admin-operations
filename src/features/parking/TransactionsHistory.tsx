@@ -25,12 +25,15 @@ export default function TransactionsHistory() {
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<VehicleTransaction[]>([]);
   const [hasMore, setHasMore] = useState(true);
+  // Track último offset procesado para evitar duplicados
+  const lastProcessedOffsetRef = useRef<number>(-1);
 
   // Reset pagination when filters or lot change
   useEffect(() => {
     setOffset(0);
     setItems([]);
     setHasMore(true);
+    lastProcessedOffsetRef.current = -1;
   }, [parkingLotId, plate, dateFrom, dateTo, status, paymentMethod]);
 
   // Memoizar filtros para evitar que cambie la identidad en cada render y dispare refetch infinito
@@ -49,8 +52,17 @@ export default function TransactionsHistory() {
   const isLoading = historyQuery.isLoading;
 
   useEffect(() => {
-    if (!page) return;
-    setItems(prev => (offset === 0 ? page : [...prev, ...page]));
+    if (!page || page.length === 0) return;
+
+    // Si es offset 0 o un nuevo offset que no hemos procesado
+    if (offset === 0) {
+      setItems(page);
+      lastProcessedOffsetRef.current = offset;
+    } else if (offset !== lastProcessedOffsetRef.current) {
+      setItems(prev => [...prev, ...page]);
+      lastProcessedOffsetRef.current = offset;
+    }
+
     if (page.length < LIMIT) setHasMore(false);
   }, [page, offset]);
 
@@ -109,7 +121,9 @@ export default function TransactionsHistory() {
     setOffset(0);
     setItems([]);
     setHasMore(true);
-    // El query se refrescará automáticamente cuando cambien los filtros
+    lastProcessedOffsetRef.current = -1;
+    // Forzar refetch invalidando el cache
+    historyQuery.refetch();
   };
 
   const clearFilters = () => {
@@ -258,7 +272,13 @@ export default function TransactionsHistory() {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-1">Historial de Transacciones</h3>
             <p className="text-sm text-gray-600">
-              {items.length > 0 ? `${items.length} transacciones encontradas` : 'Registro completo de entradas y salidas'}
+              {items.length > 0 ? (
+                <>
+                  {items.length} transacciones cargadas {hasMore && '(desplázate para cargar más)'}
+                </>
+              ) : (
+                'Registro completo de entradas y salidas'
+              )}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -268,17 +288,30 @@ export default function TransactionsHistory() {
               </svg>
               Actualizar
             </Button>
-            <Button type="button" onClick={exportCsv} className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={exportCsv}
+              className="flex items-center gap-2"
+              disabled={items.length === 0}
+              title={`Exportar ${items.length} transacciones visibles a CSV`}
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Exportar CSV
+              Exportar CSV ({items.length})
             </Button>
-            <Button type="button" variant="outline" onClick={exportJson} className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exportJson}
+              className="flex items-center gap-2"
+              disabled={items.length === 0}
+              title={`Exportar ${items.length} transacciones visibles a JSON`}
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Exportar JSON
+              Exportar JSON ({items.length})
             </Button>
           </div>
         </div>
@@ -318,7 +351,7 @@ export default function TransactionsHistory() {
               </td></tr>
             ) : (
               items.map((t, index) => (
-                <tr key={String(t.transaction_id)} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
+                <tr key={t.transaction_id ? `tx-${t.transaction_id}` : `idx-${index}`} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
