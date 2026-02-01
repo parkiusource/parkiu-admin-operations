@@ -23,14 +23,22 @@ const Auth0ClientRegistrar = ({ children }: { children: React.ReactNode }) => {
         // The useAuth0 hook provides access to getAccessTokenSilently
         // We need to register a way to get tokens with our axios client
         // We'll pass a function that calls getAccessTokenSilently
-        const tokenGetter = async () => {
+        const tokenGetter = async (options?: { detailedResponse?: boolean }) => {
           try {
-            return await auth0.getAccessTokenSilently({
+            const token = await auth0.getAccessTokenSilently({
               authorizationParams: {
                 audience: import.meta.env.VITE_AUTH0_AUDIENCE,
                 scope: 'openid profile email offline_access'
               }
             });
+
+            // Si se pide detailedResponse, devolver objeto con access_token
+            // (compatible con el formato que espera getToken() en client.ts)
+            if (options?.detailedResponse) {
+              return { access_token: token };
+            }
+
+            return token;
           } catch (error) {
             console.error('Error getting token silently:', error);
             return null;

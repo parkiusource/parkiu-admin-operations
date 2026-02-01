@@ -63,6 +63,11 @@ const createClient = () => {
         cacheMode: 'on' // Intenta usar cache primero antes de renovar
       });
 
+      // Manejar caso donde response es null (error del mock client)
+      if (!response) {
+        return null;
+      }
+
       return response.access_token;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
