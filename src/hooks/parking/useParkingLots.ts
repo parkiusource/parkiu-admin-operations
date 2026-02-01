@@ -13,6 +13,7 @@ import {
   isNetworkError
 } from '@/services/offlineCache';
 import { connectionService } from '@/services/connectionService';
+import { useToken } from '@/hooks/useToken';
 
 // ===============================
 // QUERY HOOKS
@@ -27,7 +28,8 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
   staleTime?: number;
   refetchOnWindowFocus?: boolean;
 }) => {
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
 
   const query = useQuery({
@@ -41,7 +43,6 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
       if (connectionService.considerOffline()) {
         const cached = await getCachedParkingLots();
         if (cached && cached.length > 0) {
-          console.log(`✅ Usando ${cached.length} parking lots del caché (offline)`);
           setIsFromCache(true);
           return cached;
         }
@@ -49,7 +50,11 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
       }
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('No se pudo obtener el token de autenticación');
+        }
+
         const response = await parkingLotService.getParkingLots(token, filters);
 
         if (response.error) {
@@ -70,11 +75,9 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
         return response.data;
       } catch (error) {
         if (isNetworkError(error)) {
-          console.log('🔄 Backend no disponible, intentando caché offline...');
           const cached = await getCachedParkingLots();
 
           if (cached && cached.length > 0) {
-            console.log(`✅ Usando ${cached.length} parking lots del caché`);
             setIsFromCache(true);
             return cached;
           }

@@ -4,12 +4,12 @@ import { useParkingLots } from '@/hooks/parking/useParkingLots';
 export default function VehicleEntry() {
   const { parkingLots, isLoading } = useParkingLots();
 
-  const handleEntrySuccess = (plate: string, spot: string) => {
-    console.log(`✅ Entrada registrada: ${plate} en espacio ${spot}`);
+  const handleEntrySuccess = () => {
+    // Entry registered successfully
   };
 
-  const handleError = (error: string) => {
-    console.error(`❌ Error: ${error}`);
+  const handleError = () => {
+    // Error handled by UI
   };
 
   if (isLoading) {

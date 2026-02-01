@@ -75,10 +75,3 @@ export function buildApiUrl(endpoint: string): string {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${baseUrl}${cleanEndpoint}`;
 }
-
-// Log de configuración para debug
-console.log('🔧 Backend Configuration:', {
-  current_url: BACKEND_URLS.CURRENT,
-  environment: import.meta.env.DEV ? 'development' : 'production',
-  endpoints_base: PARKING_ENDPOINTS.BASE
-});

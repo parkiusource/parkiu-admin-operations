@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAdminProfileCentralized } from '@/hooks/useAdminProfileCentralized';
-import { AdminProfile } from '@/types/common';
 
 /**
  * Componente que maneja la redirección inteligente desde la ruta raíz (/)
@@ -41,29 +40,15 @@ export const RootRedirect = () => {
   if (profileData?.profile) {
     const status = profileData.profile.status;
     const role = profileData.profile.role;
-    const profileWithLots = profileData.profile as AdminProfile & { parkingLots?: unknown[] };
-    const hasParkingLot = profileWithLots.parkingLots && profileWithLots.parkingLots.length > 0;
-
-    // Logging para debug
-    console.log('RootRedirect - Profile check:', {
-      status,
-      role,
-      hasParkingLot,
-      parkingLotsCount: profileWithLots.parkingLots?.length || 0,
-      parkingLotsData: profileWithLots.parkingLots,
-      fullProfile: profileData.profile
-    });
 
     // Si es admin activo (cualquier rol), ir directo al dashboard
     if (status === 'active') {
-      console.log('Active admin - redirecting to dashboard');
       return <Navigate to="/dashboard" replace />;
     }
 
     // Si es temp_admin con pending_verify, puede ir al dashboard (con limitaciones)
     // El status pending_verify significa que ya completó el onboarding (perfil + parqueadero)
     if (role === 'temp_admin' && status === 'pending_verify') {
-      console.log('temp_admin with pending_verify - redirecting to dashboard');
       return <Navigate to="/dashboard" replace />;
     }
 

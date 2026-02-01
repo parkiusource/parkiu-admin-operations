@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useState } from 'react';
 import { ParkingSpot } from '@/db/schema';
 import { ParkingSpot as BackendParkingSpot } from '@/services/parking/types';
@@ -12,6 +11,7 @@ import {
 } from '@/services/offlineCache';
 import { useStore } from '@/store/useStore';
 import { connectionService } from '@/services/connectionService';
+import { useToken } from '@/hooks/useToken';
 
 // ===============================
 // QUERY HOOKS
@@ -275,7 +275,6 @@ export const useUpdateSpotStatus = (options?: {
         delete globalDebounce[debounceKey];
       }, 300);
 
-      console.log(`⚡ Espacio local ${data.id} actualizado OPTIMIZADO a ${data.status}`);
       options?.onSuccess?.(data);
     },
     onError: (error) => {
@@ -453,7 +452,7 @@ export const useRealParkingSpaces = (
     refetchInterval?: number;
   }
 ) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
   const isOffline = useStore((s) => s.isOffline);
 
@@ -468,7 +467,6 @@ export const useRealParkingSpaces = (
       if (connectionService.considerOffline()) {
         const cached = await getCachedParkingSpaces(parkingLotId);
         if (cached && cached.length > 0) {
-          console.log(`✅ Usando ${cached.length} espacios del caché (offline)`);
           setIsFromCache(true);
           return cached as BackendParkingSpot[];
         }
@@ -476,7 +474,11 @@ export const useRealParkingSpaces = (
       }
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('No se pudo obtener el token de autenticación');
+        }
+
         const response = await parkingLotService.getParkingSpaces(token, parkingLotId);
 
         if (response.error) {
@@ -491,11 +493,9 @@ export const useRealParkingSpaces = (
         return response.data;
       } catch (error) {
         if (isNetworkError(error)) {
-          console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
           const cached = await getCachedParkingSpaces(parkingLotId);
 
           if (cached && cached.length > 0) {
-            console.log(`✅ Usando ${cached.length} espacios del caché`);
             setIsFromCache(true);
             return cached as BackendParkingSpot[];
           }
@@ -534,7 +534,7 @@ export const useRealParkingSpacesWithVehicles = (
     refetchInterval?: number;
   }
 ) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
   const isOffline = useStore((s) => s.isOffline);
 
@@ -547,7 +547,6 @@ export const useRealParkingSpacesWithVehicles = (
       if (connectionService.considerOffline()) {
         const cached = await getCachedParkingSpaces(parkingLotId);
         if (cached && cached.length > 0) {
-          console.log(`✅ Usando ${cached.length} espacios del caché (offline)`);
           setIsFromCache(true);
           return cached as BackendParkingSpot[];
         }
@@ -555,7 +554,11 @@ export const useRealParkingSpacesWithVehicles = (
       }
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('No se pudo obtener el token de autenticación');
+        }
+
         const response = await parkingLotService.getParkingSpacesWithVehicles(token, parkingLotId);
 
         if (response.error) {
@@ -570,11 +573,9 @@ export const useRealParkingSpacesWithVehicles = (
         return response.data;
       } catch (error) {
         if (isNetworkError(error)) {
-          console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
           const cached = await getCachedParkingSpaces(parkingLotId);
 
           if (cached && cached.length > 0) {
-            console.log(`✅ Usando ${cached.length} espacios del caché`);
             setIsFromCache(true);
             return cached as BackendParkingSpot[];
           }
@@ -609,7 +610,7 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
   onSuccess?: (updatedSpace: BackendParkingSpot) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -620,7 +621,11 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
       spaceId: number;
       status: 'available' | 'occupied' | 'maintenance' | 'reserved';
     }) => {
-      const token = await getAccessTokenSilently();
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+
       const response = await parkingLotService.updateParkingSpaceStatus(token, spaceId, status);
 
       if (response.error) {
@@ -710,9 +715,7 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
           delete globalDebounce[debounceKey];
         }, 500);
 
-        console.log(`⚡ Espacio ${variables.spaceId} actualizado OPTIMIZADO a ${variables.status} (backend: success)`);
       } else {
-        console.warn(`⚠️ No se pudo encontrar el espacio ${variables.spaceId} en el cache`);
       }
 
       // Pasar los variables al callback del usuario, no el backendResponse con placeholders
@@ -738,7 +741,7 @@ export const useCreateRealParkingSpace = (options?: {
   onSuccess?: (createdSpace: BackendParkingSpot) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -749,7 +752,11 @@ export const useCreateRealParkingSpace = (options?: {
       spaceData: Omit<BackendParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>;
       parkingLotId: string;
     }) => {
-      const token = await getAccessTokenSilently();
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+
       const response = await parkingLotService.createParkingSpace(token, spaceData, parkingLotId);
 
       if (response.error) {
@@ -762,7 +769,6 @@ export const useCreateRealParkingSpace = (options?: {
       // Invalidar las queries de espacios reales para refrescar los datos
       queryClient.invalidateQueries({ queryKey: ['realParkingSpaces'] });
 
-      console.log(`✅ Espacio ${createdSpace.number} creado exitosamente`);
       options?.onSuccess?.(createdSpace);
     },
     onError: (error) => {

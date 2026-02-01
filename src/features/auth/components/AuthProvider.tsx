@@ -1,4 +1,5 @@
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+import { Auth0Client } from '@auth0/auth0-spa-js';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { setAuth0Client } from '@/api/client';
@@ -39,10 +40,9 @@ const Auth0ClientRegistrar = ({ children }: { children: React.ReactNode }) => {
         // Register a mock Auth0 client that uses the token getter
         const mockClient = {
           getTokenSilently: tokenGetter
-        } as any;
+        };
 
-        setAuth0Client(mockClient);
-        console.log('✅ Auth0 client registered with axios');
+        setAuth0Client(mockClient as Auth0Client);
       } catch (error) {
         console.error('Error registering Auth0 client:', error);
       }
@@ -52,6 +52,29 @@ const Auth0ClientRegistrar = ({ children }: { children: React.ReactNode }) => {
       registerClient();
     }
   }, [auth0, auth0.isLoading]);
+
+  // Auto-sync pending operations after login
+  useEffect(() => {
+    const checkPendingOps = async () => {
+      // Solo si está autenticado y no está cargando
+      if (auth0.isAuthenticated && !auth0.isLoading) {
+        const hasPendingFlag = sessionStorage.getItem('hasPendingOperations');
+
+        if (hasPendingFlag === 'true') {
+          // Limpiar flag
+          sessionStorage.removeItem('hasPendingOperations');
+
+          // Esperar un poco para que Auth0 esté completamente listo
+          setTimeout(async () => {
+            const { connectionService } = await import('@/services/connectionService');
+            connectionService.retrySync();
+          }, 2000);
+        }
+      }
+    };
+
+    checkPendingOps();
+  }, [auth0.isAuthenticated, auth0.isLoading]);
 
   return <>{children}</>;
 }
@@ -66,11 +89,9 @@ export const Auth0ProviderWithNavigate = ({ children }: AuthProviderProps) => {
   const redirectUri = window.location.origin + '/callback';
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
-    console.log('Auth0 redirect callback triggered:', { appState });
     // Si hay un returnTo en el appState, usarlo; si no, ir a la raíz
     // para que RootRedirect determine el destino correcto
     const destination = appState?.returnTo || '/';
-    console.log('Redirecting to:', destination);
     navigate(destination, { replace: true });
   };
 

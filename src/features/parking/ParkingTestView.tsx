@@ -38,14 +38,12 @@ export default function ParkingTestView() {
     error: createError
   } = useCreateParkingLot({
     onSuccess: (data) => {
-      console.log('✅ Parking lot created:', data);
       setTestResults(prev => ({
         ...prev,
         createTest: { success: true, data, timestamp: new Date().toISOString() }
       }));
     },
     onError: (error) => {
-      console.error('❌ Create failed:', error);
       setTestResults(prev => ({
         ...prev,
         createTest: { success: false, error: error.message, timestamp: new Date().toISOString() }
@@ -117,7 +115,6 @@ export default function ParkingTestView() {
       await createParkingLot(testParkingData);
 
     } catch (error) {
-      console.error('❌ Test suite failed:', error);
       setTestResults(prev => ({
         ...prev,
         testSuiteError: {

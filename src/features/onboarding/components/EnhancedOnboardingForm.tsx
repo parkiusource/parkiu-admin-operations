@@ -138,14 +138,12 @@ export default function EnhancedOnboardingForm() {
 
   // Función para refrescar perfil y sincronizar step
   const refreshProfileAndSyncStep = useCallback(async (completedStep: number) => {
-    console.log(`Refrescando perfil después de completar step ${completedStep}...`);
     const refreshedData = await refetchProfile();
 
     if (refreshedData?.data?.profile?.status) {
       const newStatus = refreshedData.data.profile.status;
       const expectedStep = statusToStep[newStatus] || completedStep + 1;
 
-      console.log(`Status actualizado: ${newStatus}, step esperado: ${expectedStep}`);
 
       // Sincronizar el step con el nuevo status del servidor
       setCurrentStep(expectedStep);
@@ -174,7 +172,6 @@ export default function EnhancedOnboardingForm() {
   const handleBack = async () => {
     if (currentStep > 1) {
       // Refrescar el perfil al navegar hacia atrás para asegurar sincronización
-      console.log('Refrescando perfil al navegar hacia atrás...');
       await refetchProfile();
       setCurrentStep(currentStep - 1);
     }

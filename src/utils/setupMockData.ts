@@ -12,11 +12,9 @@ export async function setupMockParkingData() {
     const existingSpots = await db.parkingSpots.count();
 
     if (existingSpots > 0) {
-      console.log(`✅ Ya existen ${existingSpots} espacios en IndexedDB`);
       return;
     }
 
-    console.log('🔧 Inicializando datos mock de parking...');
 
     // Datos mock de espacios de parqueo
     const mockParkingSpots = [
@@ -34,7 +32,6 @@ export async function setupMockParkingData() {
 
     // Insertar espacios de parqueo
     const spotIds = await db.parkingSpots.bulkAdd(mockParkingSpots, { allKeys: true });
-    console.log(`✅ Insertados ${spotIds.length} espacios de parqueo`);
 
     // Datos mock de vehículos (solo para espacios ocupados)
     const mockVehicles = [
@@ -66,7 +63,6 @@ export async function setupMockParkingData() {
 
     // Insertar vehículos
     const vehicleIds = await db.vehicles.bulkAdd(mockVehicles, { allKeys: true });
-    console.log(`✅ Insertados ${vehicleIds.length} vehículos`);
 
     // Datos mock de transacciones
     const mockTransactions = [
@@ -91,16 +87,9 @@ export async function setupMockParkingData() {
     ];
 
     // Insertar transacciones
-    const transactionIds = await db.transactions.bulkAdd(mockTransactions, { allKeys: true });
-    console.log(`✅ Insertadas ${transactionIds.length} transacciones`);
-
-    console.log('🎉 Datos mock inicializados exitosamente:');
-    console.log(`   - ${spotIds.length} espacios de parqueo`);
-    console.log(`   - ${vehicleIds.length} vehículos`);
-    console.log(`   - ${transactionIds.length} transacciones`);
+    await db.transactions.bulkAdd(mockTransactions, { allKeys: true });
 
   } catch (error) {
-    console.error('❌ Error inicializando datos mock:', error);
     throw error;
   }
 }
@@ -115,9 +104,7 @@ export async function clearMockParkingData() {
     await db.parkingSpots.clear();
     await db.vehicles.clear();
     await db.transactions.clear();
-    console.log('🗑️ Datos mock eliminados exitosamente');
   } catch (error) {
-    console.error('❌ Error eliminando datos mock:', error);
     throw error;
   }
 }
@@ -140,10 +127,8 @@ export async function getMockDataStats() {
       hasData: spotCount > 0 || vehicleCount > 0 || transactionCount > 0
     };
 
-    console.log('📊 Estadísticas de datos mock:', stats);
     return stats;
   } catch (error) {
-    console.error('❌ Error obteniendo estadísticas:', error);
     return { spots: 0, vehicles: 0, transactions: 0, hasData: false };
   }
 }

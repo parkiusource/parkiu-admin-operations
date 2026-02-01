@@ -23,7 +23,6 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
 
   const { mutateAsync: createParkingLot, isPending } = useCreateParkingLot({
     onSuccess: (data: ParkingLot) => {
-      console.log('✅ Hook onSuccess - Parqueadero creado:', data);
 
       // 🔄 Usar datos del formulario para la pantalla de éxito
       const formData = watch();
@@ -45,7 +44,6 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
         status: 'active'
       };
 
-      console.log('🎯 Datos para mostrar:', displayData);
 
       setCreatedParkingLot(displayData);
       setIsSuccess(true);
@@ -54,7 +52,6 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
       onSuccess?.(data); // Pasar datos originales del backend al callback
     },
     onError: (error: Error) => {
-      console.error('❌ Error creando parqueadero:', error);
       setError(error.message || 'Error al crear el parqueadero');
       setIsSubmitting(false);
     }
@@ -105,11 +102,9 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
 
   // Función para manejar manualmente la creación del parqueadero
   const handleCreateParkingLot = async () => {
-    console.log('🚀 Creación manual del parqueadero iniciada en paso:', currentStep);
 
     // Solo ejecutar si estamos en el paso 3
     if (currentStep !== 3) {
-      console.log('⚠️ No estamos en el paso final. Paso actual:', currentStep);
       return;
     }
 
@@ -119,7 +114,6 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
     try {
       // Obtener datos del formulario
       const formData = watch();
-      console.log('📋 Datos del formulario:', formData);
 
       // Validaciones adicionales
       if (!formData.location.latitude || !formData.location.longitude) {
@@ -139,7 +133,6 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
         monthly_rate: Number(formData.monthly_rate) || 0
       };
 
-      console.log('🧹 Datos sanitizados:', sanitizedData);
 
       if (sanitizedData.total_spots <= 0) {
         throw new Error('El número de espacios debe ser mayor a 0');
@@ -149,9 +142,7 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
         throw new Error('El precio por hora debe ser mayor a 0');
       }
 
-      console.log('🚀 Enviando datos al backend:', sanitizedData);
-      const result = await createParkingLot(sanitizedData);
-      console.log('✅ Resultado de la creación:', result);
+      await createParkingLot(sanitizedData);
     } catch (error) {
       console.error('Error al crear el parqueadero:', error);
       setError(error instanceof Error ? error.message : 'Error desconocido al crear el parqueadero');

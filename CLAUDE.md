@@ -277,8 +277,9 @@ The frontend expects the following from the backend:
 
 **Auth Token Issues:**
 - Token is fetched automatically by Axios interceptor
-- If manual token needed, use `getToken()` from `api/client.ts`
-- Don't call `getTokenSilently()` directly - use the helper
+- In React components, use `useToken()` hook from `hooks/useToken.ts`
+- In services/classes, use `getToken()` from `api/client.ts`
+- ⚠️ NEVER use `getAccessTokenSilently()` directly - always use the centralized helpers
 
 **Build Warnings:**
 - Lottie eval warning is suppressed in vite.config.ts (safe to ignore)

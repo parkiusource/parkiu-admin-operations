@@ -15,10 +15,10 @@ import {
 import { connectionService } from '@/services/connectionService';
 import { enqueueOperation, generateIdempotencyKey } from '@/services/offlineQueue';
 import { useStore } from '@/store/useStore';
+import { useToken } from '@/hooks/useToken';
 
 const ONLINE_TIMEOUT_MS = 5000;
 const EXIT_SAFETY_TIMEOUT_MS = 12000; // Máximo tiempo de espera para salida (evita "Procesando..." eterno)
-const AUTH_TIMEOUT_SECONDS = 4;
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -65,7 +65,8 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
   staleTime?: number;
   refetchInterval?: number;
 }) => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const isOffline = useStore((s) => s.isOffline);
 
   return useQuery({
@@ -76,9 +77,10 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
           return [];
         }
 
-        const token = await getAccessTokenSilently({
-          timeoutInSeconds: 10,
-        });
+        const token = await getAuthToken();
+        if (!token) {
+          return [];
+        }
 
         const response = await VehicleService.getActiveVehicles(token, parkingLotId);
 
@@ -168,7 +170,6 @@ export const useSearchVehicle = (
     queryKey: ['vehicles', 'search', parkingLotId, debouncedPlate],
     queryFn: async () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Searching vehicle with plate:', debouncedPlate);
       }
 
       const addPendingExitFlag = async (v: ActiveVehicle | null): Promise<(ActiveVehicle & { __pendingExit?: boolean }) | null> => {
@@ -180,14 +181,11 @@ export const useSearchVehicle = (
 
       // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché sin llamar al backend
       if (connectionService.considerOffline()) {
-        console.log(`📦 [Offline] Buscando en caché placa: ${debouncedPlate}`);
         const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
         const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
         if (cached) {
-          console.log(`✅ [Offline] Vehículo encontrado en caché: ${cached.plate}`);
           return addPendingExitFlag(cached);
         }
-        console.log(`❌ [Offline] No hay vehículo en caché para placa: ${debouncedPlate}`);
         throw new Error('Error buscando vehículo');
       }
 
@@ -211,7 +209,6 @@ export const useSearchVehicle = (
         }
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Vehicle found:', response.data);
         }
 
         return addPendingExitFlag(response.data ?? null);
@@ -225,21 +222,15 @@ export const useSearchVehicle = (
         const shouldCheckCache = isNetworkError(error) || is404;
 
         if (shouldCheckCache) {
-          const reason = is404 ? 'Vehículo no en backend' : 'Backend no disponible';
-          console.log(`🔄 ${reason}, buscando vehículo en caché...`);
-
           const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
           const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
 
           if (cached) {
-            console.log(`✅ Vehículo encontrado en caché: ${cached.plate}`);
             return addPendingExitFlag(cached);
           }
-          console.log('❌ Vehículo no encontrado en caché');
         }
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Vehicle search error:', error);
         }
         throw new Error('Error buscando vehículo');
       }
@@ -265,7 +256,8 @@ export const useRegisterVehicleEntry = (options?: {
   onSuccess?: (data: VehicleEntryResponse, entryData: { parkingLotId: string; vehicleData: VehicleEntry }) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -300,7 +292,6 @@ export const useRegisterVehicleEntry = (options?: {
 
         // OFFLINE: navigator.onLine o store offline → ir directo a local sin llamar backend
         if (connectionService.considerOffline()) {
-          console.log('📴 [Offline] Guardando entrada en caché local (se sincronizará al reconectar)');
           return runOfflineEntry();
         }
 
@@ -311,7 +302,10 @@ export const useRegisterVehicleEntry = (options?: {
               if (connectionService.considerOffline()) {
                 return runOfflineEntry();
               }
-              const token = await getAccessTokenSilently({ timeoutInSeconds: AUTH_TIMEOUT_SECONDS });
+              const token = await getAuthToken();
+              if (!token) {
+                throw new Error('No se pudo obtener el token de autenticación');
+              }
               if (connectionService.considerOffline()) {
                 return runOfflineEntry();
               }
@@ -333,7 +327,6 @@ export const useRegisterVehicleEntry = (options?: {
         } catch (onlineError) {
           const { isNetworkError } = await import('@/services/offlineCache');
           if (isNetworkError(onlineError)) {
-            console.log('🔄 Error de red o timeout, usando modo offline...');
             connectionService.setOffline(true);
             return runOfflineEntry();
           }
@@ -342,7 +335,6 @@ export const useRegisterVehicleEntry = (options?: {
       } catch (error) {
         const { isNetworkError } = await import('@/services/offlineCache');
         if (isNetworkError(error)) {
-          console.log('🔄 Error de red, usando modo offline...');
           connectionService.setOffline(true);
           const now = new Date().toISOString();
           const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
@@ -463,7 +455,8 @@ export const useRegisterVehicleExit = (options?: {
   onSuccess?: (data: VehicleExitResponse, exitData: { parkingLotId: string; vehicleData: VehicleExit }) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -519,7 +512,6 @@ export const useRegisterVehicleExit = (options?: {
 
       // OFFLINE: navigator.onLine o store offline → ir directo a local
       if (connectionService.considerOffline()) {
-        console.log('📴 [Offline] Guardando salida en caché local (se sincronizará al reconectar)');
         return runOfflineExit();
       }
 
@@ -529,7 +521,10 @@ export const useRegisterVehicleExit = (options?: {
           (async () => {
             try {
               if (connectionService.considerOffline()) return runOfflineExit();
-              const token = await getAccessTokenSilently({ timeoutInSeconds: AUTH_TIMEOUT_SECONDS });
+              const token = await getAuthToken();
+              if (!token) {
+                throw new Error('No se pudo obtener el token de autenticación');
+              }
               if (connectionService.considerOffline()) return runOfflineExit();
               // Enviar el timestamp congelado al backend para que use ese momento exacto
               const response = await VehicleService.registerExit(
@@ -557,7 +552,6 @@ export const useRegisterVehicleExit = (options?: {
       } catch (onlineError) {
         const { isNetworkError } = await import('@/services/offlineCache');
         if (isNetworkError(onlineError)) {
-          console.log('🔄 Error de red o timeout, usando modo offline para salida...');
           connectionService.setOffline(true);
           return runOfflineExit();
         }

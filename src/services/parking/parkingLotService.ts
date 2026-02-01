@@ -79,7 +79,6 @@ export class ParkingLotService {
       }
 
       const url = buildApiUrl(`/parking-lots/${params.toString() ? `?${params.toString()}` : ''}`);
-      console.log('🌐 GET ParkingLots:', url);
 
       const response = await axios.get(url, {
         headers: this.createAuthHeaders(token),
@@ -90,15 +89,12 @@ export class ParkingLotService {
       const apiLots = Array.isArray(response.data) ? response.data : [];
       const parkingLots = apiLots.map((apiLot: ParkingLotAPI) => fromParkingLotAPI(apiLot));
 
-      console.log(`✅ Retrieved ${parkingLots.length} parking lots`);
-
       return {
         data: parkingLots,
         status: 'success'
       };
     } catch (error) {
       const apiError = this.handleError(error, 'getParkingLots');
-      console.error('❌ getParkingLots failed:', apiError);
       return {
         data: [],
         error: apiError.userMessage,
@@ -114,7 +110,6 @@ export class ParkingLotService {
   async getParkingLotById(token: string, id: string): Promise<ParkingApiResponse<ParkingLot | null>> {
     try {
       const url = buildApiUrl(`/parking-lots/${id}`);
-      console.log('🌐 GET ParkingLot by ID:', url);
 
       const response = await axios.get(url, {
         headers: this.createAuthHeaders(token),
@@ -124,15 +119,12 @@ export class ParkingLotService {
       // ✅ Tu backend devuelve directamente el objeto, no envuelto en {data: ...}
       const parkingLot = fromParkingLotAPI(response.data);
 
-      console.log('✅ Retrieved parking lot:', parkingLot.name);
-
       return {
         data: parkingLot,
         status: 'success'
       };
     } catch (error) {
       const apiError = this.handleError(error, 'getParkingLotById');
-      console.error('❌ getParkingLotById failed:', apiError);
       return {
         data: null,
         error: apiError.userMessage,
@@ -151,31 +143,20 @@ export class ParkingLotService {
       const createPayload = toParkingLotCreatePayload(parkingLot);
 
       const url = buildApiUrl('/parking-lots/');
-      console.log('🌐 POST CreateParkingLot:', url);
-      console.log('📤 Payload:', createPayload);
 
       const response = await axios.post(url, createPayload, {
         headers: this.createAuthHeaders(token),
         timeout: API_CONFIG.TIMEOUT
       });
 
-      console.log('🔍 Raw backend response:', response.data);
-      console.log('🔍 Response.data type:', typeof response.data);
-      console.log('🔍 Response.data.id:', response.data?.id, 'type:', typeof response.data?.id);
-      console.log('🔍 Response.data.admin_id:', response.data?.admin_id, 'type:', typeof response.data?.admin_id);
-
       // ✅ Tu backend devuelve directamente el objeto creado
       let createdParkingLot: ParkingLot;
       try {
         createdParkingLot = fromParkingLotAPI(response.data);
-        console.log('✅ Successfully converted API response to frontend format');
       } catch (conversionError) {
-        console.error('❌ Error converting API response:', conversionError);
-        console.error('❌ Response data that failed to convert:', response.data);
+        console.error('Error converting API response:', conversionError);
         throw new Error(`Failed to process backend response: ${conversionError instanceof Error ? conversionError.message : 'Unknown conversion error'}`);
       }
-
-      console.log('✅ Created parking lot:', createdParkingLot.name, 'with ID:', createdParkingLot.id);
 
       return {
         data: createdParkingLot,
@@ -184,7 +165,6 @@ export class ParkingLotService {
       };
     } catch (error) {
       const apiError = this.handleError(error, 'createParkingLot');
-      console.error('❌ createParkingLot failed:', apiError);
       return {
         data: {} as ParkingLot,
         error: apiError.userMessage,
@@ -263,7 +243,6 @@ export class ParkingLotService {
       return await this.createParkingLot(token, parkingLot);
     } catch (error) {
       const apiError = this.handleError(error, 'registerParkingLot');
-      console.error('❌ registerParkingLot failed:', apiError);
       return {
         data: {} as ParkingLot,
         error: apiError.userMessage,
@@ -387,7 +366,6 @@ export class ParkingLotService {
   async getParkingSpaces(token: string, parkingLotId: string): Promise<ParkingApiResponse<ParkingSpot[]>> {
     try {
       const url = buildApiUrl(`/parking-spaces/lot/${parkingLotId}`);
-      console.log('🌐 GET ParkingSpaces:', url);
 
       const response = await axios.get(url, {
         headers: this.createAuthHeaders(token),
@@ -398,7 +376,6 @@ export class ParkingLotService {
       const apiSpaces = response.data.parking_spaces || [];
       const parkingSpots = apiSpaces.map((apiSpace: ParkingSpaceAPI) => fromParkingSpaceAPI(apiSpace));
 
-      console.log(`✅ Retrieved ${parkingSpots.length} parking spaces`);
       return {
         data: parkingSpots,
         status: 'success'
@@ -466,7 +443,6 @@ export class ParkingLotService {
   ): Promise<ParkingApiResponse<ParkingSpot>> {
     try {
       const url = buildApiUrl(`/parking-spaces/${spaceId}/status`);
-      console.log('🌐 PUT UpdateParkingSpaceStatus:', url);
 
       // ✅ Mapear nuestro status al formato esperado por el backend Go
       const backendStatus = status === 'maintenance' ? 'out_of_service' : status;
@@ -474,18 +450,13 @@ export class ParkingLotService {
         status: backendStatus
       };
 
-      console.log('📤 Request body:', requestBody);
-
       const response = await axios.put(url, requestBody, {
         headers: this.createAuthHeaders(token),
         timeout: 5000 // ✅ Timeout optimizado para updates (5s vs 10s)
       });
 
-      console.log('🔍 Update response from backend:', response.data);
-
       // ✅ El endpoint /status solo devuelve {status: 'success'}, no el objeto completo
       if (response.data.status === 'success') {
-        console.log(`✅ Updated parking space ${spaceId} to ${status}`);
 
         // No tenemos el objeto actualizado, así que devolvemos un objeto mínimo
         // React Query invalidará las queries y volverá a fetch los datos actualizados
@@ -507,7 +478,6 @@ export class ParkingLotService {
         // Fallback por si el backend cambia y devuelve el objeto completo
         const responseSpaceData = response.data.parking_space || response.data;
         const updatedSpace = fromParkingSpaceAPI(responseSpaceData);
-        console.log(`✅ Updated parking space ${spaceId} to ${status}`);
 
         return {
           data: updatedSpace,
@@ -537,20 +507,15 @@ export class ParkingLotService {
     try {
       const createPayload = toParkingSpaceCreatePayload(spaceData, parkingLotId);
       const url = buildApiUrl('/parking-spaces/');
-      console.log('🌐 POST CreateParkingSpace:', url);
-      console.log('📤 Payload:', createPayload);
 
       const response = await axios.post(url, createPayload, {
         headers: this.createAuthHeaders(token),
         timeout: API_CONFIG.TIMEOUT
       });
 
-      console.log('🔍 Create response from backend:', response.data);
-
       // ✅ Backend devuelve { parking_space: {...} }, extraer el objeto anidado
       const responseSpaceData = response.data.parking_space || response.data;
       const createdSpace = fromParkingSpaceAPI(responseSpaceData);
-      console.log(`✅ Created parking space ${createdSpace.number}`);
 
       return {
         data: createdSpace,

@@ -48,7 +48,6 @@ export default function ParkingViewEnhanced() {
         setMockDataStats(stats);
         // Datos mock listos
       } catch (error) {
-        console.error('❌ Error inicializando datos mock:', error);
       }
     }
     initializeData();

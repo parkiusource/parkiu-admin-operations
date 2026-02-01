@@ -113,7 +113,6 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     const role = profile?.role || '';
     const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 VehicleExitCard - Authorization check:', { role, authorized, profile });
     }
     return authorized;
   }, [profile]);

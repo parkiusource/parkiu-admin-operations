@@ -28,13 +28,12 @@ export function CreateParkingSpaceModal({
 
   const { mutateAsync: createParkingSpace, isPending } = useCreateRealParkingSpace({
     onSuccess: (createdSpace) => {
-      console.log('✅ Espacio creado:', createdSpace);
       onSuccess?.(createdSpace);
       onClose();
       reset();
     },
-    onError: (error) => {
-      console.error('❌ Error creando espacio:', error);
+    onError: () => {
+      // Error handling is done by the mutation itself
     }
   });
 

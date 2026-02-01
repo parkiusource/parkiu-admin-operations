@@ -31,7 +31,6 @@ export async function cacheParkingLot(parkingLot: ParkingLot): Promise<void> {
     };
 
     await db.cachedParkingLots.put(cached);
-    console.log(`💾 Cached parking lot: ${parkingLot.name}`);
   } catch (error) {
     console.error('Error caching parking lot:', error);
   }
@@ -52,7 +51,6 @@ export async function cacheParkingLots(parkingLots: ParkingLot[]): Promise<void>
 
     if (cachedItems.length > 0) {
       await db.cachedParkingLots.bulkPut(cachedItems);
-      console.log(`💾 Cached ${cachedItems.length} parking lots`);
     }
   } catch (error) {
     console.error('Error caching parking lots:', error);
@@ -77,12 +75,10 @@ export async function getCachedParkingLots(): Promise<ParkingLot[] | null> {
 
     const cacheAge = Date.now() - new Date(mostRecent.cachedAt).getTime();
     if (cacheAge > CACHE_MAX_AGE_MS) {
-      console.log('⚠️ Parking lots cache expired');
       return null;
     }
 
     const parkingLots = cached.map(c => c.data as unknown as ParkingLot);
-    console.log(`📦 Retrieved ${parkingLots.length} parking lots from cache`);
 
     return parkingLots;
   } catch (error) {
@@ -133,7 +129,6 @@ export async function cacheParkingSpaces(
     };
 
     await db.cachedParkingSpaces.put(cached);
-    console.log(`💾 Cached ${spaces.length} spaces for lot ${parkingLotId}`);
   } catch (error) {
     console.error('Error caching parking spaces:', error);
   }
@@ -154,12 +149,10 @@ export async function getCachedParkingSpaces(
 
     const cacheAge = Date.now() - new Date(cached.cachedAt).getTime();
     if (cacheAge > CACHE_MAX_AGE_MS) {
-      console.log(`⚠️ Spaces cache expired for lot ${parkingLotId}`);
       return null;
     }
 
     const spaces = cached.spaces as unknown as ParkingSpot[];
-    console.log(`📦 Retrieved ${spaces.length} spaces from cache for lot ${parkingLotId}`);
 
     return spaces;
   } catch (error) {
@@ -179,7 +172,6 @@ export async function clearAllCache(): Promise<void> {
   try {
     await db.cachedParkingLots.clear();
     await db.cachedParkingSpaces.clear();
-    console.log('🗑️ All cache cleared');
   } catch (error) {
     console.error('Error clearing cache:', error);
   }

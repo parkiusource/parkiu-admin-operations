@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useStore } from '@/store/useStore';
 import { connectionService } from '@/services/connectionService';
 import { getPendingCount } from '@/services/offlineQueue';
@@ -8,6 +9,7 @@ export const SyncErrorBanner: React.FC = () => {
   const isOffline = useStore((s) => s.isOffline);
   const isSyncing = useStore((s) => s.isSyncing);
   const [pendingCount, setPendingCount] = useState(0);
+  const { logout } = useAuth0();
 
   // Verificar operaciones pendientes cada 5 segundos
   useEffect(() => {
@@ -26,18 +28,40 @@ export const SyncErrorBanner: React.FC = () => {
 
   // Banner para error de autenticación
   if (lastSyncError === 'auth') {
+    const handleRelogin = () => {
+      // Guardar que hay operaciones pendientes antes de cerrar sesión
+      sessionStorage.setItem('hasPendingOperations', 'true');
+
+      // Forzar logout y redirigir a login
+      logout({
+        logoutParams: {
+          returnTo: window.location.origin + '/login'
+        }
+      });
+    };
+
     return (
-      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-amber-100 border border-amber-400 text-amber-900 px-4 py-2 rounded shadow text-sm max-w-md">
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 bg-amber-100 border border-amber-400 text-amber-900 px-4 py-3 rounded shadow text-sm max-w-md">
         <span>
-          Hay operaciones pendientes de sincronizar. No se pudo obtener el token. Inicia sesión de nuevo y pulsa &quot;Reintentar&quot;.
+          Hay {pendingCount} operación{pendingCount > 1 ? 'es' : ''} pendiente{pendingCount > 1 ? 's' : ''}.
+          No se pudo renovar la sesión.
         </span>
-        <button
-          type="button"
-          onClick={() => connectionService.retrySync()}
-          className="shrink-0 px-3 py-1 bg-amber-600 text-white rounded font-medium hover:bg-amber-700"
-        >
-          Reintentar
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => connectionService.retrySync()}
+            className="flex-1 px-3 py-1 bg-amber-600 text-white rounded font-medium hover:bg-amber-700"
+          >
+            Reintentar
+          </button>
+          <button
+            type="button"
+            onClick={handleRelogin}
+            className="flex-1 px-3 py-1 bg-red-600 text-white rounded font-medium hover:bg-red-700"
+          >
+            Iniciar Sesión
+          </button>
+        </div>
       </div>
     );
   }

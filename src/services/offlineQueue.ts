@@ -18,9 +18,21 @@ export async function enqueueOperation(op: Omit<OfflineOperation, 'id' | 'create
   };
   try {
     const id = await db.operations.add(record);
+
+    // 🆕 Trigger sincronización después de encolar (con debounce)
+    // Solo si estamos online - importación dinámica para evitar dependencias circulares
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      // Importación dinámica asíncrona para evitar bloquear la operación
+      import('./connectionService').then(({ connectionService }) => {
+        connectionService.triggerSyncAfterEnqueue();
+      }).catch(() => {
+        // Silenciar error de importación - no es crítico
+      });
+    }
+
     return id;
   } catch (error) {
-    console.error('❌ Error guardando en IndexedDB:', error);
+    console.error('Error guardando en IndexedDB:', error);
     throw error;
   }
 }

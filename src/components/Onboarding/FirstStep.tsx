@@ -114,7 +114,6 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
     try {
       // Si el perfil ya está completo (no está en pending_profile), no hacer la llamada al API
       if (status && status !== 'pending_profile' && status !== 'initial') {
-        console.log('Profile already completed, skipping API call. Status:', status);
         formStorage.clear();
         hasSubmittedRef.current = true;
         // Retornar exitosamente para permitir avanzar al siguiente step
@@ -145,7 +144,6 @@ const FirstStep = forwardRef<{ submitForm: () => Promise<void> }, FirstStepProps
 
       if (errorMessage.includes('not in pending_profile status') ||
           serverMessage.includes('not in pending_profile status')) {
-        console.log('Profile was already completed in a previous call, continuing...');
         hasSubmittedRef.current = true;
         formStorage.clear();
         return data; // Permitir continuar al siguiente step

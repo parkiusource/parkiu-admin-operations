@@ -377,7 +377,6 @@ export class ParkingSpotService {
         .toArray();
 
       // TODO: Implementar sincronización real con backend
-      console.log(`${pendingSpots.length} spots pending sync`);
 
       return {
         data: pendingSpots.length,

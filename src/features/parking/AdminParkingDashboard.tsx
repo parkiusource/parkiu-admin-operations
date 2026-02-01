@@ -86,32 +86,26 @@ export default function AdminParkingDashboard() {
   const { getShortcutsHelp, formatShortcut } = useParkingOperationShortcuts({
     onOpenVehicleEntry: () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Entrada rápida activada - window.quickOperations:', window.quickOperations);
       }
       if (window.quickOperations) {
         window.quickOperations.openEntry();
       } else {
-        console.warn('⚠️ window.quickOperations no está disponible para entrada');
       }
     },
     onOpenVehicleExit: () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Salida rápida activada - window.quickOperations:', window.quickOperations);
       }
       if (window.quickOperations) {
         window.quickOperations.openExit();
       } else {
-        console.warn('⚠️ window.quickOperations no está disponible para salida');
       }
     },
     onOpenSearch: () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Búsqueda rápida activada - window.quickOperations:', window.quickOperations);
       }
       if (window.quickOperations) {
         window.quickOperations.openSearch();
       } else {
-        console.warn('⚠️ window.quickOperations no está disponible para búsqueda');
       }
     },
     onRefresh: () => {
@@ -1006,8 +1000,7 @@ export default function AdminParkingDashboard() {
       <CreateParkingLotModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newParkingLot) => {
-          console.log('✅ Nuevo parqueadero creado:', newParkingLot);
+        onSuccess={() => {
           // El hook ya invalida las queries, así que la lista se actualizará automáticamente
         }}
       />
@@ -1017,8 +1010,7 @@ export default function AdminParkingDashboard() {
         <CreateParkingSpaceModal
           isOpen={isCreateSpaceModalOpen}
           onClose={() => setIsCreateSpaceModalOpen(false)}
-          onSuccess={(newSpace) => {
-            console.log('✅ Nuevo espacio creado:', newSpace);
+          onSuccess={() => {
             // El hook ya invalida las queries, así que la lista se actualizará automáticamente
             refetchSpaces();
           }}
