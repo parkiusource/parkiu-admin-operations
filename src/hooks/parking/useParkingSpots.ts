@@ -275,7 +275,6 @@ export const useUpdateSpotStatus = (options?: {
         delete globalDebounce[debounceKey];
       }, 300);
 
-      console.log(`⚡ Espacio local ${data.id} actualizado OPTIMIZADO a ${data.status}`);
       options?.onSuccess?.(data);
     },
     onError: (error) => {
@@ -468,7 +467,6 @@ export const useRealParkingSpaces = (
       if (connectionService.considerOffline()) {
         const cached = await getCachedParkingSpaces(parkingLotId);
         if (cached && cached.length > 0) {
-          console.log(`✅ Usando ${cached.length} espacios del caché (offline)`);
           setIsFromCache(true);
           return cached as BackendParkingSpot[];
         }
@@ -491,11 +489,9 @@ export const useRealParkingSpaces = (
         return response.data;
       } catch (error) {
         if (isNetworkError(error)) {
-          console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
           const cached = await getCachedParkingSpaces(parkingLotId);
 
           if (cached && cached.length > 0) {
-            console.log(`✅ Usando ${cached.length} espacios del caché`);
             setIsFromCache(true);
             return cached as BackendParkingSpot[];
           }
@@ -547,7 +543,6 @@ export const useRealParkingSpacesWithVehicles = (
       if (connectionService.considerOffline()) {
         const cached = await getCachedParkingSpaces(parkingLotId);
         if (cached && cached.length > 0) {
-          console.log(`✅ Usando ${cached.length} espacios del caché (offline)`);
           setIsFromCache(true);
           return cached as BackendParkingSpot[];
         }
@@ -570,11 +565,9 @@ export const useRealParkingSpacesWithVehicles = (
         return response.data;
       } catch (error) {
         if (isNetworkError(error)) {
-          console.log(`🔄 Backend no disponible, intentando caché para lot ${parkingLotId}...`);
           const cached = await getCachedParkingSpaces(parkingLotId);
 
           if (cached && cached.length > 0) {
-            console.log(`✅ Usando ${cached.length} espacios del caché`);
             setIsFromCache(true);
             return cached as BackendParkingSpot[];
           }
@@ -710,9 +703,7 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
           delete globalDebounce[debounceKey];
         }, 500);
 
-        console.log(`⚡ Espacio ${variables.spaceId} actualizado OPTIMIZADO a ${variables.status} (backend: success)`);
       } else {
-        console.warn(`⚠️ No se pudo encontrar el espacio ${variables.spaceId} en el cache`);
       }
 
       // Pasar los variables al callback del usuario, no el backendResponse con placeholders
@@ -762,7 +753,6 @@ export const useCreateRealParkingSpace = (options?: {
       // Invalidar las queries de espacios reales para refrescar los datos
       queryClient.invalidateQueries({ queryKey: ['realParkingSpaces'] });
 
-      console.log(`✅ Espacio ${createdSpace.number} creado exitosamente`);
       options?.onSuccess?.(createdSpace);
     },
     onError: (error) => {

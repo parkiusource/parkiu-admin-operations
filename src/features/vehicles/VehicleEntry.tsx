@@ -5,11 +5,11 @@ export default function VehicleEntry() {
   const { parkingLots, isLoading } = useParkingLots();
 
   const handleEntrySuccess = (plate: string, spot: string) => {
-    console.log(`✅ Entrada registrada: ${plate} en espacio ${spot}`);
+    // Entry registered successfully
   };
 
   const handleError = (error: string) => {
-    console.error(`❌ Error: ${error}`);
+    // Error handled by UI
   };
 
   if (isLoading) {

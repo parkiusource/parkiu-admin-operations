@@ -41,7 +41,6 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
       if (connectionService.considerOffline()) {
         const cached = await getCachedParkingLots();
         if (cached && cached.length > 0) {
-          console.log(`✅ Usando ${cached.length} parking lots del caché (offline)`);
           setIsFromCache(true);
           return cached;
         }
@@ -70,11 +69,9 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
         return response.data;
       } catch (error) {
         if (isNetworkError(error)) {
-          console.log('🔄 Backend no disponible, intentando caché offline...');
           const cached = await getCachedParkingLots();
 
           if (cached && cached.length > 0) {
-            console.log(`✅ Usando ${cached.length} parking lots del caché`);
             setIsFromCache(true);
             return cached;
           }

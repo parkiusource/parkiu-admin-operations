@@ -168,7 +168,6 @@ export const useSearchVehicle = (
     queryKey: ['vehicles', 'search', parkingLotId, debouncedPlate],
     queryFn: async () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Searching vehicle with plate:', debouncedPlate);
       }
 
       const addPendingExitFlag = async (v: ActiveVehicle | null): Promise<(ActiveVehicle & { __pendingExit?: boolean }) | null> => {
@@ -180,14 +179,11 @@ export const useSearchVehicle = (
 
       // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché sin llamar al backend
       if (connectionService.considerOffline()) {
-        console.log(`📦 [Offline] Buscando en caché placa: ${debouncedPlate}`);
         const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
         const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
         if (cached) {
-          console.log(`✅ [Offline] Vehículo encontrado en caché: ${cached.plate}`);
           return addPendingExitFlag(cached);
         }
-        console.log(`❌ [Offline] No hay vehículo en caché para placa: ${debouncedPlate}`);
         throw new Error('Error buscando vehículo');
       }
 
@@ -211,7 +207,6 @@ export const useSearchVehicle = (
         }
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Vehicle found:', response.data);
         }
 
         return addPendingExitFlag(response.data ?? null);
@@ -226,20 +221,16 @@ export const useSearchVehicle = (
 
         if (shouldCheckCache) {
           const reason = is404 ? 'Vehículo no en backend' : 'Backend no disponible';
-          console.log(`🔄 ${reason}, buscando vehículo en caché...`);
 
           const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
           const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
 
           if (cached) {
-            console.log(`✅ Vehículo encontrado en caché: ${cached.plate}`);
             return addPendingExitFlag(cached);
           }
-          console.log('❌ Vehículo no encontrado en caché');
         }
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Vehicle search error:', error);
         }
         throw new Error('Error buscando vehículo');
       }
@@ -300,7 +291,6 @@ export const useRegisterVehicleEntry = (options?: {
 
         // OFFLINE: navigator.onLine o store offline → ir directo a local sin llamar backend
         if (connectionService.considerOffline()) {
-          console.log('📴 [Offline] Guardando entrada en caché local (se sincronizará al reconectar)');
           return runOfflineEntry();
         }
 
@@ -333,7 +323,6 @@ export const useRegisterVehicleEntry = (options?: {
         } catch (onlineError) {
           const { isNetworkError } = await import('@/services/offlineCache');
           if (isNetworkError(onlineError)) {
-            console.log('🔄 Error de red o timeout, usando modo offline...');
             connectionService.setOffline(true);
             return runOfflineEntry();
           }
@@ -342,7 +331,6 @@ export const useRegisterVehicleEntry = (options?: {
       } catch (error) {
         const { isNetworkError } = await import('@/services/offlineCache');
         if (isNetworkError(error)) {
-          console.log('🔄 Error de red, usando modo offline...');
           connectionService.setOffline(true);
           const now = new Date().toISOString();
           const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
@@ -519,7 +507,6 @@ export const useRegisterVehicleExit = (options?: {
 
       // OFFLINE: navigator.onLine o store offline → ir directo a local
       if (connectionService.considerOffline()) {
-        console.log('📴 [Offline] Guardando salida en caché local (se sincronizará al reconectar)');
         return runOfflineExit();
       }
 
@@ -557,7 +544,6 @@ export const useRegisterVehicleExit = (options?: {
       } catch (onlineError) {
         const { isNetworkError } = await import('@/services/offlineCache');
         if (isNetworkError(onlineError)) {
-          console.log('🔄 Error de red o timeout, usando modo offline para salida...');
           connectionService.setOffline(true);
           return runOfflineExit();
         }

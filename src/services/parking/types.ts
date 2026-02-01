@@ -344,11 +344,8 @@ export function toParkingLotCreatePayload(parking: ParkingLot): CreateParkingLot
 export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
   // Guard against null/undefined api object
   if (!api) {
-    console.error('❌ fromParkingLotAPI: api object is null or undefined');
     throw new Error('Invalid API response: parking lot data is missing');
   }
-
-  console.log('🔄 Converting API response to frontend format:', api);
 
   return {
     id: api.id != null ? api.id.toString() : '', // Safely convert number to string
@@ -437,26 +434,22 @@ export function toParkingLotAPI(parking: ParkingLot): Partial<ParkingLotAPI> {
 export function fromParkingSpaceAPI(apiSpace: ParkingSpaceAPI): ParkingSpot {
   // Guard against null/undefined apiSpace object
   if (!apiSpace) {
-    console.error('❌ fromParkingSpaceAPI: apiSpace object is null or undefined');
     throw new Error('Invalid API response: parking space data is missing');
   }
 
   // Validar que parking_lot_id tenga un valor válido
   if (apiSpace.parking_lot_id == null) {
-    console.error('❌ fromParkingSpaceAPI: parking_lot_id is null or undefined', apiSpace);
     throw new Error('Invalid API response: parking_lot_id is required');
   }
 
   // Validar que id tenga un valor válido
   if (apiSpace.id == null) {
-    console.error('❌ fromParkingSpaceAPI: id is null or undefined', apiSpace);
     throw new Error('Invalid API response: space id is required');
   }
 
   // Validar que status sea un valor válido (backend format)
   const validBackendStatuses = ['available', 'occupied', 'out_of_service', 'reserved'];
   if (!validBackendStatuses.includes(apiSpace.status)) {
-    console.error('❌ fromParkingSpaceAPI: invalid status', apiSpace.status, apiSpace);
     throw new Error(`Invalid API response: status '${apiSpace.status}' is not valid`);
   }
 
@@ -465,7 +458,6 @@ export function fromParkingSpaceAPI(apiSpace: ParkingSpaceAPI): ParkingSpot {
   type VehicleType = typeof validVehicleTypes[number];
   const vehicleType = apiSpace.vehicle_type as VehicleType;
   if (!vehicleType || !validVehicleTypes.includes(vehicleType)) {
-    console.error('❌ fromParkingSpaceAPI: invalid vehicle_type', apiSpace.vehicle_type, apiSpace);
     throw new Error(`Invalid API response: vehicle_type '${apiSpace.vehicle_type}' is not valid`);
   }
 

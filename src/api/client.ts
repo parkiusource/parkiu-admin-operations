@@ -44,7 +44,12 @@ const createClient = () => {
   const getToken = async (retryCount = 0): Promise<string | null> => {
     try {
       if (!auth0Client) {
-        throw new Error('Auth0 client not initialized');
+        if (retryCount < 2) {
+          // Esperar a que Auth0 se inicialice (puede tomar tiempo tras cargar la app)
+          await new Promise((r) => setTimeout(r, 1000));
+          return getToken(retryCount + 1);
+        }
+        throw new Error('Auth0 client not initialized after retries');
       }
 
       // Try to get the token with refresh token
@@ -54,25 +59,28 @@ const createClient = () => {
         authorizationParams: {
           audience: import.meta.env.VITE_AUTH0_AUDIENCE,
           scope: 'openid profile email offline_access'
-        }
+        },
+        cacheMode: 'on' // Intenta usar cache primero antes de renovar
       });
 
       return response.access_token;
     } catch (error) {
-      console.error('Error getting token:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Si es error de login requerido, no reintentar
+      if (errorMsg.includes('login_required') || errorMsg.includes('consent_required')) {
+        console.error('Se requiere nuevo login:', error);
+        return null;
+      }
 
       // Un reintento con espera (útil tras reconectar: red o refresh pueden no estar listos)
       if (retryCount === 0) {
-        const isRefreshError = error instanceof Error && error.message.includes('refresh token');
-        if (isRefreshError) {
-          console.log('Reintentando obtención de token (refresh)...');
-        } else {
-          console.log('Reintentando obtención de token en 2s...');
-        }
-        await new Promise((r) => setTimeout(r, isRefreshError ? 1000 : 2000));
+        const isRefreshError = errorMsg.includes('refresh token');
+        await new Promise((r) => setTimeout(r, isRefreshError ? 1500 : 2500));
         return getToken(retryCount + 1);
       }
 
+      console.error('No se pudo obtener token después de reintentos:', error);
       return null;
     }
   };

@@ -48,24 +48,11 @@ export const ProtectedRoute = () => {
 
     // Logging adicional para casos específicos
     if (status === 'active') {
-      console.log('Active admin - allowing dashboard access');
     }
     if (role === 'temp_admin' && status === 'pending_verify') {
-      console.log('temp_admin with pending_verify - allowing dashboard access');
     }
 
     // Logging para debug
-    console.log('ProtectedRoute - Profile check:', {
-      status,
-      role,
-      hasCompleteProfile,
-      hasParkingLot,
-      canAccessDashboard,
-      parkingLotsCount: profileWithLots.parkingLots?.length || 0,
-      parkingLotsData: profileWithLots.parkingLots,
-      fullProfile: profileData.profile
-    });
-
     // Si no puede acceder al dashboard, necesita completar onboarding
     if (!canAccessDashboard) {
       return <Navigate to="/onboarding" replace />;

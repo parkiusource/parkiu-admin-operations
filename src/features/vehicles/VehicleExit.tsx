@@ -5,11 +5,9 @@ export default function VehicleExit() {
   const { parkingLots, isLoading } = useParkingLots();
 
   const handleExitSuccess = (plate: string, cost: number) => {
-    console.log(`✅ Salida registrada: ${plate} - Cobrado: $${cost.toLocaleString()}`);
   };
 
   const handleError = (error: string) => {
-    console.error(`❌ Error: ${error}`);
   };
 
   if (isLoading) {

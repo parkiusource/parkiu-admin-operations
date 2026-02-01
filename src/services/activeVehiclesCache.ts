@@ -88,7 +88,6 @@ export async function cacheVehicleEntry(
     };
 
     await db.activeVehicles.put(vehicle);
-    console.log(`💾 Cached vehicle entry: ${plate} in lot ${parkingLotId}`);
   } catch (error) {
     console.error('Error caching vehicle entry:', error);
   }
@@ -104,7 +103,6 @@ export async function cacheActiveVehicles(
   try {
     const cached = vehicles.map(v => toCache(parkingLotId, v));
     await db.activeVehicles.bulkPut(cached);
-    console.log(`💾 Cached ${vehicles.length} active vehicles for lot ${parkingLotId}`);
   } catch (error) {
     console.error('Error caching active vehicles:', error);
   }
@@ -130,7 +128,6 @@ export async function findCachedVehicle(
     }
 
     const vehicle = fromCache(cached);
-    console.log(`📦 Retrieved vehicle from cache: ${plate}`);
     return vehicle;
   } catch (error) {
     console.error('Error finding cached vehicle:', error);
@@ -151,7 +148,6 @@ export async function getCachedActiveVehicles(
       .toArray();
 
     const vehicles = cached.map(fromCache);
-    console.log(`📦 Retrieved ${vehicles.length} active vehicles from cache for lot ${parkingLotId}`);
     return vehicles;
   } catch (error) {
     console.error('Error getting cached active vehicles:', error);
@@ -173,7 +169,6 @@ export async function removeVehicleFromCache(
   try {
     const id = getVehicleId(parkingLotId, plate);
     await db.activeVehicles.delete(id);
-    console.log(`🗑️ Removed vehicle from cache: ${plate}`);
   } catch (error) {
     console.error('Error removing vehicle from cache:', error);
   }
@@ -197,7 +192,6 @@ export async function updateVehicleTransactionId(
       transactionId,
       syncStatus: 'synced'
     });
-    console.log(`✅ Updated transaction ID for vehicle: ${plate}`);
   } catch (error) {
     console.error('Error updating vehicle transaction ID:', error);
   }
@@ -230,7 +224,6 @@ export async function getLocalOnlyVehicles(
 export async function clearActiveVehiclesCache(): Promise<void> {
   try {
     await db.activeVehicles.clear();
-    console.log('🗑️ Cleared all active vehicles cache');
   } catch (error) {
     console.error('Error clearing active vehicles cache:', error);
   }

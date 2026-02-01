@@ -20,7 +20,7 @@ export async function enqueueOperation(op: Omit<OfflineOperation, 'id' | 'create
     const id = await db.operations.add(record);
     return id;
   } catch (error) {
-    console.error('❌ Error guardando en IndexedDB:', error);
+    console.error('Error guardando en IndexedDB:', error);
     throw error;
   }
 }

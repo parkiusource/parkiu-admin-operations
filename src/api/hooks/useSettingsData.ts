@@ -21,12 +21,10 @@ export const useAdminProfileSettings = () => {
     queryFn: async () => {
       try {
         const token = await getAccessTokenSilently();
-        console.log('🔑 Token obtenido para perfil de configuración');
         const result = await getAdminProfileForSettings(token);
-        console.log('✅ Perfil de configuración cargado:', result);
         return result;
       } catch (error) {
-        console.error('❌ Error cargando perfil de configuración:', error);
+        console.error('Error cargando perfil de configuración:', error);
         throw error;
       }
     },
@@ -72,12 +70,10 @@ export const useAdminParkingLotsSettings = () => {
     queryFn: async () => {
       try {
         const token = await getAccessTokenSilently();
-        console.log('🔑 Token obtenido para parqueaderos de configuración');
         const result = await getAdminParkingLotsForSettings(token);
-        console.log('✅ Parqueaderos de configuración cargados:', result);
         return result;
       } catch (error) {
-        console.error('❌ Error cargando parqueaderos de configuración:', error);
+        console.error('Error cargando parqueaderos de configuración:', error);
         throw error;
       }
     },

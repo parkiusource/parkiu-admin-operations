@@ -90,7 +90,6 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
     const role = profile?.role || '';
     const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 VehicleEntryCard - Authorization check:', { role, authorized, profile });
     }
     return authorized;
   }, [profile]);
@@ -98,7 +97,6 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
   if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 VehicleEntryCard - Parking lots data:', { parkingLots, parkingLot, lots });
   }
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingLot | null>(lots[0] || null);
   const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | null>(null);
