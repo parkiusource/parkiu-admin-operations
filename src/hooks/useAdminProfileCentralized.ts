@@ -2,27 +2,39 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
 import { getAdminProfile } from '@/services/profile';
 import { ProfileResponse } from '@/types/common';
+import { useToken } from './useToken';
 
 /**
  * Hook centralizado para obtener el perfil del administrador
  * Evita duplicación de queries y requests infinitos
  */
 export const useAdminProfileCentralized = () => {
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
 
   return useQuery<ProfileResponse>({
     queryKey: ['adminProfile', 'centralized'],
     queryFn: async () => {
-      const token = await getAccessTokenSilently();
-      return getAdminProfile(token);
+      console.log('[useAdminProfileCentralized] Fetching profile...');
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+      const result = await getAdminProfile(token);
+      console.log('[useAdminProfileCentralized] Profile fetched successfully');
+      return result;
     },
-    // Evitar fetch continuo cuando no hay conexión
+    // Configuración ESTRICTA para evitar múltiples peticiones
     enabled: isAuthenticated && typeof navigator !== 'undefined' && navigator.onLine,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: Infinity, // Cache infinito - solo se actualiza manualmente o al reconectar
+    gcTime: 1000 * 60 * 30, // Garbage collection después de 30 minutos
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: true,
+    // Evitar refetch automático
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
   });
 };
 
