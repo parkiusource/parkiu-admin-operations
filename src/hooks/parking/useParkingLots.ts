@@ -13,6 +13,7 @@ import {
   isNetworkError
 } from '@/services/offlineCache';
 import { connectionService } from '@/services/connectionService';
+import { useToken } from '@/hooks/useToken';
 
 // ===============================
 // QUERY HOOKS
@@ -27,7 +28,8 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
   staleTime?: number;
   refetchOnWindowFocus?: boolean;
 }) => {
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
 
   const query = useQuery({
@@ -48,7 +50,11 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
       }
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('No se pudo obtener el token de autenticación');
+        }
+
         const response = await parkingLotService.getParkingLots(token, filters);
 
         if (response.error) {

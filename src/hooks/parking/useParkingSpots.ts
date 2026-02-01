@@ -12,6 +12,7 @@ import {
 } from '@/services/offlineCache';
 import { useStore } from '@/store/useStore';
 import { connectionService } from '@/services/connectionService';
+import { useToken } from '@/hooks/useToken';
 
 // ===============================
 // QUERY HOOKS
@@ -452,7 +453,7 @@ export const useRealParkingSpaces = (
     refetchInterval?: number;
   }
 ) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
   const isOffline = useStore((s) => s.isOffline);
 
@@ -474,7 +475,11 @@ export const useRealParkingSpaces = (
       }
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('No se pudo obtener el token de autenticación');
+        }
+
         const response = await parkingLotService.getParkingSpaces(token, parkingLotId);
 
         if (response.error) {
@@ -530,7 +535,7 @@ export const useRealParkingSpacesWithVehicles = (
     refetchInterval?: number;
   }
 ) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
   const isOffline = useStore((s) => s.isOffline);
 
@@ -550,7 +555,11 @@ export const useRealParkingSpacesWithVehicles = (
       }
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('No se pudo obtener el token de autenticación');
+        }
+
         const response = await parkingLotService.getParkingSpacesWithVehicles(token, parkingLotId);
 
         if (response.error) {
@@ -602,7 +611,7 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
   onSuccess?: (updatedSpace: BackendParkingSpot) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -613,7 +622,11 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
       spaceId: number;
       status: 'available' | 'occupied' | 'maintenance' | 'reserved';
     }) => {
-      const token = await getAccessTokenSilently();
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+
       const response = await parkingLotService.updateParkingSpaceStatus(token, spaceId, status);
 
       if (response.error) {
@@ -729,7 +742,7 @@ export const useCreateRealParkingSpace = (options?: {
   onSuccess?: (createdSpace: BackendParkingSpot) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -740,7 +753,11 @@ export const useCreateRealParkingSpace = (options?: {
       spaceData: Omit<BackendParkingSpot, 'id' | 'created_at' | 'updated_at' | 'syncStatus' | 'last_status_change'>;
       parkingLotId: string;
     }) => {
-      const token = await getAccessTokenSilently();
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('No se pudo obtener el token de autenticación');
+      }
+
       const response = await parkingLotService.createParkingSpace(token, spaceData, parkingLotId);
 
       if (response.error) {

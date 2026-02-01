@@ -15,10 +15,10 @@ import {
 import { connectionService } from '@/services/connectionService';
 import { enqueueOperation, generateIdempotencyKey } from '@/services/offlineQueue';
 import { useStore } from '@/store/useStore';
+import { useToken } from '@/hooks/useToken';
 
 const ONLINE_TIMEOUT_MS = 5000;
 const EXIT_SAFETY_TIMEOUT_MS = 12000; // Máximo tiempo de espera para salida (evita "Procesando..." eterno)
-const AUTH_TIMEOUT_SECONDS = 4;
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -65,7 +65,8 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
   staleTime?: number;
   refetchInterval?: number;
 }) => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const isOffline = useStore((s) => s.isOffline);
 
   return useQuery({
@@ -76,9 +77,10 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
           return [];
         }
 
-        const token = await getAccessTokenSilently({
-          timeoutInSeconds: 10,
-        });
+        const token = await getAuthToken();
+        if (!token) {
+          return [];
+        }
 
         const response = await VehicleService.getActiveVehicles(token, parkingLotId);
 
@@ -220,8 +222,6 @@ export const useSearchVehicle = (
         const shouldCheckCache = isNetworkError(error) || is404;
 
         if (shouldCheckCache) {
-          const reason = is404 ? 'Vehículo no en backend' : 'Backend no disponible';
-
           const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
           const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
 
@@ -256,7 +256,8 @@ export const useRegisterVehicleEntry = (options?: {
   onSuccess?: (data: VehicleEntryResponse, entryData: { parkingLotId: string; vehicleData: VehicleEntry }) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -301,7 +302,10 @@ export const useRegisterVehicleEntry = (options?: {
               if (connectionService.considerOffline()) {
                 return runOfflineEntry();
               }
-              const token = await getAccessTokenSilently({ timeoutInSeconds: AUTH_TIMEOUT_SECONDS });
+              const token = await getAuthToken();
+              if (!token) {
+                throw new Error('No se pudo obtener el token de autenticación');
+              }
               if (connectionService.considerOffline()) {
                 return runOfflineEntry();
               }
@@ -451,7 +455,8 @@ export const useRegisterVehicleExit = (options?: {
   onSuccess?: (data: VehicleExitResponse, exitData: { parkingLotId: string; vehicleData: VehicleExit }) => void;
   onError?: (error: Error) => void;
 }) => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { isAuthenticated } = useAuth0();
+  const { getAuthToken } = useToken();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -516,7 +521,10 @@ export const useRegisterVehicleExit = (options?: {
           (async () => {
             try {
               if (connectionService.considerOffline()) return runOfflineExit();
-              const token = await getAccessTokenSilently({ timeoutInSeconds: AUTH_TIMEOUT_SECONDS });
+              const token = await getAuthToken();
+              if (!token) {
+                throw new Error('No se pudo obtener el token de autenticación');
+              }
               if (connectionService.considerOffline()) return runOfflineExit();
               // Enviar el timestamp congelado al backend para que use ese momento exacto
               const response = await VehicleService.registerExit(
