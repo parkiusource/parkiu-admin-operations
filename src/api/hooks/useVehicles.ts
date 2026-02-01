@@ -96,7 +96,9 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId && !isOffline,
     staleTime: options?.staleTime ?? 1000 * 60 * 1,
-    refetchInterval: isOffline ? false : (options?.refetchInterval ?? 1000 * 30),
+    refetchInterval: isOffline ? false : (options?.refetchInterval ?? false), // 🔥 FIX LOOP: Desactivar polling por defecto
+    refetchOnWindowFocus: false, // 🔥 FIX LOOP: Evitar refetch al cambiar de pestaña
+    refetchOnReconnect: false, // 🔥 FIX LOOP: Evitar refetch múltiple al reconectar
     retry: 1,
   });
 };
@@ -169,8 +171,7 @@ export const useSearchVehicle = (
   return useQuery({
     queryKey: ['vehicles', 'search', parkingLotId, debouncedPlate],
     queryFn: async () => {
-      if (process.env.NODE_ENV === 'development') {
-      }
+      console.log('🔍 [useSearchVehicle] Buscando:', { parkingLotId, debouncedPlate });
 
       const addPendingExitFlag = async (v: ActiveVehicle | null): Promise<(ActiveVehicle & { __pendingExit?: boolean }) | null> => {
         if (!v) return null;
@@ -181,24 +182,30 @@ export const useSearchVehicle = (
 
       // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché sin llamar al backend
       if (connectionService.considerOffline()) {
+        console.log('📴 [useSearchVehicle] Offline - Buscando en caché...');
         const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
         const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
         if (cached) {
+          console.log('✅ [useSearchVehicle] Vehículo encontrado en caché:', cached);
           return addPendingExitFlag(cached);
         }
-        throw new Error('Error buscando vehículo');
+        console.warn('⚠️ [useSearchVehicle] Vehículo NO encontrado en caché');
+        throw new Error('Vehículo no encontrado en caché local');
       }
 
       try {
+        console.log('🌐 [useSearchVehicle] Online - Consultando backend...');
         const token = await getAccessTokenSilently();
         const response = await VehicleService.searchVehicle(token, parkingLotId, debouncedPlate);
 
         if (response.error) {
+          console.error('❌ [useSearchVehicle] Error del backend:', response.error);
           throw new Error(response.error);
         }
 
         // 💾 Si encontramos vehículo, cachearlo para uso offline
         if (response.data) {
+          console.log('✅ [useSearchVehicle] Vehículo encontrado en backend:', response.data);
           const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
           await cacheVehicleEntry(
             parkingLotId,
@@ -206,13 +213,14 @@ export const useSearchVehicle = (
             response.data.vehicle_type,
             response.data.spot_number
           );
-        }
-
-        if (process.env.NODE_ENV === 'development') {
+        } else {
+          console.log('ℹ️ [useSearchVehicle] Backend retornó 200 pero sin data');
         }
 
         return addPendingExitFlag(response.data ?? null);
       } catch (error) {
+        console.error('❌ [useSearchVehicle] Error en búsqueda:', error);
+
         // 📦 FALLBACK: Buscar en caché local en estos casos:
         // 1. Error de red (backend no disponible)
         // 2. 404 (vehículo no encontrado en backend, pero podría estar en caché local)
@@ -222,25 +230,28 @@ export const useSearchVehicle = (
         const shouldCheckCache = isNetworkError(error) || is404;
 
         if (shouldCheckCache) {
+          console.log('📦 [useSearchVehicle] Intentando fallback a caché...');
           const { findCachedVehicle } = await import('@/services/activeVehiclesCache');
           const cached = await findCachedVehicle(parkingLotId, debouncedPlate);
 
           if (cached) {
+            console.log('✅ [useSearchVehicle] Vehículo encontrado en caché (fallback):', cached);
             return addPendingExitFlag(cached);
           }
         }
 
-        if (process.env.NODE_ENV === 'development') {
-        }
-        throw new Error('Error buscando vehículo');
+        console.error('❌ [useSearchVehicle] No se pudo encontrar el vehículo');
+        throw error;
       }
     },
     enabled: (options?.enabled ?? true) && !!parkingLotId && !!debouncedPlate && debouncedPlate.length >= 3,
-    staleTime: options?.staleTime ?? 1000 * 60 * 1, // 1 minuto para búsquedas
+    staleTime: options?.staleTime ?? 0, // 🔥 FIX: Sin caché para búsquedas - siempre fresco
+    gcTime: 0, // 🔥 FIX: Limpiar inmediatamente después de usar
     retry: false,
     // Evitar refetch automático para búsquedas
     refetchOnWindowFocus: false,
-    refetchOnMount: false
+    refetchOnMount: false,
+    refetchOnReconnect: false, // 🔥 FIX LOOP: Evitar refetch al reconectar
   });
 };
 

@@ -20,7 +20,7 @@ class ConnectionService {
   private syncRetryCount = 0;
   private maxSyncRetries = 3;
   private lastSyncAttemptTime = 0;
-  private minTimeBetweenSyncs = 10000; // 10 segundos mínimo entre sincronizaciones
+  private minTimeBetweenSyncs = 30000; // 🔥 FIX LOOP: 30 segundos mínimo entre sincronizaciones (antes 10s)
 
   /**
    * Check if Auth0 client is ready
@@ -166,7 +166,7 @@ class ConnectionService {
       clearInterval(this.periodicSyncIntervalId);
     }
 
-    // Sincronización periódica cada 2 minutos
+    // 🔥 FIX LOOP: Sincronización periódica cada 5 minutos (antes 2 min)
     this.periodicSyncIntervalId = setInterval(async () => {
       const store = useStore.getState();
 
@@ -177,18 +177,19 @@ class ConnectionService {
       if (!store.isOffline && !store.isSyncing) {
         const pendingCount = await getPendingCount();
         if (pendingCount > 0) {
+          console.log(`🔄 [PeriodicSync] Sincronizando ${pendingCount} operación(es) pendiente(s)...`);
           this.attemptSync(store);
         }
       }
 
-      // 🧹 Limpieza de operaciones antiguas cada 2 minutos
+      // 🧹 Limpieza de operaciones antiguas cada 5 minutos
       // (silenciosamente elimina operaciones con más de 48h que ya no pueden sincronizarse)
       try {
         await cleanupOldOperations(48);
       } catch (error) {
         console.error('Error limpiando operaciones antiguas:', error);
       }
-    }, 120000); // 2 minutos
+    }, 300000); // 🔥 FIX LOOP: 5 minutos (antes 2 min)
   }
 
   /**
@@ -199,16 +200,21 @@ class ConnectionService {
 
     // Solo si estamos online
     if (store.isOffline) {
+      console.log('⚠️ [CheckAndSyncOnStartup] Offline - Saltando sincronización inicial');
       return;
     }
 
     // Verificar si hay operaciones pendientes
     const pendingCount = await getPendingCount();
     if (pendingCount > 0) {
-      // Esperar 3 segundos para dar tiempo a que Auth0 se inicialice
+      console.log(`🔄 [CheckAndSyncOnStartup] ${pendingCount} operación(es) pendiente(s) - Programando sincronización...`);
+      // 🔥 FIX LOOP: Esperar 5 segundos para dar tiempo a que Auth0 y toda la app se inicialice
       setTimeout(() => {
+        console.log('🔄 [CheckAndSyncOnStartup] Iniciando sincronización...');
         this.attemptSync(store, true);
-      }, 3000);
+      }, 5000); // Antes 3s, ahora 5s
+    } else {
+      console.log('✅ [CheckAndSyncOnStartup] No hay operaciones pendientes');
     }
   }
 
@@ -237,18 +243,26 @@ class ConnectionService {
     const store = useStore.getState();
 
     const handleOnline = async () => {
+      console.log('🌐 [ConnectionService] Conexión restaurada - Volviendo online...');
       store.setOffline(false);
       this.syncRetryCount = 0; // Nuevo ciclo de reintentos al reconectar
 
-      // 🔄 SINCRONIZACIÓN AUTOMÁTICA con debounce de 5s para dar tiempo a Auth0 a refrescar el token
+      // 🔄 SINCRONIZACIÓN AUTOMÁTICA con debounce de 8s para dar tiempo a Auth0 a refrescar el token
+      // 🔥 FIX LOOP: Aumentar delay para evitar sincronización múltiple al reconectar
       if (this.syncTimeoutId) {
         clearTimeout(this.syncTimeoutId);
       }
 
-      this.syncTimeoutId = setTimeout(() => {
+      this.syncTimeoutId = setTimeout(async () => {
         this.syncTimeoutId = null;
-        this.attemptSync(store, true);
-      }, 5000);
+        const pendingCount = await getPendingCount();
+        if (pendingCount > 0) {
+          console.log(`🔄 [HandleOnline] Sincronizando ${pendingCount} operación(es) tras reconexión...`);
+          this.attemptSync(store, true);
+        } else {
+          console.log('✅ [HandleOnline] No hay operaciones pendientes para sincronizar');
+        }
+      }, 8000); // 🔥 FIX LOOP: 8 segundos (antes 5s)
     };
 
     const handleOffline = () => {

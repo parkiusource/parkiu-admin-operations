@@ -31,7 +31,7 @@ export const useAdminProfileCentralized = () => {
     gcTime: 1000 * 60 * 30, // Garbage collection después de 30 minutos
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: true,
+    refetchOnReconnect: false, // 🔥 FIX LOOP: Desactivar refetch al reconectar
     // Evitar refetch automático
     refetchInterval: false,
     refetchIntervalInBackground: false,
