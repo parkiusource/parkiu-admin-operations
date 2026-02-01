@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAdminProfileCentralized } from '@/hooks/useAdminProfileCentralized';
-import { AdminProfile } from '@/types/common';
 
 /**
  * Componente que maneja la redirección inteligente desde la ruta raíz (/)
@@ -41,8 +40,6 @@ export const RootRedirect = () => {
   if (profileData?.profile) {
     const status = profileData.profile.status;
     const role = profileData.profile.role;
-    const profileWithLots = profileData.profile as AdminProfile & { parkingLots?: unknown[] };
-    const hasParkingLot = profileWithLots.parkingLots && profileWithLots.parkingLots.length > 0;
 
     // Si es admin activo (cualquier rol), ir directo al dashboard
     if (status === 'active') {

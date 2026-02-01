@@ -32,7 +32,8 @@ export function CreateParkingSpaceModal({
       onClose();
       reset();
     },
-    onError: (error) => {
+    onError: () => {
+      // Error handling is done by the mutation itself
     }
   });
 

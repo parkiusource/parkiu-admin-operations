@@ -4,10 +4,12 @@ import { useParkingLots } from '@/hooks/parking/useParkingLots';
 export default function VehicleExit() {
   const { parkingLots, isLoading } = useParkingLots();
 
-  const handleExitSuccess = (plate: string, cost: number) => {
+  const handleExitSuccess = () => {
+    // Exit registered successfully
   };
 
-  const handleError = (error: string) => {
+  const handleError = () => {
+    // Error handled by UI
   };
 
   if (isLoading) {

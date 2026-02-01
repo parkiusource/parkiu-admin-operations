@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useState } from 'react';
 import { ParkingSpot } from '@/db/schema';
 import { ParkingSpot as BackendParkingSpot } from '@/services/parking/types';

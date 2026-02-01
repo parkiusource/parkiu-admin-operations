@@ -143,7 +143,8 @@ export const GooglePlacesParking = ({ mapRef, center, radius = 1000 }: GooglePla
     }
   }, [mapRef, center, searchNearbyParking]);
 
-  const handleJoinParkiu = useCallback((place: PlaceResult) => {
+  const handleJoinParkiu = useCallback((_place: PlaceResult) => {
+    // TODO: Implement join Parkiu functionality
   }, []);
 
   return (

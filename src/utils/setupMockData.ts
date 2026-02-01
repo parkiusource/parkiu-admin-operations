@@ -87,8 +87,7 @@ export async function setupMockParkingData() {
     ];
 
     // Insertar transacciones
-    const transactionIds = await db.transactions.bulkAdd(mockTransactions, { allKeys: true });
-
+    await db.transactions.bulkAdd(mockTransactions, { allKeys: true });
 
   } catch (error) {
     throw error;

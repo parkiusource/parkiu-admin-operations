@@ -142,7 +142,7 @@ export function CreateParkingLotModal({ isOpen, onClose, onSuccess }: CreatePark
         throw new Error('El precio por hora debe ser mayor a 0');
       }
 
-      const result = await createParkingLot(sanitizedData);
+      await createParkingLot(sanitizedData);
     } catch (error) {
       console.error('Error al crear el parqueadero:', error);
       setError(error instanceof Error ? error.message : 'Error desconocido al crear el parqueadero');

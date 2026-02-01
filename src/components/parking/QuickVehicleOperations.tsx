@@ -104,10 +104,10 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
         return (
           <VehicleEntryCard
             parkingLot={selectedParkingLot}
-            onSuccess={(plate: string, spot: string) => {
+            onSuccess={() => {
               handleSuccess();
             }}
-            onError={(error: string) => {
+            onError={() => {
               handleError();
             }}
             onClose={closeModal} // Cerrar modal cuando se hace clic en "Cerrar"
@@ -120,10 +120,10 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
         return (
           <VehicleExitCard
             parkingLot={selectedParkingLot}
-            onSuccess={(plate: string, cost: number) => {
+            onSuccess={() => {
               handleSuccess();
             }}
-            onError={(error: string) => {
+            onError={() => {
               handleError();
             }}
             onClose={closeModal} // Cerrar modal cuando se hace clic en "Cerrar"

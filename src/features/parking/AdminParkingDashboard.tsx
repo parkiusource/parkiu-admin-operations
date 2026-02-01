@@ -1000,7 +1000,7 @@ export default function AdminParkingDashboard() {
       <CreateParkingLotModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newParkingLot) => {
+        onSuccess={() => {
           // El hook ya invalida las queries, así que la lista se actualizará automáticamente
         }}
       />
@@ -1010,7 +1010,7 @@ export default function AdminParkingDashboard() {
         <CreateParkingSpaceModal
           isOpen={isCreateSpaceModalOpen}
           onClose={() => setIsCreateSpaceModalOpen(false)}
-          onSuccess={(newSpace) => {
+          onSuccess={() => {
             // El hook ya invalida las queries, así que la lista se actualizará automáticamente
             refetchSpaces();
           }}
