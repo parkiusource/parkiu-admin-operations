@@ -271,7 +271,7 @@ export const useRegisterVehicleEntry = (options?: {
         const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
 
         const runOfflineEntry = async () => {
-          const idempotencyKey = generateIdempotencyKey(`entry-${vehicleData.plate}`);
+          const idempotencyKey = generateIdempotencyKey();
           await enqueueOperation({
             type: 'entry',
             parkingLotId,
@@ -338,7 +338,7 @@ export const useRegisterVehicleEntry = (options?: {
           connectionService.setOffline(true);
           const now = new Date().toISOString();
           const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
-          const idempotencyKey = generateIdempotencyKey(`entry-${vehicleData.plate}`);
+          const idempotencyKey = generateIdempotencyKey();
           await enqueueOperation({
             type: 'entry',
             parkingLotId,
@@ -394,6 +394,18 @@ export const useRegisterVehicleEntry = (options?: {
               ? { ...space, status: 'occupied', last_status_change: new Date().toISOString() }
               : space
           );
+        });
+
+        // 💾 CRÍTICO OFFLINE: Actualizar también el caché persistente de IndexedDB
+        // Esto garantiza que el estado persista en recargas offline
+        import('@/services/offlineCache').then(({ updateCachedParkingSpaceStatus }) =>
+          updateCachedParkingSpaceStatus(
+            variables.parkingLotId,
+            spotNumber,
+            'occupied'
+          )
+        ).catch(() => {
+          // Silenciar error - no es crítico para la operación principal
         });
       }
 
@@ -477,7 +489,7 @@ export const useRegisterVehicleExit = (options?: {
       const now = frozenExitTime || new Date().toISOString();
 
       const runOfflineExit = async (): Promise<VehicleExitResponse> => {
-        const idempotencyKey = generateIdempotencyKey(`exit-${vehicleData.plate}`);
+        const idempotencyKey = generateIdempotencyKey();
         const { findCachedVehicle, removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
         const cachedVehicle = await findCachedVehicle(parkingLotId, vehicleData.plate);
         // Calcular duración usando el tiempo congelado, no la hora actual
@@ -588,6 +600,21 @@ export const useRegisterVehicleExit = (options?: {
               : space
           );
         });
+
+        // 💾 CRÍTICO OFFLINE: Actualizar también el caché persistente de IndexedDB
+        // Esto garantiza que el estado persista en recargas offline
+        if (exitedVehicleSpot) {
+          const spotToUpdate = exitedVehicleSpot; // Capturar el valor para TypeScript
+          import('@/services/offlineCache').then(({ updateCachedParkingSpaceStatus }) =>
+            updateCachedParkingSpaceStatus(
+              variables.parkingLotId,
+              spotToUpdate,
+              'available'
+            )
+          ).catch(() => {
+            // Silenciar error - no es crítico para la operación principal
+          });
+        }
       }
 
       // Debounce para invalidaciones secundarias

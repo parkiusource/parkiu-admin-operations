@@ -161,6 +161,60 @@ export async function getCachedParkingSpaces(
   }
 }
 
+/**
+ * 🔄 Actualiza el estado de un espacio específico en el caché persistente
+ *
+ * CRÍTICO para offline-first: Cuando se registran entradas/salidas offline,
+ * necesitamos actualizar el estado del espacio en IndexedDB para que persista
+ * en recargas de página.
+ *
+ * @param parkingLotId - ID del parking lot
+ * @param spaceNumber - Número del espacio (ej: "A-1")
+ * @param newStatus - Nuevo estado del espacio
+ */
+export async function updateCachedParkingSpaceStatus(
+  parkingLotId: string,
+  spaceNumber: string,
+  newStatus: 'available' | 'occupied' | 'maintenance' | 'reserved'
+): Promise<void> {
+  try {
+    const cached = await db.cachedParkingSpaces.get(parkingLotId);
+
+    if (!cached) {
+      console.warn(`⚠️ No cached spaces found for parking lot ${parkingLotId} - cannot update space ${spaceNumber}`);
+      return;
+    }
+
+    const spaces = cached.spaces as unknown as ParkingSpot[];
+    const spaceExists = spaces.some(space => space.number === spaceNumber);
+
+    if (!spaceExists) {
+      console.warn(`⚠️ Space ${spaceNumber} not found in cached spaces for parking lot ${parkingLotId}`);
+      return;
+    }
+
+    const updatedSpaces = spaces.map(space =>
+      space.number === spaceNumber
+        ? {
+            ...space,
+            status: newStatus,
+            last_status_change: new Date().toISOString()
+          }
+        : space
+    );
+
+    await db.cachedParkingSpaces.put({
+      parkingLotId,
+      spaces: updatedSpaces as unknown as Record<string, unknown>[],
+      cachedAt: cached.cachedAt // Mantener fecha de caché original
+    });
+
+    console.log(`✅ Updated space ${spaceNumber} to ${newStatus} in persistent cache (parking lot: ${parkingLotId})`);
+  } catch (error) {
+    console.error(`❌ Error updating cached parking space status for ${spaceNumber}:`, error);
+  }
+}
+
 // ===============================
 // UTILIDADES
 // ===============================

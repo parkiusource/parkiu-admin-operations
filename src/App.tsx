@@ -15,6 +15,7 @@ import RoleGuard from './features/auth/components/RoleGuard';
 import OfflineBanner from './components/common/OfflineBanner';
 import SyncErrorBanner from './components/common/SyncErrorBanner';
 import { SyncResultNotifier } from './components/common/SyncResultNotifier';
+import { PendingOperationsList } from './components/common/PendingOperationsList';
 
 // Lazy load components
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
@@ -104,6 +105,7 @@ function App() {
         <OfflineBanner />
         <SyncErrorBanner />
         <SyncResultNotifier />
+        <PendingOperationsList />
       </ToastProvider>
       <BackendStatus />
       <ReactQueryDevtools initialIsOpen={false} />

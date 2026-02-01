@@ -2,20 +2,135 @@ import { ParkiuDB, OfflineOperation } from '@/db/schema';
 
 const db = new ParkiuDB();
 
-export function generateIdempotencyKey(seed?: string): string {
+/**
+ * Genera un UUID v4 usando crypto.randomUUID() (nativo del navegador)
+ * Fallback mejorado para navegadores antiguos que no soporten crypto.randomUUID()
+ */
+export function generateIdempotencyKey(): string {
+  // Usar crypto.randomUUID() si está disponible (navegadores modernos)
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return (crypto as unknown as { randomUUID: () => string }).randomUUID();
+    return (crypto as { randomUUID: () => string }).randomUUID();
   }
-  const base = `${Date.now()}-${Math.random().toString(36).slice(2)}-${seed || ''}`;
-  return base;
+
+  // Fallback mejorado para navegadores antiguos
+  // Genera un UUID v4 válido según RFC 4122
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * Valida que un string sea un UUID v4 válido
+ */
+export function validateUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
+/**
+ * Valida que un timestamp sea válido y no esté en el futuro ni sea muy antiguo
+ */
+export function validateTimestamp(timestamp: string, maxAgeHours: number = 48): { valid: boolean; error?: string } {
+  try {
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    // Verificar formato válido
+    if (isNaN(date.getTime())) {
+      return { valid: false, error: 'Formato de timestamp inválido' };
+    }
+
+    // No futuro (con margen de 5 minutos para diferencias de reloj)
+    if (date.getTime() > now.getTime() + (5 * 60 * 1000)) {
+      return { valid: false, error: 'Timestamp no puede estar en el futuro' };
+    }
+
+    // No muy antiguo (max 48 horas según backend)
+    const ageHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    if (ageHours > maxAgeHours) {
+      return { valid: false, error: `Timestamp muy antiguo (máximo ${maxAgeHours}h)` };
+    }
+
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Error al validar timestamp' };
+  }
+}
+
+/**
+ * Valida el payload de una operación de entrada
+ */
+function validateEntryPayload(payload: Record<string, unknown>): { valid: boolean; error?: string } {
+  if (!payload.plate || typeof payload.plate !== 'string' || payload.plate.trim().length === 0) {
+    return { valid: false, error: 'Placa es requerida' };
+  }
+
+  const validVehicleTypes = ['car', 'motorcycle', 'truck', 'bicycle'];
+  if (!payload.vehicle_type || !validVehicleTypes.includes(payload.vehicle_type as string)) {
+    return { valid: false, error: 'Tipo de vehículo inválido' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Valida el payload de una operación de salida
+ */
+function validateExitPayload(payload: Record<string, unknown>): { valid: boolean; error?: string } {
+  if (!payload.plate || typeof payload.plate !== 'string' || payload.plate.trim().length === 0) {
+    return { valid: false, error: 'Placa es requerida' };
+  }
+
+  if (!payload.payment_amount || typeof payload.payment_amount !== 'number' || payload.payment_amount <= 0) {
+    return { valid: false, error: 'Monto de pago debe ser mayor a 0' };
+  }
+
+  const validPaymentMethods = ['cash', 'card', 'digital'];
+  if (!payload.payment_method || !validPaymentMethods.includes(payload.payment_method as string)) {
+    return { valid: false, error: 'Método de pago inválido' };
+  }
+
+  return { valid: true };
 }
 
 export async function enqueueOperation(op: Omit<OfflineOperation, 'id' | 'createdAt' | 'status'>): Promise<number> {
+  // ✅ VALIDACIÓN 1: UUID de idempotencia
+  if (!validateUUID(op.idempotencyKey)) {
+    throw new Error('Formato de UUID inválido para idempotency key');
+  }
+
+  // ✅ VALIDACIÓN 2: Payload según tipo de operación
+  const payloadValidation = op.type === 'entry'
+    ? validateEntryPayload(op.payload)
+    : validateExitPayload(op.payload);
+
+  if (!payloadValidation.valid) {
+    throw new Error(`Payload inválido: ${payloadValidation.error}`);
+  }
+
+  // ✅ VALIDACIÓN 3: Timestamps
+  if (op.type === 'entry' && op.payload.client_entry_time) {
+    const validation = validateTimestamp(op.payload.client_entry_time as string);
+    if (!validation.valid) {
+      throw new Error(`Timestamp de entrada inválido: ${validation.error}`);
+    }
+  }
+
+  if (op.type === 'exit' && op.payload.client_exit_time) {
+    const validation = validateTimestamp(op.payload.client_exit_time as string);
+    if (!validation.valid) {
+      throw new Error(`Timestamp de salida inválido: ${validation.error}`);
+    }
+  }
+
   const record: OfflineOperation = {
     ...op,
     createdAt: new Date().toISOString(),
     status: 'pending',
   };
+
   try {
     const id = await db.operations.add(record);
 
@@ -78,4 +193,29 @@ export async function syncPending(
     }
   }
   return { synced, failed };
+}
+
+/**
+ * Limpia operaciones antiguas que superan el límite de edad del backend (48 horas)
+ * Esto evita acumulación de operaciones obsoletas que ya no pueden sincronizarse
+ */
+export async function cleanupOldOperations(maxAgeHours: number = 48): Promise<number> {
+  const cutoffDate = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000).toISOString();
+
+  const old = await db.operations
+    .where('createdAt')
+    .below(cutoffDate)
+    .toArray();
+
+  let cleaned = 0;
+  for (const op of old) {
+    await db.operations.delete(op.id!);
+    cleaned++;
+  }
+
+  if (cleaned > 0) {
+    console.warn(`🧹 Limpiadas ${cleaned} operaciones con más de ${maxAgeHours}h de antigüedad`);
+  }
+
+  return cleaned;
 }

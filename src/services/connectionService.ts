@@ -1,7 +1,7 @@
 import { useStore } from '../store/useStore';
 import { syncPendingOperations } from './offlineSync';
 import { getToken, getAuth0Client } from '@/api/client';
-import { getPendingCount } from './offlineQueue';
+import { getPendingCount, cleanupOldOperations } from './offlineQueue';
 
 /**
  * Connection status service that monitors network connectivity
@@ -97,6 +97,12 @@ class ConnectionService {
       if (result.synced > 0 || result.failed > 0) {
         store.setLastSyncResult({ synced: result.synced, failed: result.failed });
       }
+
+      // Log conflictos para debugging (no mostrar al usuario)
+      if (result.conflicts > 0) {
+        console.info(`ℹ️ ${result.conflicts} conflicto(s) de idempotencia resueltos automáticamente`);
+      }
+
       store.setLastSyncError(null);
       this.syncRetryCount = 0; // Solo resetear en éxito
     } catch (error) {
@@ -173,6 +179,14 @@ class ConnectionService {
         if (pendingCount > 0) {
           this.attemptSync(store);
         }
+      }
+
+      // 🧹 Limpieza de operaciones antiguas cada 2 minutos
+      // (silenciosamente elimina operaciones con más de 48h que ya no pueden sincronizarse)
+      try {
+        await cleanupOldOperations(48);
+      } catch (error) {
+        console.error('Error limpiando operaciones antiguas:', error);
       }
     }, 120000); // 2 minutos
   }
