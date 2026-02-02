@@ -764,9 +764,10 @@ export const useCreateRealParkingSpace = (options?: {
 
       return response.data;
     },
-    onSuccess: (createdSpace) => {
-      // Invalidar las queries de espacios reales para refrescar los datos
+    onSuccess: (createdSpace, variables) => {
+      // Invalidar ambas queries para que lista y detalle se actualicen
       queryClient.invalidateQueries({ queryKey: ['realParkingSpaces'] });
+      queryClient.invalidateQueries({ queryKey: ['realParkingSpacesWithVehicles', variables.parkingLotId] });
 
       options?.onSuccess?.(createdSpace);
     },

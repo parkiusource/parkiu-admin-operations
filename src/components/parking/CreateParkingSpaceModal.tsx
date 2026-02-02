@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { X, Car, Plus } from 'lucide-react';
 import { useCreateRealParkingSpace } from '@/hooks/parking/useParkingSpots';
 import { ParkingSpot } from '@/services/parking/types';
+import { useToast } from '@/hooks';
 
 interface CreateParkingSpaceModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function CreateParkingSpaceModal({
   parkingLotId
 }: CreateParkingSpaceModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addToast } = useToast();
 
   const { mutateAsync: createParkingSpace, isPending } = useCreateRealParkingSpace({
     onSuccess: (createdSpace) => {
@@ -32,8 +34,8 @@ export function CreateParkingSpaceModal({
       onClose();
       reset();
     },
-    onError: () => {
-      // Error handling is done by the mutation itself
+    onError: (error) => {
+      addToast(error?.message || 'Error al crear el espacio', 'error');
     }
   });
 

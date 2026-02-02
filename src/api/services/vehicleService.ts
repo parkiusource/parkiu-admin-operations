@@ -172,6 +172,15 @@ export class VehicleService {
       if (options?.clientTime) {
         payload['client_exit_time'] = options.clientTime;
       }
+      // Enviar costo calculado por el frontend para que el backend lo use
+      // Esto evita discrepancias entre lo que el usuario confirmó y lo que aparece en el recibo
+      if (exitData.calculated_cost != null) {
+        payload['calculated_cost'] = exitData.calculated_cost;
+        payload['total_cost'] = exitData.calculated_cost; // Alias para backends que esperan total_cost
+      }
+      if (exitData.duration_minutes != null) {
+        payload['duration_minutes'] = exitData.duration_minutes;
+      }
 
       const response = await client.post(
         `/admin/parking-lots/${parkingLotId}/vehicles/exit`,

@@ -221,6 +221,10 @@ export interface VehicleExit {
   plate: string;
   payment_amount: number;
   payment_method: 'cash' | 'card' | 'digital';
+  /** Costo calculado por el frontend - el backend debería usar este valor */
+  calculated_cost?: number;
+  /** Duración calculada por el frontend en minutos */
+  duration_minutes?: number;
 }
 
 // ✅ RESPUESTA DE ENTRADA

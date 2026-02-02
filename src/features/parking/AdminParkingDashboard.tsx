@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LuMapPin, LuSettings, LuPlus, LuSearch, LuCar, LuArrowRight, LuLoader, LuChevronLeft, LuBuilding, LuTriangle, LuKeyboard } from 'react-icons/lu';
 import { FaMotorcycle } from 'react-icons/fa';
+import { Bike } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { Input } from '@/components/common/Input';
 import { QuickVehicleOperations } from '@/components/parking/QuickVehicleOperations';
@@ -37,6 +38,7 @@ import { useParkingLotPricing } from '@/api/hooks/useSettingsData';
 import { useAdminProfileStatus } from '@/hooks/useAdminProfileCentralized';
 import { useStore } from '@/store/useStore';
 import { getCachedParkingLot } from '@/services/offlineCache';
+import { useToast } from '@/hooks';
 
 // ✅ IMPORTAR TIPOS DEL BACKEND
 import { ParkingLot, ParkingSpot } from '@/services/parking/types';
@@ -62,6 +64,7 @@ export default function AdminParkingDashboard() {
   const [isCreateSpaceModalOpen, setIsCreateSpaceModalOpen] = useState(false); // ✅ Estado para modal de espacios
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false); // ✅ Estado para ayuda de atajos
   const [fallbackParking, setFallbackParking] = useState<ParkingLot | null>(null);
+  const [updatingSpotId, setUpdatingSpotId] = useState<number | null>(null);
 
   const isOffline = useStore(s => s.isOffline);
 
@@ -85,28 +88,13 @@ export default function AdminParkingDashboard() {
   // ✅ CONFIGURAR ATAJOS DE TECLADO PARA OPERACIONES RÁPIDAS
   const { getShortcutsHelp, formatShortcut } = useParkingOperationShortcuts({
     onOpenVehicleEntry: () => {
-      if (process.env.NODE_ENV === 'development') {
-      }
-      if (window.quickOperations) {
-        window.quickOperations.openEntry();
-      } else {
-      }
+      window.quickOperations?.openEntry();
     },
     onOpenVehicleExit: () => {
-      if (process.env.NODE_ENV === 'development') {
-      }
-      if (window.quickOperations) {
-        window.quickOperations.openExit();
-      } else {
-      }
+      window.quickOperations?.openExit();
     },
     onOpenSearch: () => {
-      if (process.env.NODE_ENV === 'development') {
-      }
-      if (window.quickOperations) {
-        window.quickOperations.openSearch();
-      } else {
-      }
+      window.quickOperations?.openSearch();
     },
     onRefresh: () => {
       window.location.reload();
@@ -203,19 +191,30 @@ export default function AdminParkingDashboard() {
     };
   }, [parkingSpots]);
 
+  const { addToast } = useToast();
+
   // ✅ HOOKS DE MUTACIÓN REALES DEL BACKEND
   const updateSpotStatus = useUpdateRealParkingSpaceStatus({
     onSuccess: () => {
-      // Los datos se actualizan automáticamente via invalidateQueries
+      setUpdatingSpotId(null);
     },
     onError: (error) => {
+      setUpdatingSpotId(null);
       console.error('Error al actualizar espacio:', error);
+      addToast(error.message || 'Error al actualizar el espacio', 'error');
     }
   });
 
+  const toNumericSpaceId = (spotId: string | number): number | null => {
+    const n = typeof spotId === 'string' ? parseInt(spotId, 10) : spotId;
+    return Number.isFinite(n) ? n : null;
+  };
+
   const occupySpot = {
     mutate: (spotId: string | number) => {
-      const numericId = typeof spotId === 'string' ? parseInt(spotId.toString()) : spotId;
+      const numericId = toNumericSpaceId(spotId);
+      if (numericId == null) return;
+      setUpdatingSpotId(numericId);
       updateSpotStatus.mutate({ spaceId: numericId, status: 'occupied' });
     },
     isPending: updateSpotStatus.isPending
@@ -223,7 +222,9 @@ export default function AdminParkingDashboard() {
 
   const releaseSpot = {
     mutate: (spotId: string | number) => {
-      const numericId = typeof spotId === 'string' ? parseInt(spotId.toString()) : spotId;
+      const numericId = toNumericSpaceId(spotId);
+      if (numericId == null) return;
+      setUpdatingSpotId(numericId);
       updateSpotStatus.mutate({ spaceId: numericId, status: 'available' });
     },
     isPending: updateSpotStatus.isPending
@@ -259,9 +260,22 @@ export default function AdminParkingDashboard() {
   };
 
   const handleMaintenanceToggle = (spotId: number | string, currentStatus: ParkingSpot['status']) => {
+    const numericId = toNumericSpaceId(spotId);
+    if (numericId == null) return;
     const newStatus = currentStatus === 'maintenance' ? 'available' : 'maintenance';
-    const numericId = typeof spotId === 'string' ? parseInt(spotId.toString()) : spotId;
+    setUpdatingSpotId(numericId);
     updateSpotStatus.mutate({ spaceId: numericId, status: newStatus });
+  };
+
+  const handleSpotClickFromMap = (spot: ParkingSpot) => {
+    const id = spot?.id != null ? String(spot.id) : '';
+    if (id) document.getElementById(`spot-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const isSpotUpdating = (spot: ParkingSpot) => {
+    if (updatingSpotId == null) return false;
+    const spotNum = typeof spot.id === 'string' ? parseInt(spot.id, 10) : spot.id;
+    return updateSpotStatus.isPending && Number.isFinite(spotNum) && spotNum === updatingSpotId;
   };
 
   // ✅ LOADING STATE
@@ -858,7 +872,7 @@ export default function AdminParkingDashboard() {
             {/* ✅ MAPA VISUAL DEL PARQUEADERO */}
             <ParkingLotMap
               spots={filteredSpots}
-              onSpotClick={() => {}}
+              onSpotClick={handleSpotClickFromMap}
               selectedSpotId={null}
               viewMode="realistic"
             />
@@ -889,13 +903,13 @@ export default function AdminParkingDashboard() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
                       {carSpots.map((spot) => (
-                        <div key={spot.id} className="overflow-hidden">
+                        <div key={spot.id} id={`spot-${spot.id}`} className="overflow-hidden scroll-mt-4">
                           <SpotCard
                             spot={spot}
                             onOccupy={handleOccupySpot}
                             onRelease={handleReleaseSpot}
                             onMaintenanceToggle={handleMaintenanceToggle}
-                            isUpdating={updateSpotStatus.isPending || occupySpot.isPending || releaseSpot.isPending}
+                            isUpdating={isSpotUpdating(spot)}
                           />
                         </div>
                       ))}
@@ -917,13 +931,13 @@ export default function AdminParkingDashboard() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
                       {motorcycleSpots.map((spot) => (
-                        <div key={spot.id} className="overflow-hidden">
+                        <div key={spot.id} id={`spot-${spot.id}`} className="overflow-hidden scroll-mt-4">
                           <SpotCard
                             spot={spot}
                             onOccupy={handleOccupySpot}
                             onRelease={handleReleaseSpot}
                             onMaintenanceToggle={handleMaintenanceToggle}
-                            isUpdating={updateSpotStatus.isPending || occupySpot.isPending || releaseSpot.isPending}
+                            isUpdating={isSpotUpdating(spot)}
                           />
                         </div>
                       ))}
@@ -936,7 +950,7 @@ export default function AdminParkingDashboard() {
                   <div className="p-3 sm:p-5">
                     <div className="mb-3 sm:mb-4">
                       <h4 className="text-xs sm:text-sm font-medium text-slate-900 flex items-center gap-2">
-                        <FaMotorcycle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
+                        <Bike className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
                         Bicicletas
                         <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-slate-100 text-slate-600">
                           {bicycleSpots.length}
@@ -945,13 +959,13 @@ export default function AdminParkingDashboard() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
                       {bicycleSpots.map((spot) => (
-                        <div key={spot.id} className="overflow-hidden">
+                        <div key={spot.id} id={`spot-${spot.id}`} className="overflow-hidden scroll-mt-4">
                           <SpotCard
                             spot={spot}
                             onOccupy={handleOccupySpot}
                             onRelease={handleReleaseSpot}
                             onMaintenanceToggle={handleMaintenanceToggle}
-                            isUpdating={updateSpotStatus.isPending || occupySpot.isPending || releaseSpot.isPending}
+                            isUpdating={isSpotUpdating(spot)}
                           />
                         </div>
                       ))}
@@ -1060,7 +1074,10 @@ interface SpotCardProps {
 }
 
 function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }: SpotCardProps) {
-  const IconComponent = spot.type === 'car' ? LuCar : FaMotorcycle;
+  const IconComponent =
+    spot.type === 'car' ? LuCar
+    : spot.type === 'bicycle' ? Bike
+    : FaMotorcycle;
   const [forceOpen, setForceOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const FORCE_PHRASE = 'LIBERAR';
@@ -1090,10 +1107,20 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
       badge: 'bg-amber-100 text-amber-700',
       pulse: 'bg-amber-500',
       label: 'Mant.'
+    },
+    reserved: {
+      card: 'bg-gradient-to-br from-blue-50 to-white border-blue-200 hover:border-blue-300',
+      icon: 'bg-gradient-to-br from-blue-100 to-blue-200',
+      iconColor: 'text-blue-600',
+      badge: 'bg-blue-100 text-blue-700',
+      pulse: 'bg-blue-500',
+      label: 'Reservado'
     }
   };
 
   const config = statusConfig[spot.status as keyof typeof statusConfig] || statusConfig.available;
+  const spotId = spot.id;
+  const hasValidId = spotId != null && Number.isFinite(typeof spotId === 'string' ? parseInt(spotId, 10) : spotId);
 
   const hasActiveVehicle = spot.status === 'occupied' && !!spot.active_vehicle?.plate;
   const canReleaseDirectly = spot.status === 'occupied' ? !hasActiveVehicle : true;
@@ -1118,7 +1145,7 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
             {spot.number}
           </h4>
           <p className="text-[10px] sm:text-xs text-slate-500">
-            {spot.type === 'car' ? 'Auto' : 'Moto'}
+            {spot.type === 'car' ? 'Auto' : spot.type === 'bicycle' ? 'Bici' : spot.type === 'truck' ? 'Camión' : 'Moto'}
           </p>
         </div>
         <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${config.badge}`}>
@@ -1139,8 +1166,8 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
       <div className="flex items-center gap-1.5 sm:gap-2">
         {spot.status === 'available' && (
           <button
-            onClick={() => onOccupy(spot.id!)}
-            disabled={isUpdating}
+            onClick={() => hasValidId && onOccupy(spotId!)}
+            disabled={isUpdating || !hasValidId}
             className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50"
           >
             <LuPlus className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1151,8 +1178,8 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
         {spot.status === 'occupied' && (
           <>
             <button
-              onClick={() => onRelease(spot.id!)}
-              disabled={isUpdating || !canReleaseDirectly}
+              onClick={() => hasValidId && onRelease(spotId!)}
+              disabled={isUpdating || !canReleaseDirectly || !hasValidId}
               className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50"
             >
               <LuArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1173,8 +1200,8 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
 
         {spot.status === 'maintenance' && (
           <button
-            onClick={() => onMaintenanceToggle(spot.id!, spot.status)}
-            disabled={isUpdating}
+            onClick={() => hasValidId && onMaintenanceToggle(spotId!, spot.status)}
+            disabled={isUpdating || !hasValidId}
             className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50"
           >
             <LuSettings className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1183,8 +1210,8 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
         )}
 
         <button
-          onClick={() => onMaintenanceToggle(spot.id!, spot.status)}
-          disabled={isUpdating}
+          onClick={() => hasValidId && onMaintenanceToggle(spotId!, spot.status)}
+          disabled={isUpdating || !hasValidId}
           className="inline-flex items-center justify-center p-2 sm:p-2.5 text-xs rounded-lg sm:rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 transition-all disabled:opacity-50"
           title="Mantenimiento"
         >
@@ -1228,8 +1255,8 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
               Cancelar
             </button>
             <button
-              onClick={() => { onRelease(spot.id!); setForceOpen(false); setConfirmText(''); }}
-              disabled={confirmText.trim().toUpperCase() !== FORCE_PHRASE}
+              onClick={() => { if (hasValidId) onRelease(spotId!); setForceOpen(false); setConfirmText(''); }}
+              disabled={confirmText.trim().toUpperCase() !== FORCE_PHRASE || !hasValidId}
               className="w-full sm:w-auto px-3 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
             >
               Confirmar

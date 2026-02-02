@@ -533,14 +533,16 @@ export const useRegisterVehicleExit = (options?: {
         console.log('🔍 [useRegisterVehicleExit] Vehículo en cache:', cachedVehicle);
         // Calcular duración usando el tiempo congelado, no la hora actual
         const exitTimestamp = new Date(now).getTime();
-        const durationMinutes = cachedVehicle
+        const durationMinutes = vehicleData.duration_minutes ?? (cachedVehicle
           ? Math.floor((exitTimestamp - new Date(cachedVehicle.entry_time).getTime()) / (1000 * 60))
-          : 0;
+          : 0);
+        // 🔧 FIX: Usar el costo calculado si está disponible, si no usar payment_amount
+        const totalCost = vehicleData.calculated_cost ?? vehicleData.payment_amount;
         await enqueueOperation({
           type: 'exit',
           parkingLotId,
           plate: vehicleData.plate,
-          payload: { ...vehicleData, client_exit_time: now, idempotencyKey },
+          payload: { ...vehicleData, client_exit_time: now, idempotencyKey, calculated_cost: totalCost },
           idempotencyKey,
         });
         console.log('✅ [useRegisterVehicleExit] Operación de salida encolada en IndexedDB');
@@ -548,13 +550,13 @@ export const useRegisterVehicleExit = (options?: {
         console.log('✅ [useRegisterVehicleExit] Vehículo removido del cache local');
         return {
           transaction_id: Date.now(),
-          total_cost: vehicleData.payment_amount,
+          total_cost: totalCost,
           duration_minutes: durationMinutes,
           receipt: JSON.stringify({
             plate: vehicleData.plate,
             exit_time: now,
             entry_time: cachedVehicle?.entry_time || now,
-            total_cost: vehicleData.payment_amount,
+            total_cost: totalCost,
             duration_minutes: durationMinutes,
             payment_method: vehicleData.payment_method,
             offline: true
@@ -590,7 +592,22 @@ export const useRegisterVehicleExit = (options?: {
               if (response.error) throw new Error(response.error);
               const { removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
               await removeVehicleFromCache(parkingLotId, vehicleData.plate);
-              return response.data!;
+
+              // 🔧 FIX: Usar el costo calculado por el frontend si fue enviado
+              // Esto garantiza que el recibo muestre el mismo costo que el usuario confirmó
+              const result = response.data!;
+              if (vehicleData.calculated_cost != null && result.total_cost !== vehicleData.calculated_cost) {
+                console.warn(
+                  `⚠️ [useRegisterVehicleExit] Discrepancia de costo: ` +
+                  `frontend=${vehicleData.calculated_cost}, backend=${result.total_cost}. ` +
+                  `Usando costo del frontend para consistencia.`
+                );
+                result.total_cost = vehicleData.calculated_cost;
+              }
+              if (vehicleData.duration_minutes != null && result.duration_minutes !== vehicleData.duration_minutes) {
+                result.duration_minutes = vehicleData.duration_minutes;
+              }
+              return result;
             } catch (inner) {
               const { isNetworkError } = await import('@/services/offlineCache');
               if (isNetworkError(inner)) {

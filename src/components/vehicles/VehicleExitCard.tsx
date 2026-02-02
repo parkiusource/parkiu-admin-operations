@@ -113,6 +113,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
     const role = profile?.role || '';
     const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
     if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') console.debug('isOperatorAuthorized', authorized);
     }
     return authorized;
   }, [profile]);
@@ -903,7 +904,10 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               vehicleData: {
                 plate: normalizePlate(plate),
                 payment_amount: amount,
-                payment_method: paymentMethod as 'cash' | 'card' | 'digital'
+                payment_method: paymentMethod as 'cash' | 'card' | 'digital',
+                // Enviar costo y duración calculados para que el backend los use
+                calculated_cost: currentCost || amount,
+                duration_minutes: frozenDuration || undefined
               },
               // Enviar el tiempo de salida congelado para que backend use ese timestamp
               frozenExitTime: frozenExitTime || undefined
@@ -1359,7 +1363,10 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
               vehicleData: {
                 plate: normalizePlate(plate),
                 payment_amount: amount,
-                payment_method: paymentMethod as 'cash' | 'card' | 'digital'
+                payment_method: paymentMethod as 'cash' | 'card' | 'digital',
+                // Enviar costo y duración calculados para que el backend los use
+                calculated_cost: currentCost || amount,
+                duration_minutes: frozenDuration || undefined
               },
               // Enviar el tiempo de salida congelado para que backend use ese timestamp
               frozenExitTime: frozenExitTime || undefined
