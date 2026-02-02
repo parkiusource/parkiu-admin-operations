@@ -10,10 +10,17 @@ import {
   ActiveVehicle,
   CostCalculation,
   VehicleType,
-  ParkingLot
+  ParkingLot,
+  type VehicleTransaction
 } from '@/types/parking';
 import { connectionService } from '@/services/connectionService';
 import { enqueueOperation, generateIdempotencyKey } from '@/services/offlineQueue';
+import {
+  getCachedTransactionHistory,
+  cacheTransactionHistory,
+  isNetworkError,
+  type TransactionHistoryFilters
+} from '@/services/offlineCache';
 import { useStore } from '@/store/useStore';
 import { useToken } from '@/hooks/useToken';
 
@@ -105,40 +112,51 @@ export const useActiveVehicles = (parkingLotId: string, options?: {
 
 /**
  * 📊 Hook para obtener historial de transacciones de un parqueadero
- * Offline: deshabilitado para no llamar al backend.
+ * ✅ Offline-first: guarda en IndexedDB y muestra caché cuando no hay red; al volver online se recupera del backend.
  */
 export const useTransactionHistory = (
   parkingLotId: string,
-  filters?: {
-    limit?: number;
-    offset?: number;
-    date_from?: string;
-    date_to?: string;
-    plate?: string;
-    status?: 'active' | 'completed';
-    payment_method?: 'cash' | 'card' | 'digital';
-  },
+  filters?: TransactionHistoryFilters,
   options?: {
     enabled?: boolean;
     staleTime?: number;
   }
 ) => {
   const { getAccessTokenSilently } = useAuth0();
-  const isOffline = useStore((s) => s.isOffline);
 
   return useQuery({
     queryKey: ['vehicles', 'transactions', parkingLotId, filters],
-    queryFn: async () => {
-      const token = await getAccessTokenSilently();
-      const response = await VehicleService.getTransactionHistory(token, parkingLotId, filters);
+    queryFn: async (): Promise<VehicleTransaction[]> => {
+      const normFilters = filters ?? {};
 
-      if (response.error) {
-        throw new Error(response.error);
+      // Offline: leer desde IndexedDB
+      if (connectionService.considerOffline()) {
+        const cached = await getCachedTransactionHistory(parkingLotId, normFilters);
+        return (cached ?? []) as unknown as VehicleTransaction[];
       }
 
-      return response.data || [];
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await VehicleService.getTransactionHistory(token, parkingLotId, normFilters);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        const data = response.data ?? [];
+        await cacheTransactionHistory(parkingLotId, normFilters, data as unknown as Record<string, unknown>[]);
+        return data;
+      } catch (error) {
+        if (isNetworkError(error)) {
+          const cached = await getCachedTransactionHistory(parkingLotId, normFilters);
+          if (cached && cached.length >= 0) {
+            return cached as unknown as VehicleTransaction[];
+          }
+        }
+        throw error;
+      }
     },
-    enabled: (options?.enabled ?? true) && !!parkingLotId && !isOffline,
+    enabled: (options?.enabled ?? true) && !!parkingLotId,
     staleTime: options?.staleTime ?? 1000 * 60 * 5,
     retry: (failureCount, error: Error & { code?: string }) => {
       if (error?.code === 'ERR_NETWORK') {

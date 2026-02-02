@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParkingLots } from '@/api/hooks/useParkingLots';
 import { useTransactionHistory } from '@/api/hooks';
 import { Button } from '@/components/common/Button';
 import ReceiptModal from '@/components/vehicles/ReceiptModal';
+import { useStore } from '@/store/useStore';
 import type { VehicleTransaction } from '@/types/parking';
 
 export default function TransactionsHistory() {
@@ -47,6 +49,8 @@ export default function TransactionsHistory() {
     payment_method: paymentMethod === 'all' ? undefined : paymentMethod,
   }), [offset, dateFrom, dateTo, plate, status, paymentMethod]);
 
+  const queryClient = useQueryClient();
+  const isOffline = useStore((s) => s.isOffline);
   const historyQuery = useTransactionHistory(parkingLotId || '', filters, {
     enabled: !!parkingLotId,
     staleTime: 1000 * 60 * 2, // 2 min: evita refetch automático mientras el usuario navega
@@ -137,7 +141,10 @@ export default function TransactionsHistory() {
     setItems([]);
     setHasMore(true);
     setOffset(0);
-    historyQuery.refetch();
+    // Invalidar para forzar refetch (si offset ya era 0 la clave no cambia y no se pediría de nuevo)
+    if (parkingLotId) {
+      queryClient.invalidateQueries({ queryKey: ['vehicles', 'transactions', parkingLotId] });
+    }
   };
 
   const clearFilters = () => {
@@ -150,33 +157,39 @@ export default function TransactionsHistory() {
 
   const applyQuickFilter = (preset: 'today' | 'yesterday' | 'week' | 'month') => {
     const now = new Date();
-    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+    // Backend solo acepta YYYY-MM-DD (no ISO con hora)
+    const formatDateLocal = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
 
     switch (preset) {
       case 'today': {
-        setDateFrom(formatDate(now));
-        setDateTo(formatDate(now));
+        setDateFrom(formatDateLocal(now));
+        setDateTo(formatDateLocal(now));
         break;
       }
       case 'yesterday': {
         const yesterday = new Date(now);
         yesterday.setDate(now.getDate() - 1);
-        setDateFrom(formatDate(yesterday));
-        setDateTo(formatDate(yesterday));
+        setDateFrom(formatDateLocal(yesterday));
+        setDateTo(formatDateLocal(yesterday));
         break;
       }
       case 'week': {
         const weekAgo = new Date(now);
         weekAgo.setDate(now.getDate() - 7);
-        setDateFrom(formatDate(weekAgo));
-        setDateTo(formatDate(now));
+        setDateFrom(formatDateLocal(weekAgo));
+        setDateTo(formatDateLocal(now));
         break;
       }
       case 'month': {
         const monthAgo = new Date(now);
         monthAgo.setMonth(now.getMonth() - 1);
-        setDateFrom(formatDate(monthAgo));
-        setDateTo(formatDate(now));
+        setDateFrom(formatDateLocal(monthAgo));
+        setDateTo(formatDateLocal(now));
         break;
       }
     }
@@ -302,6 +315,11 @@ export default function TransactionsHistory() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-1">Historial de Transacciones</h3>
+            {isOffline && items.length > 0 && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2 inline-block">
+                Datos en caché. Se actualizarán al reconectar.
+              </p>
+            )}
             <p className="text-sm text-gray-600">
               {items.length > 0 ? (
                 <>

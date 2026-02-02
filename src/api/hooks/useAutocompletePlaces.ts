@@ -19,12 +19,14 @@ const BOGOTA_RADIUS_M = 40_000; // 40km bias
 const MIN_CHARS = 3;
 const AUTOCOMPLETE_DEBOUNCE_MS = 500;
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_SESSION_STORAGE_ENTRIES = 50; // Evitar llenar sessionStorage (buena práctica)
 
 type Bias = { lat: number; lng: number; radius: number };
 
 type CachedValue = { data: AutocompleteSuggestion[]; ts: number };
 const memoryCache = new Map<string, CachedValue>();
 const pendingRequests = new Map<string, Promise<AutocompleteSuggestion[]>>();
+const sessionStorageKeys: string[] = []; // Orden de escritura para evict oldest
 
 const makeKey = (q: string, bias: Bias | undefined): string =>
   `${q.toLowerCase()}|${bias ? `${bias.lat},${bias.lng},${bias.radius}` : 'none'}`;
@@ -136,7 +138,12 @@ export const useAutocompletePlaces = (
         const value: CachedValue = { data, ts: Date.now() };
         memoryCache.set(key, value);
         try {
+          while (sessionStorageKeys.length >= MAX_SESSION_STORAGE_ENTRIES && sessionStorageKeys.length > 0) {
+            const oldest = sessionStorageKeys.shift();
+            if (oldest) sessionStorage.removeItem(oldest);
+          }
           sessionStorage.setItem(ssKey, JSON.stringify(value));
+          sessionStorageKeys.push(ssKey);
         } catch {
           // Ignore quota/security errors
         }

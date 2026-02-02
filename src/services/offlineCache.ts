@@ -5,7 +5,7 @@
  * para permitir funcionamiento offline cuando el backend no está disponible.
  */
 
-import { ParkiuDB, CachedParkingLot, CachedParkingSpaces } from '@/db/schema';
+import { ParkiuDB, CachedParkingLot, CachedParkingSpaces, CachedTransactionHistory } from '@/db/schema';
 import { ParkingLot, ParkingSpot } from '@/services/parking/types';
 
 const db = new ParkiuDB();
@@ -216,6 +216,99 @@ export async function updateCachedParkingSpaceStatus(
 }
 
 // ===============================
+// TRANSACTION HISTORY CACHE (offline-first historial)
+// ===============================
+
+export type TransactionHistoryFilters = {
+  limit?: number;
+  offset?: number;
+  date_from?: string;
+  date_to?: string;
+  plate?: string;
+  status?: 'active' | 'completed';
+  payment_method?: 'cash' | 'card' | 'digital';
+};
+
+function transactionHistoryFilterKey(filters: TransactionHistoryFilters = {}): string {
+  const normalized = {
+    limit: filters.limit ?? 50,
+    offset: filters.offset ?? 0,
+    date_from: filters.date_from ?? '',
+    date_to: filters.date_to ?? '',
+    plate: (filters.plate ?? '').trim().toUpperCase(),
+    status: filters.status ?? '',
+    payment_method: filters.payment_method ?? ''
+  };
+  return JSON.stringify(normalized);
+}
+
+const MAX_HISTORY_CACHE_ENTRIES_PER_LOT = 15;
+
+/**
+ * Guarda historial de transacciones en IndexedDB para uso offline.
+ * Mantiene como máximo MAX_HISTORY_CACHE_ENTRIES_PER_LOT entradas por parkingLotId (FIFO).
+ */
+export async function cacheTransactionHistory(
+  parkingLotId: string,
+  filters: TransactionHistoryFilters,
+  transactions: Record<string, unknown>[]
+): Promise<void> {
+  try {
+    const filterKey = transactionHistoryFilterKey(filters);
+    const id = `${parkingLotId}_${filterKey}`;
+
+    const entries = await db.cachedTransactionHistory
+      .where('parkingLotId')
+      .equals(parkingLotId)
+      .sortBy('cachedAt');
+
+    const isNewKey = !entries.some((e) => e.id === id);
+    if (isNewKey && entries.length >= MAX_HISTORY_CACHE_ENTRIES_PER_LOT) {
+      const toDelete = entries.slice(0, entries.length - MAX_HISTORY_CACHE_ENTRIES_PER_LOT + 1);
+      for (const e of toDelete) {
+        await db.cachedTransactionHistory.delete(e.id);
+      }
+    }
+
+    const cached: CachedTransactionHistory = {
+      id,
+      parkingLotId,
+      filterKey,
+      transactions,
+      cachedAt: new Date().toISOString()
+    };
+    await db.cachedTransactionHistory.put(cached);
+  } catch (error) {
+    console.error('Error caching transaction history:', error);
+  }
+}
+
+/**
+ * Obtiene historial de transacciones del caché (IndexedDB).
+ * Retorna null si no hay datos o el caché expiró (TTL 24h).
+ */
+export async function getCachedTransactionHistory(
+  parkingLotId: string,
+  filters: TransactionHistoryFilters
+): Promise<Record<string, unknown>[] | null> {
+  try {
+    const filterKey = transactionHistoryFilterKey(filters);
+    const id = `${parkingLotId}_${filterKey}`;
+    const cached = await db.cachedTransactionHistory.get(id);
+
+    if (!cached) return null;
+
+    const cacheAge = Date.now() - new Date(cached.cachedAt).getTime();
+    if (cacheAge > CACHE_MAX_AGE_MS) return null;
+
+    return cached.transactions;
+  } catch (error) {
+    console.error('Error getting cached transaction history:', error);
+    return null;
+  }
+}
+
+// ===============================
 // UTILIDADES
 // ===============================
 
@@ -226,6 +319,7 @@ export async function clearAllCache(): Promise<void> {
   try {
     await db.cachedParkingLots.clear();
     await db.cachedParkingSpaces.clear();
+    await db.cachedTransactionHistory.clear();
   } catch (error) {
     console.error('Error clearing cache:', error);
   }
@@ -237,11 +331,13 @@ export async function clearAllCache(): Promise<void> {
 export async function getCacheStats(): Promise<{
   parkingLotsCount: number;
   parkingSpacesEntries: number;
+  transactionHistoryEntries: number;
   oldestEntry: string | null;
 }> {
   try {
     const lots = await db.cachedParkingLots.count();
     const spaces = await db.cachedParkingSpaces.count();
+    const transactionHistoryEntries = await db.cachedTransactionHistory.count();
 
     const allLots = await db.cachedParkingLots.toArray();
     const oldest = allLots.length > 0
@@ -253,6 +349,7 @@ export async function getCacheStats(): Promise<{
     return {
       parkingLotsCount: lots,
       parkingSpacesEntries: spaces,
+      transactionHistoryEntries,
       oldestEntry: oldest
     };
   } catch (error) {
@@ -260,6 +357,7 @@ export async function getCacheStats(): Promise<{
     return {
       parkingLotsCount: 0,
       parkingSpacesEntries: 0,
+      transactionHistoryEntries: 0,
       oldestEntry: null
     };
   }

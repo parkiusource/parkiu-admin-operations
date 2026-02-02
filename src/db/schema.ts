@@ -64,6 +64,17 @@ export interface ActiveVehicleCache {
   cachedAt: string; // Cuándo se guardó localmente
 }
 
+// ===============================
+// CACHÉ OFFLINE - HISTORIAL DE TRANSACCIONES
+// ===============================
+export interface CachedTransactionHistory {
+  id: string; // Primary key: `${parkingLotId}_${filterKey}`
+  parkingLotId: string;
+  filterKey: string; // Hash estable de limit, offset, date_from, date_to, plate, status, payment_method
+  transactions: Record<string, unknown>[]; // VehicleTransaction[] serializado
+  cachedAt: string; // ISO timestamp
+}
+
 export class ParkiuDB extends Dexie {
   vehicles!: Table<Vehicle>;
   parkingSpots!: Table<ParkingSpot>;
@@ -72,6 +83,7 @@ export class ParkiuDB extends Dexie {
   cachedParkingLots!: Table<CachedParkingLot>;
   cachedParkingSpaces!: Table<CachedParkingSpaces>;
   activeVehicles!: Table<ActiveVehicleCache>;
+  cachedTransactionHistory!: Table<CachedTransactionHistory>;
 
   constructor() {
     super('ParkiuDB');
@@ -109,6 +121,18 @@ export class ParkiuDB extends Dexie {
       cachedParkingLots: 'id, cachedAt',
       cachedParkingSpaces: 'parkingLotId, cachedAt',
       activeVehicles: 'id, parkingLotId, plate, syncStatus, cachedAt'
+    });
+
+    // v5: add transaction history cache for offline-first historial
+    this.version(5).stores({
+      vehicles: '++id, plate, status, parkingSpotId, syncStatus',
+      parkingSpots: '++id, number, type, status, floor, syncStatus',
+      transactions: '++id, vehicleId, status, syncStatus',
+      operations: '++id, type, plate, status, createdAt',
+      cachedParkingLots: 'id, cachedAt',
+      cachedParkingSpaces: 'parkingLotId, cachedAt',
+      activeVehicles: 'id, parkingLotId, plate, syncStatus, cachedAt',
+      cachedTransactionHistory: 'id, parkingLotId, cachedAt'
     });
   }
 }

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuth0 } from '@auth0/auth0-react';
 import {
   SystemStatsResponse,
   ParkingOverviewResponse,
@@ -29,9 +30,13 @@ const defaultQueryConfig = {
 // ===================================
 // FUNCIONES DE FETCH
 // ===================================
+// Token vía Auth0 (nunca localStorage: riesgo XSS). Ver docs/OFFLINE_STORAGE.md
 
-async function fetchWithAuth<T>(url: string): Promise<T> {
-  const token = localStorage.getItem('auth_token'); // Ajustar según tu implementación
+async function fetchWithAuth<T>(url: string, getToken: () => Promise<string>): Promise<T> {
+  const token = await getToken();
+  if (!token) {
+    throw new Error('No se pudo obtener el token de autenticación');
+  }
 
   const response = await fetch(`${API_BASE_URL}${url}`, {
     headers: {
@@ -52,13 +57,15 @@ async function fetchWithAuth<T>(url: string): Promise<T> {
 // ===================================
 
 export const useSystemStats = (params: DashboardStatsParams = {}) => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryParams = new URLSearchParams();
   if (params.timeRange) queryParams.set('timeRange', params.timeRange);
   if (params.timezone) queryParams.set('timezone', params.timezone);
 
   return useQuery<SystemStatsResponse>({
     queryKey: ['dashboard', 'system-stats', params],
-    queryFn: () => fetchWithAuth<SystemStatsResponse>(`/api/dashboard/stats?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<SystemStatsResponse>(`/api/dashboard/stats?${queryParams.toString()}`, getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
     staleTime: 2 * 60 * 1000, // 2 minutos para stats críticas
   });
@@ -69,6 +76,7 @@ export const useSystemStats = (params: DashboardStatsParams = {}) => {
 // ===================================
 
 export const useParkingOverview = (params: ParkingOverviewParams = {}) => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set('page', params.page.toString());
   if (params.limit) queryParams.set('limit', params.limit.toString());
@@ -78,7 +86,8 @@ export const useParkingOverview = (params: ParkingOverviewParams = {}) => {
 
   return useQuery<ParkingOverviewResponse>({
     queryKey: ['dashboard', 'parking-overview', params],
-    queryFn: () => fetchWithAuth<ParkingOverviewResponse>(`/api/dashboard/parkings?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<ParkingOverviewResponse>(`/api/dashboard/parkings?${queryParams.toString()}`, getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
   });
 };
@@ -88,6 +97,7 @@ export const useParkingOverview = (params: ParkingOverviewParams = {}) => {
 // ===================================
 
 export const useRecentActivity = (params: RecentActivityParams = {}) => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryParams = new URLSearchParams();
   if (params.limit) queryParams.set('limit', params.limit.toString());
   if (params.types) queryParams.set('types', params.types.join(','));
@@ -95,7 +105,8 @@ export const useRecentActivity = (params: RecentActivityParams = {}) => {
 
   return useQuery<RecentActivityResponse>({
     queryKey: ['dashboard', 'recent-activity', params],
-    queryFn: () => fetchWithAuth<RecentActivityResponse>(`/api/dashboard/activity?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<RecentActivityResponse>(`/api/dashboard/activity?${queryParams.toString()}`, getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
     staleTime: 1 * 60 * 1000, // 1 minuto para actividad reciente
   });
@@ -106,6 +117,7 @@ export const useRecentActivity = (params: RecentActivityParams = {}) => {
 // ===================================
 
 export const useOccupancyStats = (params: OccupancyStatsParams) => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryParams = new URLSearchParams();
   queryParams.set('timeRange', params.timeRange);
   if (params.parkingId) queryParams.set('parkingId', params.parkingId);
@@ -113,7 +125,8 @@ export const useOccupancyStats = (params: OccupancyStatsParams) => {
 
   return useQuery<OccupancyStats>({
     queryKey: ['dashboard', 'occupancy-stats', params],
-    queryFn: () => fetchWithAuth<OccupancyStats>(`/api/dashboard/occupancy?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<OccupancyStats>(`/api/dashboard/occupancy?${queryParams.toString()}`, getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
     staleTime: 3 * 60 * 1000, // 3 minutos
   });
@@ -124,12 +137,14 @@ export const useOccupancyStats = (params: OccupancyStatsParams) => {
 // ===================================
 
 export const useRevenueStats = (timeRange: 'today' | 'week' | 'month' | 'year' = 'today') => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryParams = new URLSearchParams();
   queryParams.set('timeRange', timeRange);
 
   return useQuery<RevenueStats>({
     queryKey: ['dashboard', 'revenue-stats', timeRange],
-    queryFn: () => fetchWithAuth<RevenueStats>(`/api/dashboard/revenue?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<RevenueStats>(`/api/dashboard/revenue?${queryParams.toString()}`, getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
   });
 };
@@ -139,9 +154,11 @@ export const useRevenueStats = (timeRange: 'today' | 'week' | 'month' | 'year' =
 // ===================================
 
 export const useSystemHealth = () => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   return useQuery<SystemHealthResponse>({
     queryKey: ['dashboard', 'system-health'],
-    queryFn: () => fetchWithAuth<SystemHealthResponse>('/api/dashboard/health'),
+    queryFn: () => fetchWithAuth<SystemHealthResponse>('/api/dashboard/health', getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
     staleTime: 1 * 60 * 1000, // 1 minuto para salud del sistema
     refetchInterval: 2 * 60 * 1000, // Auto-refresh cada 2 minutos
@@ -153,12 +170,14 @@ export const useSystemHealth = () => {
 // ===================================
 
 export const useUserStats = (timeRange: 'today' | 'week' | 'month' = 'month') => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryParams = new URLSearchParams();
   queryParams.set('timeRange', timeRange);
 
   return useQuery<UserStats>({
     queryKey: ['dashboard', 'user-stats', timeRange],
-    queryFn: () => fetchWithAuth<UserStats>(`/api/dashboard/users?${queryParams.toString()}`),
+    queryFn: () => fetchWithAuth<UserStats>(`/api/dashboard/users?${queryParams.toString()}`, getAccessTokenSilently),
+    enabled: isAuthenticated,
     ...defaultQueryConfig,
   });
 };
