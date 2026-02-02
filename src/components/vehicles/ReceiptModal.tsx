@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/common/Dialog';
 import { Button } from '@/components/common/Button';
+import { useToast } from '@/hooks';
 import { tryPrintViaQZ, selectQZPrinter } from '@/services/printing/qz';
 import type { ParkingLot, VehicleTransaction } from '@/types/parking';
 
@@ -63,6 +64,8 @@ function formatDuration(minutes: number | undefined): string {
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, transaction, parkingLot }) => {
+  const { addToast } = useToast();
+
   if (!transaction) return null;
 
   const parsed: Record<string, unknown> | null = (() => {
@@ -103,25 +106,28 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
           taxId: parkingLot.tax_id,
         } : undefined,
       });
-      if (ok) return;
+      if (ok) {
+        addToast('Recibo enviado a la impresora térmica.', 'success');
+        return;
+      }
       await selectQZPrinter();
+      addToast('QZ Tray no disponible. Abriendo ventana de impresión del navegador.', 'success');
 
       const html = buildHtml();
-      const win = window.open('', '_blank');
-      if (win) {
-        win.document.write(html);
-        win.document.close();
-
-        // Hacer la impresión asíncrona para no bloquear la aplicación
-        setTimeout(() => {
-          win.focus();
-          win.print();
-          // Opcional: cerrar automáticamente después de imprimir
-          // win.close();
-        }, 100);
+      const printWin = window.open('', '_blank');
+      if (!printWin) {
+        addToast('No se pudo abrir la ventana. Desbloquea las ventanas emergentes para este sitio.', 'error');
+        return;
       }
+      printWin.document.write(html);
+      printWin.document.close();
+      setTimeout(() => {
+        printWin.focus();
+        printWin.print();
+      }, 100);
     } catch (e) {
       console.error('Print error:', e);
+      addToast(e instanceof Error ? e.message : 'Error desconocido al imprimir', 'error');
     }
   };
 

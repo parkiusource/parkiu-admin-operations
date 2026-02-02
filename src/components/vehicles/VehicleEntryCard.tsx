@@ -89,15 +89,11 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   const isOperatorAuthorized = useMemo(() => {
     const role = profile?.role || '';
     const authorized = role === 'local_admin' || role === 'global_admin' || role === 'operator';
-    if (process.env.NODE_ENV === 'development') {
-    }
     return authorized;
   }, [profile]);
   const lots = (parkingLots && parkingLots.length > 0)
     ? parkingLots
     : (parkingLot ? [parkingLot] : []);
-  if (process.env.NODE_ENV === 'development') {
-  }
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingLot | null>(lots[0] || null);
   const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | null>(null);
   const [plate, setPlate] = useState('');
@@ -313,12 +309,12 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
               <Button
                 type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => {
-                  (async () => {
+                onClick={async () => {
+                  try {
                     const ok = await tryPrintViaQZ({
                       transactionId: entryResponse.transaction_id,
                       plate: entryPlate.toUpperCase(),
-                      entryTime: new Date(entryResponse.entry_time).toLocaleString('es-CO'),
+                      entryTime: new Date(entryResponse.entry_time).toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
                       exitTime: undefined,
                       durationMinutes: 0,
                       space: entrySpot,
@@ -341,8 +337,12 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                         taxId: selectedParkingLot.tax_id,
                       } : undefined,
                     });
-                    if (ok) return;
+                    if (ok) {
+                      addToast('Ticket enviado a la impresora térmica.', 'success');
+                      return;
+                    }
                     await selectQZPrinter();
+                    addToast('QZ Tray no disponible. Abriendo ventana de impresión del navegador.', 'success');
                     const rateForSelected = selectedVehicle
                       ? (
                         selectedVehicle.value === 'car' ? selectedParkingLot?.car_rate_per_minute :
@@ -373,25 +373,26 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                       ${selectedVehicle ? `<div class="row"><div>Tipo:</div><div>${selectedVehicle.label}</div></div>` : ''}
                       ${selectedVehicle ? `<div class="row"><div>Tarifa:</div><div>$${(rateForSelected != null ? rateForSelected.toLocaleString('es-CO') : '0')}/min</div></div>` : ''}
                       <div class="row"><div>Espacio:</div><div class="mono">${entrySpot}</div></div>
-                      <div class="row"><div>Entrada:</div><div>${new Date(entryResponse.entry_time).toLocaleString('es-CO')}</div></div>
+                      <div class="row"><div>Entrada:</div><div>${new Date(entryResponse.entry_time).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}</div></div>
                       <hr />
                       <div class="center">Conserve este ticket</div>
                       <div class="center">Powered by ParkiU</div>
                     </div></body></html>`;
                     const win = window.open('', '_blank');
-                    if (win) {
-                      win.document.write(html);
-                      win.document.close();
-
-                      // Hacer la impresión asíncrona para no bloquear la aplicación
-                      setTimeout(() => {
-                        win.focus();
-                        win.print();
-                        // Opcional: cerrar automáticamente después de imprimir
-                        // win.close();
-                      }, 100);
+                    if (!win) {
+                      addToast('No se pudo abrir la ventana. Desbloquea las ventanas emergentes para este sitio.', 'error');
+                      return;
                     }
-                  })();
+                    win.document.write(html);
+                    win.document.close();
+                    setTimeout(() => {
+                      win.focus();
+                      win.print();
+                    }, 100);
+                  } catch (e) {
+                    console.error('Error printing ticket', e);
+                    addToast(e instanceof Error ? e.message : 'Error desconocido al imprimir', 'error');
+                  }
                 }}
               >
                 <Printer className="w-4 h-4 mr-2" /> Imprimir Ticket
