@@ -38,8 +38,12 @@ export const useAdminProfile = () => {
       }
       return failureCount < 1; // Solo 1 retry para otros errores
     },
+    // 🔥 FIX INFINITE LOOP: networkMode 'always' evita cancelaciones/reintentos por estado de red
+    networkMode: 'always',
     staleTime: 1000 * 60 * 5, // 5 minutos
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 };
 

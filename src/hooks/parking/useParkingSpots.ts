@@ -715,7 +715,6 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
           delete globalDebounce[debounceKey];
         }, 500);
 
-      } else {
       }
 
       // Pasar los variables al callback del usuario, no el backendResponse con placeholders

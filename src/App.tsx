@@ -38,9 +38,14 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
+      // 🔥 FIX INFINITE LOOP: Configuración global para evitar refetches automáticos
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      networkMode: 'always', // Intenta siempre, maneja errores de red gracefully
     },
     mutations: {
       retry: 1,
+      // ✅ Mutaciones usan networkMode por defecto ('online') para compatibilidad con lógica offline-first
     },
   },
 });

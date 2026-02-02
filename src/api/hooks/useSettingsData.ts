@@ -33,7 +33,11 @@ export const useAdminProfileSettings = () => {
       if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
       return failureCount < 2;
     },
-    enabled: typeof navigator !== 'undefined' && navigator.onLine,
+    // 🔥 FIX INFINITE LOOP: Removido navigator.onLine - React Query maneja network state
+    networkMode: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -82,7 +86,11 @@ export const useAdminParkingLotsSettings = () => {
       if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
       return failureCount < 2;
     },
-    enabled: typeof navigator !== 'undefined' && navigator.onLine,
+    // 🔥 FIX INFINITE LOOP: Removido navigator.onLine - React Query maneja network state
+    networkMode: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -129,12 +137,17 @@ export const useParkingLotPricing = (parkingLotId: string | null) => {
       const token = await getAccessTokenSilently();
       return getParkingLotPricing(token, parkingLotId);
     },
-    enabled: !!parkingLotId && (typeof navigator === 'undefined' ? true : navigator.onLine),
+    // 🔥 FIX INFINITE LOOP: Removido navigator.onLine de enabled
+    enabled: !!parkingLotId,
+    networkMode: 'always',
     staleTime: 10 * 60 * 1000, // 10 minutos
     retry: (failureCount, error: Error & { code?: string }) => {
       if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
       return failureCount < 2;
     },
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -187,12 +200,17 @@ export const useParkingLotSchedule = (parkingLotId: string | null) => {
       const token = await getAccessTokenSilently();
       return getParkingLotSchedule(token, parkingLotId);
     },
-    enabled: !!parkingLotId && (typeof navigator === 'undefined' ? true : navigator.onLine),
+    // 🔥 FIX INFINITE LOOP: Removido navigator.onLine de enabled
+    enabled: !!parkingLotId,
+    networkMode: 'always',
     staleTime: 10 * 60 * 1000, // 10 minutos
     retry: (failureCount, error: Error & { code?: string }) => {
       if (error?.code === 'ERR_NETWORK' || error?.message?.includes('ERR_CONNECTION_REFUSED')) return false;
       return failureCount < 2;
     },
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 };
 

@@ -272,7 +272,18 @@ export const useRegisterVehicleEntry = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // ✅ networkMode: 'always' permite que la mutación se ejecute sin validar conexión
+    // Nuestra lógica interna maneja offline-first
+    networkMode: 'always',
     mutationFn: async ({ parkingLotId, vehicleData }: { parkingLotId: string; vehicleData: VehicleEntry }) => {
+      console.log('🚀 [useRegisterVehicleEntry] Iniciando mutación...', { parkingLotId, plate: vehicleData.plate });
+      console.log('🔌 [useRegisterVehicleEntry] Estado:', {
+        isAuthenticated,
+        'navigator.onLine': navigator.onLine,
+        'considerOffline': connectionService.considerOffline(),
+        'store.isOffline': useStore.getState().isOffline
+      });
+
       if (!isAuthenticated) {
         throw new Error('Usuario no autenticado');
       }
@@ -282,6 +293,7 @@ export const useRegisterVehicleEntry = (options?: {
         const spotNumber = vehicleData.space_number || vehicleData.spot_number || vehicleData.parking_space_number || '';
 
         const runOfflineEntry = async () => {
+          console.log('📴 [useRegisterVehicleEntry] Ejecutando entrada OFFLINE');
           const idempotencyKey = generateIdempotencyKey();
           await enqueueOperation({
             type: 'entry',
@@ -290,8 +302,10 @@ export const useRegisterVehicleEntry = (options?: {
             payload: { ...vehicleData, client_entry_time: now, idempotencyKey },
             idempotencyKey,
           });
+          console.log('✅ [useRegisterVehicleEntry] Operación encolada en IndexedDB');
           const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
           await cacheVehicleEntry(parkingLotId, vehicleData.plate, vehicleData.vehicle_type, spotNumber);
+          console.log('✅ [useRegisterVehicleEntry] Vehículo cacheado localmente');
           return {
             transaction_id: Date.now(),
             entry_time: now,
@@ -303,6 +317,7 @@ export const useRegisterVehicleEntry = (options?: {
 
         // OFFLINE: navigator.onLine o store offline → ir directo a local sin llamar backend
         if (connectionService.considerOffline()) {
+          console.log('📴 [useRegisterVehicleEntry] Modo OFFLINE detectado');
           return runOfflineEntry();
         }
 
@@ -483,6 +498,9 @@ export const useRegisterVehicleExit = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // ✅ networkMode: 'always' permite que la mutación se ejecute sin validar conexión
+    // Nuestra lógica interna maneja offline-first
+    networkMode: 'always',
     mutationFn: async ({
       parkingLotId,
       vehicleData,
@@ -492,6 +510,14 @@ export const useRegisterVehicleExit = (options?: {
       vehicleData: VehicleExit;
       frozenExitTime?: string;
     }) => {
+      console.log('🚀 [useRegisterVehicleExit] Iniciando mutación...', { parkingLotId, plate: vehicleData.plate });
+      console.log('🔌 [useRegisterVehicleExit] Estado:', {
+        isAuthenticated,
+        'navigator.onLine': navigator.onLine,
+        'considerOffline': connectionService.considerOffline(),
+        'store.isOffline': useStore.getState().isOffline
+      });
+
       if (!isAuthenticated) {
         throw new Error('Usuario no autenticado');
       }
@@ -500,9 +526,11 @@ export const useRegisterVehicleExit = (options?: {
       const now = frozenExitTime || new Date().toISOString();
 
       const runOfflineExit = async (): Promise<VehicleExitResponse> => {
+        console.log('📴 [useRegisterVehicleExit] Ejecutando salida OFFLINE');
         const idempotencyKey = generateIdempotencyKey();
         const { findCachedVehicle, removeVehicleFromCache } = await import('@/services/activeVehiclesCache');
         const cachedVehicle = await findCachedVehicle(parkingLotId, vehicleData.plate);
+        console.log('🔍 [useRegisterVehicleExit] Vehículo en cache:', cachedVehicle);
         // Calcular duración usando el tiempo congelado, no la hora actual
         const exitTimestamp = new Date(now).getTime();
         const durationMinutes = cachedVehicle
@@ -515,7 +543,9 @@ export const useRegisterVehicleExit = (options?: {
           payload: { ...vehicleData, client_exit_time: now, idempotencyKey },
           idempotencyKey,
         });
+        console.log('✅ [useRegisterVehicleExit] Operación de salida encolada en IndexedDB');
         await removeVehicleFromCache(parkingLotId, vehicleData.plate);
+        console.log('✅ [useRegisterVehicleExit] Vehículo removido del cache local');
         return {
           transaction_id: Date.now(),
           total_cost: vehicleData.payment_amount,
@@ -535,6 +565,7 @@ export const useRegisterVehicleExit = (options?: {
 
       // OFFLINE: navigator.onLine o store offline → ir directo a local
       if (connectionService.considerOffline()) {
+        console.log('📴 [useRegisterVehicleExit] Modo OFFLINE detectado');
         return runOfflineExit();
       }
 

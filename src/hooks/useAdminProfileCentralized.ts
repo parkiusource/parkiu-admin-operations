@@ -25,8 +25,11 @@ export const useAdminProfileCentralized = () => {
       return result;
     },
     // Configuración ESTRICTA para evitar múltiples peticiones
-    enabled: isAuthenticated && typeof navigator !== 'undefined' && navigator.onLine,
+    // 🔥 FIX INFINITE LOOP: Removido navigator.onLine de enabled - React Query maneja network state internamente
+    enabled: isAuthenticated,
     retry: false,
+    // 🔥 FIX INFINITE LOOP: networkMode 'always' intenta la petición incluso offline, evita cancelaciones/reintentos
+    networkMode: 'always',
     staleTime: Infinity, // Cache infinito - solo se actualiza manualmente o al reconectar
     gcTime: 1000 * 60 * 30, // Garbage collection después de 30 minutos
     refetchOnWindowFocus: false,
