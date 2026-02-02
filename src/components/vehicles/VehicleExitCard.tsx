@@ -726,7 +726,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
                   placeholder="Buscar por placa"
-                  className="text-sm p-2 h-9 flex-1 font-mono"
+                  className="text-base sm:text-sm p-2 h-10 flex-1 font-mono"
                   maxLength={8}
                 />
                 <Button

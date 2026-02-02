@@ -40,7 +40,7 @@ export default function MainLayout() {
             - min-h-0: required so overflow works inside flex
             - overflow-y-auto: keep scrolling inside main to avoid mobile viewport jumps
         */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-50 pt-14 lg:pt-0">
+        <main className="flex-1 min-h-0 flex flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain ios-scroll bg-slate-50 pt-14 lg:pt-0">
           <Outlet />
         </main>
       </div>

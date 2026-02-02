@@ -510,7 +510,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
                   placeholder="ABC123"
-                  className="text-sm p-2 h-9 font-mono"
+                  className="text-base sm:text-sm p-2 h-10 font-mono"
                   maxLength={8}
                 />
               </div>
@@ -526,7 +526,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                     id="spaceNumber"
                     value={spaceNumber}
                     onChange={(e) => setSpaceNumber(e.target.value)}
-                    className="w-full text-sm p-2 h-9 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full text-base sm:text-sm p-2 h-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Seleccione</option>
                     {availableSpots.map((spot) => (

@@ -454,7 +454,7 @@ export default function AdminParkingDashboard() {
                       <div className="min-w-0">
                         <p className="text-[10px] sm:text-xs lg:text-sm text-slate-600 flex items-center gap-1">
                           Espacios
-                          {overviewStats.loadingSpaces && <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse"></span>}
+                          {overviewStats.loadingSpaces && <span className="w-1.5 h-1.5 bg-slate-400 rounded-full motion-safe:animate-pulse"></span>}
                         </p>
                         <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900">{overviewStats.totalSpaces}</p>
                       </div>
@@ -752,7 +752,7 @@ export default function AdminParkingDashboard() {
                     <h3 className="text-base sm:text-xl font-bold text-slate-900 truncate">{currentParking.name}</h3>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 bg-green-100 rounded-full flex-shrink-0">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full motion-safe:animate-pulse"></div>
                     <span className="text-xs sm:text-sm font-medium text-green-700">En Vivo</span>
                   </div>
                 </div>
@@ -847,7 +847,7 @@ export default function AdminParkingDashboard() {
 
                     <div className="relative w-full bg-slate-100 rounded-full h-2.5 sm:h-4 overflow-hidden">
                       <div
-                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 via-yellow-500 to-red-500 rounded-full transition-all duration-1000 ease-out"
+                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 via-yellow-500 to-red-500 rounded-full transition-[width] duration-500 ease-out"
                         style={{ width: `${Math.min(occupancyStats.occupancyRate, 100)}%` }}
                       />
                     </div>
@@ -1080,11 +1080,11 @@ export default function AdminParkingDashboard() {
       {/* Botón de ayuda flotante - Oculto en móvil muy pequeño */}
       <button
         onClick={() => setShowKeyboardHelp(true)}
-        className="hidden sm:flex fixed bottom-40 right-4 sm:right-6 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/60 backdrop-blur-sm text-white rounded-full shadow-lg hover:bg-gray-700/80 transition-all duration-200 z-50 items-center justify-center group"
+        className="hidden sm:flex fixed bottom-40 right-4 sm:right-6 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/60 supports-[backdrop-filter]:backdrop-blur-sm text-white rounded-full shadow-lg hover:bg-gray-700/80 transition-colors duration-200 z-50 items-center justify-center group"
         title="Atajos de teclado (Shift + ?)"
       >
         <LuKeyboard className="w-4 h-4 sm:w-5 sm:h-5" />
-        <span className="absolute -top-8 right-0 bg-gray-800/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap hidden lg:block">
+        <span className="absolute -top-8 right-0 bg-gray-800/90 supports-[backdrop-filter]:backdrop-blur-sm text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap hidden lg:block">
           Atajos (Shift + ?)
         </span>
       </button>
@@ -1152,15 +1152,17 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
 
   const hasActiveVehicle = spot.status === 'occupied' && !!spot.active_vehicle?.plate;
   const canReleaseDirectly = spot.status === 'occupied' ? !hasActiveVehicle : true;
+  // Performance: avoid animating dozens/hundreds of items at once
+  const shouldPulse = spot.status === 'occupied';
 
   return (
-    <div className={`group relative rounded-xl sm:rounded-2xl border-2 p-3 sm:p-4 transition-all duration-300 hover:shadow-lg ${
+    <div className={`group relative rounded-xl sm:rounded-2xl border-2 p-3 sm:p-4 transition-colors transition-shadow duration-200 sm:hover:shadow-lg ${
       config.card
     } ${isUpdating ? 'opacity-50' : ''}`} style={{ isolation: 'isolate' }}>
 
       {/* Indicador de estado (pulso) */}
       <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-        <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${config.pulse} animate-pulse shadow-sm`}></div>
+        <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${config.pulse} ${shouldPulse ? 'motion-safe:animate-pulse' : ''} shadow-sm`}></div>
       </div>
 
       {/* Header compacto */}
@@ -1196,7 +1198,7 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
           <button
             onClick={() => hasValidId && onOccupy(spotId!)}
             disabled={isUpdating || !hasValidId}
-            className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-colors disabled:opacity-50"
           >
             <LuPlus className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden xs:inline">Ocupar</span>
@@ -1208,7 +1210,7 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
             <button
               onClick={() => hasValidId && onRelease(spotId!)}
               disabled={isUpdating || !canReleaseDirectly || !hasValidId}
-              className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-colors disabled:opacity-50"
             >
               <LuArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Liberar</span>
@@ -1217,7 +1219,7 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
               <button
                 onClick={() => setForceOpen(true)}
                 disabled={isUpdating}
-                className="inline-flex items-center justify-center p-2 sm:px-3 sm:py-2.5 text-xs font-semibold rounded-lg sm:rounded-xl bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 transition-all disabled:opacity-50"
+                className="inline-flex items-center justify-center p-2 sm:px-3 sm:py-2.5 text-xs font-semibold rounded-lg sm:rounded-xl bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
                 title="Forzar"
               >
                 <LuTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1230,7 +1232,7 @@ function SpotCard({ spot, onOccupy, onRelease, onMaintenanceToggle, isUpdating }
           <button
             onClick={() => hasValidId && onMaintenanceToggle(spotId!, spot.status)}
             disabled={isUpdating || !hasValidId}
-            className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-colors disabled:opacity-50"
           >
             <LuSettings className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden xs:inline">Reactivar</span>

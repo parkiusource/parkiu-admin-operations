@@ -150,7 +150,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
               {searchPlate && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
                   {isSearching ? (
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse block" />
+                    <span className="w-2 h-2 bg-blue-500 rounded-full motion-safe:animate-pulse block" />
                   ) : (
                     <span className="w-2 h-2 bg-green-500 rounded-full block" />
                   )}
@@ -301,7 +301,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black bg-opacity-25 backdrop-blur-sm" />
+            <div className="fixed inset-0 bg-black/25 supports-[backdrop-filter]:backdrop-blur-sm" />
           </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
@@ -317,7 +317,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
                 leaveTo="opacity-0 scale-95"
               >
         <Dialog.Panel
-          className="w-full transform overflow-hidden bg-white text-left align-middle shadow-xl transition-all border border-gray-200
+          className="w-full transform overflow-hidden bg-white text-left align-middle shadow-xl transition-transform border border-gray-200
                      rounded-t-2xl sm:rounded-xl
                      max-h-[90dvh] sm:max-h-[85vh]
                      flex flex-col
