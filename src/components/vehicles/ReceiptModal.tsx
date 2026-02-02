@@ -239,10 +239,35 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ open, onOpenChange, 
           </div>
         </div>
 
-        <DialogFooter>
-          <Button type="button" onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white">Imprimir</Button>
-          <Button type="button" onClick={downloadHtml}>Descargar HTML</Button>
-          <Button type="button" onClick={downloadJson}>Descargar JSON</Button>
+        <DialogFooter className="flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            onClick={handlePrint}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white order-1 sm:order-none"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Imprimir
+          </Button>
+          <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-none">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={downloadHtml}
+              className="flex-1 sm:flex-none text-sm"
+            >
+              HTML
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={downloadJson}
+              className="flex-1 sm:flex-none text-sm"
+            >
+              JSON
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

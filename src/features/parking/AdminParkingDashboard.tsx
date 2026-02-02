@@ -387,7 +387,7 @@ export default function AdminParkingDashboard() {
     // ✅ LISTA DE PARQUEADEROS - Optimizada para móvil
     return (
       <>
-        <div className="min-h-screen bg-slate-50">
+        <div className="flex-1 flex flex-col bg-slate-50 pb-safe">
           {/* Banner de datos offline */}
           {isUsingCachedData && (
             <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
@@ -501,7 +501,7 @@ export default function AdminParkingDashboard() {
           </div>
 
           {/* Lista de parqueaderos - Grid responsive */}
-          <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+          <div className="flex-1 max-w-7xl mx-auto w-full px-3 py-4 sm:px-6 sm:py-8 lg:px-8 pb-24 sm:pb-8">
             {isLoadingLots ? (
               /* Loading skeleton responsive */
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
@@ -625,15 +625,15 @@ export default function AdminParkingDashboard() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50">
+      <div className="flex-1 flex flex-col bg-slate-50 pb-safe">
       {/* ✅ Banner de datos offline */}
       {isUsingCachedData && (
         <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
           <OfflineBanner />
         </div>
       )}
-      {/* Header del parqueadero específico - Optimizado para móvil */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+      {/* Header del parqueadero específico - Sticky dentro del scroll del MainLayout */}
+      <div className="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-10 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-3 py-2 sm:px-6 sm:py-3 lg:px-8">
 
           {/* ✅ BREADCRUMBS - Ocultos en móvil muy pequeño */}
@@ -734,7 +734,7 @@ export default function AdminParkingDashboard() {
           </div>
         </div>
       )}
-      <div className="max-w-[1600px] mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="flex-1 max-w-[1600px] mx-auto w-full px-3 py-4 sm:px-6 sm:py-6 lg:px-8 pb-24 sm:pb-6">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
           {/* Panel principal */}
           <div className="xl:col-span-8 space-y-4 sm:space-y-6 order-2 xl:order-1">

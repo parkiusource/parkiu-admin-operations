@@ -21,6 +21,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
   selectedParkingLot,
 }) => {
   const [activeOperation, setActiveOperation] = useState<OperationType>(null);
+  const [fabOpen, setFabOpen] = useState(false);
   const [searchPlate, setSearchPlate] = useState('');
 
   // Hook para búsqueda de vehículos con debounce
@@ -202,11 +203,15 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
   return (
     <>
       {/* Botones de acceso rápido */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-2">
+      <div
+        className="fixed right-4 sm:right-6 z-40 flex flex-col items-end gap-3"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}
+      >
+        {/* Desktop: always visible quick panel */}
+        <div className="hidden sm:block bg-white rounded-lg shadow-lg border border-gray-200 p-2">
           <div className="flex flex-col gap-2">
             <button
-              onClick={() => setActiveOperation('entry')}
+              onClick={() => { setActiveOperation('entry'); setFabOpen(false); }}
               className="flex items-center gap-2 px-3 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors group"
               title="Entrada (F1 o Ctrl/Cmd+E)"
             >
@@ -216,7 +221,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveOperation('exit')}
+              onClick={() => { setActiveOperation('exit'); setFabOpen(false); }}
               className="flex items-center gap-2 px-3 py-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors group"
               title="Salida (F2 o Ctrl/Cmd+D)"
             >
@@ -226,7 +231,7 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveOperation('search')}
+              onClick={() => { setActiveOperation('search'); setFabOpen(false); }}
               className="flex items-center gap-2 px-3 py-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors group"
               title="Buscar (F3 o Ctrl/Cmd+B)"
             >
@@ -235,6 +240,47 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
               <kbd className="hidden group-hover:block text-xs bg-gray-100 px-1 rounded">F3</kbd>
             </button>
           </div>
+        </div>
+
+        {/* Mobile: compact FAB + expandable menu */}
+        <div className="sm:hidden flex flex-col items-end gap-3">
+          {fabOpen && (
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-2 w-44">
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => { setActiveOperation('entry'); setFabOpen(false); }}
+                  className="flex items-center gap-2 px-3 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                >
+                  <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
+                  <span className="text-sm font-semibold">Entrada</span>
+                </button>
+                <button
+                  onClick={() => { setActiveOperation('exit'); setFabOpen(false); }}
+                  className="flex items-center gap-2 px-3 py-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <ArrowLeftStartOnRectangleIcon className="w-5 h-5" />
+                  <span className="text-sm font-semibold">Salida</span>
+                </button>
+                <button
+                  onClick={() => { setActiveOperation('search'); setFabOpen(false); }}
+                  className="flex items-center gap-2 px-3 py-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <MagnifyingGlassIcon className="w-5 h-5" />
+                  <span className="text-sm font-semibold">Buscar</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setFabOpen(v => !v)}
+            className="w-14 h-14 rounded-full bg-parkiu-600 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={fabOpen ? 'Cerrar acciones rápidas' : 'Abrir acciones rápidas'}
+            title="Acciones rápidas"
+          >
+            <span className="text-2xl leading-none">{fabOpen ? '×' : '+'}</span>
+          </button>
         </div>
       </div>
 
@@ -259,7 +305,8 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
           </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
+            {/* Mobile: bottom sheet. Desktop: centered modal */}
+            <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4 text-center">
               <Transition.Child
                 as={Fragment}
                 enter="ease-out duration-300"
@@ -270,11 +317,15 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
                 leaveTo="opacity-0 scale-95"
               >
         <Dialog.Panel
-          className="w-full max-w-2xl transform overflow-hidden rounded-xl bg-white text-left align-middle shadow-xl transition-all border border-gray-200"
+          className="w-full transform overflow-hidden bg-white text-left align-middle shadow-xl transition-all border border-gray-200
+                     rounded-t-2xl sm:rounded-xl
+                     max-h-[90dvh] sm:max-h-[85vh]
+                     flex flex-col
+                     sm:max-w-2xl"
           data-modal="true"
         >
           {/* Header simple */}
-          <div className="px-4 py-2.5 border-b border-gray-200 flex items-center justify-between gap-3">
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3 flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               {selectedParkingLot && (
                 <span className="text-sm font-medium text-gray-700 truncate">
@@ -328,12 +379,12 @@ export const QuickVehicleOperations: React.FC<QuickVehicleOperationsProps> = ({
           </div>
 
           {/* Contenido */}
-          <div className="p-5">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {renderModalContent()}
           </div>
 
           {/* Footer atajos */}
-          <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-center gap-4 text-xs text-gray-500">
+          <div className="hidden sm:flex px-4 py-2 border-t border-gray-100 items-center justify-center gap-4 text-xs text-gray-500 flex-shrink-0">
             <span><kbd className="font-mono">F1</kbd> Entrada</span>
             <span><kbd className="font-mono">F2</kbd> Salida</span>
             <span><kbd className="font-mono">F3</kbd> Buscar</span>

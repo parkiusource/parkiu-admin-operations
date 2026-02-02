@@ -11,7 +11,10 @@ export const DialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(
     <div
       ref={ref}
       className={twMerge(
-        'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+        // Mobile: stack buttons vertically with gap
+        'flex flex-col-reverse gap-2 pt-4 border-t border-gray-100',
+        // Desktop: horizontal layout
+        'sm:flex-row sm:justify-end sm:gap-2 sm:pt-0 sm:border-t-0',
         className
       )}
       {...props}
