@@ -99,13 +99,17 @@ async function connectQZ(): Promise<Window['qz']> {
   }
 
   if (!qz || !qz.websocket || !qz.websocket.isActive()) {
-    await qz!.websocket.connect({ retries: 3, delay: 1000 }).catch((err: unknown) => {
+    const connectPromise = qz!.websocket.connect({ retries: 3, delay: 1000 });
+    const timeoutMs = 10000;
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('QZ Tray no responde. Reinicia la aplicación QZ Tray.')), timeoutMs)
+    );
+    await Promise.race([connectPromise, timeoutPromise]).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
-      // Detect common macOS issues
       if (message.includes('Connection refused') || message.includes('ECONNREFUSED')) {
         throw new Error('QZ Tray no está ejecutándose. Busca el ícono 🖨️ en la barra de menú superior y ábrelo');
       }
-      if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+      if (message.includes('timeout') || message.includes('ETIMEDOUT') || message.includes('no responde')) {
         throw new Error('QZ Tray no responde. Reinicia la aplicación QZ Tray desde Aplicaciones');
       }
       throw new Error(`QZ Tray no disponible: ${message}`);
@@ -133,6 +137,7 @@ function formatMoney(value: number): string {
   }
 }
 
+/** ESC/POS commands for 80mm thermal; output is ASCII + basic Latin. For printers that need CP437, configure QZ encoding. */
 function buildEscPos(data: ThermalReceiptData): string {
   const esc = '\x1B';
   const gs = '\x1D';
@@ -165,9 +170,12 @@ function buildEscPos(data: ThermalReceiptData): string {
   out += alignCenter + headerPhone + '\n';
   if (headerNit) out += alignCenter + headerNit + '\n';
   out += '-'.repeat(width) + '\n';
+  const now = new Date();
+  const dateStrCol = now.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+  const timeStrCol = now.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true });
   out += alignLeft + padRight('Ticket:', 12) + padLeft(`T-${String(data.transactionId)}`, width - 12) + '\n';
-  out += padRight('Fecha:', 12) + padLeft(new Date().toLocaleDateString('es-CO'), width - 12) + '\n';
-  out += padRight('Hora:', 12) + padLeft(new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), width - 12) + '\n';
+  out += padRight('Fecha:', 12) + padLeft(dateStrCol, width - 12) + '\n';
+  out += padRight('Hora:', 12) + padLeft(timeStrCol, width - 12) + '\n';
   out += padRight('Placa:', 12) + padLeft(data.plate.toUpperCase(), width - 12) + '\n';
   if (data.space) out += padRight('Espacio:', 12) + padLeft(data.space, width - 12) + '\n';
   if (data.vehicleType) out += padRight('Tipo:', 12) + padLeft(data.vehicleType, width - 12) + '\n';
@@ -201,8 +209,11 @@ export async function tryPrintViaQZ(receipt: ThermalReceiptData): Promise<boolea
     const qz = await connectQZ();
     if (!qz) throw new Error('QZ not loaded');
     const saved = localStorage.getItem('qz.printerName');
-    const printer = saved || await qz.printers.getDefault();
-    if (!printer) throw new Error('No default printer found');
+    const list: string[] = await qz.printers.find();
+    const defaultName = await qz.printers.getDefault();
+    // Use saved only if it still exists in the system (avoids "printer not found" when disconnected)
+    const printer = (saved && list.includes(saved)) ? saved : (defaultName || list[0] || null);
+    if (!printer) throw new Error('No hay impresoras disponibles. Conecta una impresora o selecciona una en Configuración.');
 
     const cfg = qz.configs.create(printer, {
       size: { width: 80, units: 'mm' },

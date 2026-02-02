@@ -85,14 +85,40 @@ const vehicleLabels = {
   truck: 'Camión 🚛',
 } as const;
 
-// 🐛 FIX: Safe date formatting helper
+const COLOMBIA_TZ = 'America/Bogota';
+
+/** Formato solo hora (HH:mm) en hora colombiana */
 const formatTimeOnly = (dateStr: string): string => {
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return 'Hora inválida';
-    return date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return date.toLocaleTimeString('es-CO', {
+      timeZone: COLOMBIA_TZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   } catch {
     return 'Hora inválida';
+  }
+};
+
+/** Fecha y hora en hora colombiana para recibo (ej: "1/2/2026, 11:04 p. m.") */
+const formatColombianDateTime = (isoStr: string): string => {
+  try {
+    const date = new Date(isoStr);
+    if (isNaN(date.getTime())) return isoStr;
+    return date.toLocaleString('es-CO', {
+      timeZone: COLOMBIA_TZ,
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return isoStr;
   }
 };
 
@@ -373,9 +399,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 <div className="text-gray-600">Ticket:</div>
                 <div className="text-right font-mono">T-{exitResponse.transaction_id}</div>
                 <div className="text-gray-600">Fecha:</div>
-                <div className="text-right">{new Date().toLocaleDateString('es-CO')}</div>
+                <div className="text-right">{new Date().toLocaleDateString('es-CO', { timeZone: COLOMBIA_TZ })}</div>
                 <div className="text-gray-600">Hora:</div>
-                <div className="text-right">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="text-right">{new Date().toLocaleTimeString('es-CO', { timeZone: COLOMBIA_TZ, hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                 <div className="text-gray-600">Placa:</div>
                 <div className="text-right font-mono">{plate.toUpperCase()}</div>
                 {/* Agregar espacio si está disponible - igual que en impresión */}
@@ -399,9 +425,9 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                   ) : null;
                 })()}
                 <div className="text-gray-600">Entrada:</div>
-                <div className="text-right">{receiptParsed?.entry_time ? String(receiptParsed.entry_time) : '-'}</div>
+                <div className="text-right">{receiptParsed?.entry_time ? formatColombianDateTime(String(receiptParsed.entry_time)) : '-'}</div>
                 <div className="text-gray-600">Salida:</div>
-                <div className="text-right">{receiptParsed?.exit_time ? String(receiptParsed.exit_time) : '-'}</div>
+                <div className="text-right">{receiptParsed?.exit_time ? formatColombianDateTime(String(receiptParsed.exit_time)) : '-'}</div>
                 <div className="text-gray-600">Tiempo:</div>
                 <div className="text-right">{Math.floor(exitResponse.duration_minutes / 60)}h {exitResponse.duration_minutes % 60}m</div>
               </div>
@@ -454,61 +480,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 <Button
                   type="button"
                   className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => {
+                  onClick={async () => {
                     try {
-                      // Attempt silent QZ printing with ESC/POS
-                      (async () => {
-                        const vt = (receiptParsed as Record<string, unknown> | null)?.vehicle_type as 'car' | 'motorcycle' | 'bicycle' | 'truck' | undefined;
-                        const hourlyRateValue = (() => {
-                          const v = (receiptParsed as Record<string, unknown> | null)?.hourly_rate as unknown;
-                          const n = typeof v === 'number' ? v : Number(v);
-                          return Number.isFinite(n) && n > 0 ? n : undefined;
-                        })();
-                        const perMinute = (() => {
-                          if (!selectedParkingLot) return undefined;
-                          switch (vt) {
-                            case 'car': return selectedParkingLot.car_rate_per_minute;
-                            case 'motorcycle': return selectedParkingLot.motorcycle_rate_per_minute;
-                            case 'bicycle': return selectedParkingLot.bicycle_rate_per_minute;
-                            case 'truck': return selectedParkingLot.truck_rate_per_minute;
-                            default: return undefined;
-                          }
-                        })();
-                        const computedHourly = hourlyRateValue ?? (perMinute ? Math.round(perMinute * 60) : selectedParkingLot?.price_per_hour || exitResponse.total_cost);
-                        const base = Math.min(exitResponse.total_cost, computedHourly);
-                        const additional = Math.max(0, exitResponse.total_cost - base);
-
-                        const ok = await tryPrintViaQZ({
-                          transactionId: exitResponse.transaction_id,
-                          plate: plate.toUpperCase(),
-                          entryTime: receiptParsed?.entry_time ? String(receiptParsed.entry_time) : undefined,
-                          exitTime: receiptParsed?.exit_time ? String(receiptParsed.exit_time) : undefined,
-                          durationMinutes: exitResponse.duration_minutes,
-                          space: (receiptParsed && 'space_number' in receiptParsed) ? String((receiptParsed as Record<string, unknown>)['space_number']) : undefined,
-                          vehicleType: vt,
-                          baseAmount: base,
-                          additionalAmount: additional,
-                          totalAmount: exitResponse.total_cost,
-                          company: selectedParkingLot ? {
-                            name: selectedParkingLot.name,
-                            address: selectedParkingLot.address,
-                            phone: selectedParkingLot.contact_phone,
-                            taxId: selectedParkingLot.tax_id,
-                          } : undefined,
-                        });
-
-                        if (ok) return; // Printed silently via QZ
-
-                        // Fallback to HTML if QZ is unavailable
-                        const wantSelect = await selectQZPrinter();
-                        void wantSelect; // no-op; selection stored for next time
-
-                        // ...falls through to existing HTML printing below
-                      })();
-
-                      const entry = receiptParsed?.entry_time ? String(receiptParsed.entry_time) : '';
-                      const exitT = receiptParsed?.exit_time ? String(receiptParsed.exit_time) : '';
-                      const space = (receiptParsed && 'space_number' in receiptParsed) ? String((receiptParsed as Record<string, unknown>)['space_number']) : '';
                       const vt = (receiptParsed as Record<string, unknown> | null)?.vehicle_type as 'car' | 'motorcycle' | 'bicycle' | 'truck' | undefined;
                       const hourlyRateValue = (() => {
                         const v = (receiptParsed as Record<string, unknown> | null)?.hourly_rate as unknown;
@@ -528,6 +501,37 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                       const computedHourly = hourlyRateValue ?? (perMinute ? Math.round(perMinute * 60) : selectedParkingLot?.price_per_hour || exitResponse.total_cost);
                       const base = Math.min(exitResponse.total_cost, computedHourly);
                       const additional = Math.max(0, exitResponse.total_cost - base);
+
+                      const ok = await tryPrintViaQZ({
+                        transactionId: exitResponse.transaction_id,
+                        plate: plate.toUpperCase(),
+                        entryTime: receiptParsed?.entry_time ? formatColombianDateTime(String(receiptParsed.entry_time)) : undefined,
+                        exitTime: receiptParsed?.exit_time ? formatColombianDateTime(String(receiptParsed.exit_time)) : undefined,
+                        durationMinutes: exitResponse.duration_minutes,
+                        space: (receiptParsed && 'space_number' in receiptParsed) ? String((receiptParsed as Record<string, unknown>)['space_number']) : undefined,
+                        vehicleType: vt,
+                        baseAmount: base,
+                        additionalAmount: additional,
+                        totalAmount: exitResponse.total_cost,
+                        company: selectedParkingLot ? {
+                          name: selectedParkingLot.name,
+                          address: selectedParkingLot.address,
+                          phone: selectedParkingLot.contact_phone,
+                          taxId: selectedParkingLot.tax_id,
+                        } : undefined,
+                      });
+
+                      if (ok) {
+                        addToast('Recibo enviado a la impresora térmica.', 'success');
+                        return;
+                      }
+
+                      await selectQZPrinter();
+                      addToast('QZ Tray no disponible. Abriendo ventana de impresión del navegador.', 'success');
+
+                      const entry = receiptParsed?.entry_time ? formatColombianDateTime(String(receiptParsed.entry_time)) : '';
+                      const exitT = receiptParsed?.exit_time ? formatColombianDateTime(String(receiptParsed.exit_time)) : '';
+                      const space = (receiptParsed && 'space_number' in receiptParsed) ? String((receiptParsed as Record<string, unknown>)['space_number']) : '';
                       const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Recibo ${plate.toUpperCase()}</title><style>
                         @page { size: 80mm auto; margin: 0; }
                         body { width: 80mm; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px; }
@@ -546,8 +550,8 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                         </div>
                         <hr />
                         <div class="row"><div>Ticket:</div><div class="mono">T-${exitResponse.transaction_id}</div></div>
-                        <div class="row"><div>Fecha:</div><div>${new Date().toLocaleDateString('es-CO')}</div></div>
-                        <div class="row"><div>Hora:</div><div>${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}</div></div>
+                        <div class="row"><div>Fecha:</div><div>${new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}</div></div>
+                        <div class="row"><div>Hora (Colombia):</div><div>${new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true })}</div></div>
                         <div class="row"><div>Placa:</div><div class="mono">${plate.toUpperCase()}</div></div>
                         ${vt ? `<div class="row"><div>Tipo:</div><div>${vt}</div></div>` : ''}
                         ${space ? `<div class="row"><div>Espacio:</div><div class="mono">${space}</div></div>` : ''}
@@ -562,20 +566,19 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                         <div class="center">¡Gracias por su preferencia!<br/>www.parkiu.com<br/>Powered by ParkiU</div>
                       </div></body></html>`;
                       const win = window.open('', '_blank');
-                      if (win) {
-                        win.document.write(html);
-                        win.document.close();
-
-                        // Hacer la impresión asíncrona para no bloquear la aplicación
-                        setTimeout(() => {
-                          win.focus();
-                          win.print();
-                          // Opcional: cerrar automáticamente después de imprimir
-                          // win.close();
-                        }, 100);
+                      if (!win) {
+                        addToast('No se pudo abrir la ventana. Desbloquea las ventanas emergentes para este sitio.', 'error');
+                        return;
                       }
+                      win.document.write(html);
+                      win.document.close();
+                      setTimeout(() => {
+                        win.focus();
+                        win.print();
+                      }, 100);
                     } catch (e) {
                       console.error('Error printing receipt', e);
+                      addToast(e instanceof Error ? e.message : 'Error desconocido al imprimir', 'error');
                     }
                   }}
                 >

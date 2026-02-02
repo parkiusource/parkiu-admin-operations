@@ -47,14 +47,23 @@ export default function TransactionsHistory() {
     payment_method: paymentMethod === 'all' ? undefined : paymentMethod,
   }), [offset, dateFrom, dateTo, plate, status, paymentMethod]);
 
-  const historyQuery = useTransactionHistory(parkingLotId || '', filters, { enabled: !!parkingLotId });
+  const historyQuery = useTransactionHistory(parkingLotId || '', filters, {
+    enabled: !!parkingLotId,
+    staleTime: 1000 * 60 * 2, // 2 min: evita refetch automático mientras el usuario navega
+  });
   const page = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
   const isLoading = historyQuery.isLoading;
 
+  // Procesar página recibida: evita loop infinito cuando el backend devuelve vacío
   useEffect(() => {
-    if (!page || page.length === 0) return;
+    if (!page) return;
+    if (page.length === 0) {
+      setHasMore(false);
+      if (offset === 0) setItems([]);
+      lastProcessedOffsetRef.current = offset;
+      return;
+    }
 
-    // Si es offset 0 o un nuevo offset que no hemos procesado
     if (offset === 0) {
       setItems(page);
       lastProcessedOffsetRef.current = offset;
@@ -67,15 +76,21 @@ export default function TransactionsHistory() {
   }, [page, offset]);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const itemsLengthRef = useRef(0);
+  itemsLengthRef.current = items.length;
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const obs = new IntersectionObserver((entries) => {
       const [entry] = entries;
-      if (entry.isIntersecting && hasMore && !isLoading) {
-        setOffset((o) => o + LIMIT);
-      }
-    });
+      if (!entry.isIntersecting || !hasMore || isLoading) return;
+      const currentItemsLen = itemsLengthRef.current;
+      setOffset((o) => {
+        if (o === 0 && currentItemsLen === 0) return o;
+        return o + LIMIT;
+      });
+    }, { rootMargin: '100px', threshold: 0 });
     obs.observe(el);
     return () => obs.disconnect();
   }, [hasMore, isLoading]);
@@ -118,11 +133,10 @@ export default function TransactionsHistory() {
   };
 
   const refreshHistory = () => {
-    setOffset(0);
+    lastProcessedOffsetRef.current = -1;
     setItems([]);
     setHasMore(true);
-    lastProcessedOffsetRef.current = -1;
-    // Forzar refetch invalidando el cache
+    setOffset(0);
     historyQuery.refetch();
   };
 
@@ -169,14 +183,31 @@ export default function TransactionsHistory() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Historial de Transacciones</h1>
-          <p className="text-gray-600">{lot ? `${lot.name} — ${lot.address}` : 'Seleccione un parqueadero'}</p>
+    <div className="max-w-7xl mx-auto p-4 sm:p-6">
+      <header className="mb-6">
+        <nav className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+          <Link to="/parking" className="hover:text-slate-700">Parqueaderos</Link>
+          <span aria-hidden>/</span>
+          {lot && <Link to={`/parking/${parkingLotId}`} className="hover:text-slate-700 truncate">{lot.name}</Link>}
+          <span aria-hidden>/</span>
+          <span className="text-slate-700 font-medium">Transacciones</span>
+        </nav>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Transacciones</h1>
+            <p className="text-slate-600 text-sm mt-0.5">
+              {lot ? `${lot.name} — ${lot.address}` : 'Seleccione un parqueadero'}
+            </p>
+          </div>
+          <Link
+            to={`/parking/${parkingLotId}`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /> </svg>
+            Volver al panel
+          </Link>
         </div>
-        <Link to={`/parking/${parkingLotId}`}>Volver</Link>
-      </div>
+      </header>
 
       {/* Filtros avanzados */}
       <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
@@ -282,11 +313,27 @@ export default function TransactionsHistory() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={refreshHistory} className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Actualizar
+            <Button
+              type="button"
+              variant="outline"
+              onClick={refreshHistory}
+              disabled={isLoading}
+              className="flex items-center gap-2 min-w-[100px]"
+              title="Recargar historial"
+            >
+              {isLoading && offset === 0 ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                  Actualizando…
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Actualizar
+                </>
+              )}
             </Button>
             <Button
               type="button"
@@ -454,30 +501,27 @@ export default function TransactionsHistory() {
             )}
           </tbody>
         </table>
-        {/* Sentinel for infinite scroll */}
-        <div ref={sentinelRef} className="p-4 text-center border-t bg-gray-50">
+        {/* Sentinel for infinite scroll: solo muestra "Cargando más" cuando offset > 0 */}
+        <div ref={sentinelRef} className="p-4 text-center border-t border-gray-200 bg-slate-50/80">
           {hasMore ? (
-            isLoading ? (
-              <div className="flex items-center justify-center gap-2 text-gray-600">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                Cargando más transacciones...
+            isLoading && offset > 0 ? (
+              <div className="flex items-center justify-center gap-2 text-slate-600 text-sm">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-400 border-t-transparent" />
+                Cargando más…
               </div>
             ) : (
-              <div className="text-gray-600">
-                <svg className="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-                Desplázate para cargar más
-              </div>
+              <p className="text-slate-500 text-sm">
+                Desplázate hacia abajo para cargar más transacciones
+              </p>
             )
-          ) : (
-            <div className="text-gray-500 flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+          ) : items.length > 0 ? (
+            <p className="text-slate-500 text-sm flex items-center justify-center gap-2">
+              <span className="inline-block w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              </span>
               Todas las transacciones cargadas
-            </div>
-          )}
+            </p>
+          ) : null}
         </div>
       </div>
 

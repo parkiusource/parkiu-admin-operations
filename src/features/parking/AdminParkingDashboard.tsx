@@ -166,6 +166,7 @@ export default function AdminParkingDashboard() {
   const {
     data: parkingSpots = [],
     isLoading: isLoadingSpaces,
+    isFetching: isFetchingSpaces,
     error: spacesError,
     refetch: refetchSpaces,
     isFromCache: spacesFromCache
@@ -231,7 +232,7 @@ export default function AdminParkingDashboard() {
   };
 
   const refetchSpots = () => {
-    refetchSpaces();
+    if (!isFetchingSpaces) refetchSpaces();
   };
 
   // ✅ FILTRAR SPOTS CON DATOS REALES DEL BACKEND
@@ -634,12 +635,14 @@ export default function AdminParkingDashboard() {
 
           {/* ✅ BREADCRUMBS - Ocultos en móvil muy pequeño */}
           <div className="mb-2 sm:mb-4 hidden xs:block">
-            <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
+            <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500" aria-label="Navegación">
               <button
+                type="button"
                 onClick={() => navigate('/parking')}
-                className="hover:text-gray-700 flex items-center gap-1"
+                className="hover:text-gray-700 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:ring-offset-1 rounded"
+                aria-label="Ir a mis parqueaderos"
               >
-                <LuBuilding className="w-3 h-3 sm:w-4 sm:h-4" />
+                <LuBuilding className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden />
                 <span className="hidden sm:inline">Mis Parqueaderos</span>
                 <span className="sm:hidden">Parqueaderos</span>
               </button>
@@ -652,11 +655,13 @@ export default function AdminParkingDashboard() {
             {/* Título y estado */}
             <div className="flex items-center gap-2 sm:gap-3">
               <button
+                type="button"
                 onClick={() => navigate('/parking')}
-                className="flex-shrink-0 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex-shrink-0 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:ring-offset-2"
                 title="Volver a mis parqueaderos"
+                aria-label="Volver a mis parqueaderos"
               >
-                <LuChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                <LuChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" aria-hidden />
               </button>
               <div className="flex-shrink-0 p-1.5 sm:p-2 bg-parkiu-50 rounded-lg">
                 <CircleParking className="w-5 h-5 sm:w-6 sm:h-6 text-parkiu-600" />
@@ -679,26 +684,39 @@ export default function AdminParkingDashboard() {
             </div>
 
             {/* Botones de acción - Scroll horizontal en móvil */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide" role="toolbar" aria-label="Acciones del panel">
               <button
+                type="button"
                 onClick={() => refetchSpots()}
-                className="inline-flex items-center px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap flex-shrink-0"
+                disabled={isFetchingSpaces}
+                aria-label="Actualizar espacios"
+                title="Recargar lista de espacios"
+                className="inline-flex items-center px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap flex-shrink-0 disabled:opacity-60 disabled:pointer-events-none"
               >
-                <LuSettings className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                {isFetchingSpaces ? (
+                  <LuLoader className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin sm:mr-2" aria-hidden />
+                ) : (
+                  <LuSettings className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" aria-hidden />
+                )}
                 <span className="hidden sm:inline">Actualizar</span>
               </button>
               <button
+                type="button"
                 onClick={() => navigate(`/parking/${currentParking.id}/history`)}
-                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors whitespace-nowrap flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                aria-label="Ver historial de transacciones"
               >
                 Historial
               </button>
               <button
+                type="button"
                 onClick={() => setIsCreateSpaceModalOpen(true)}
-                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
                 disabled={!currentParking?.id || !isAdminRole}
+                aria-label="Crear nuevo espacio"
+                title={!isAdminRole ? 'Sin permisos para crear espacios' : 'Agregar espacio de parqueo'}
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
               >
-                <LuPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <LuPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" aria-hidden />
                 <span className="hidden xs:inline">Nuevo</span> Espacio
               </button>
             </div>
@@ -844,21 +862,28 @@ export default function AdminParkingDashboard() {
               <div className="bg-white rounded-lg sm:rounded-xl border border-slate-200 shadow-sm p-3 sm:p-5">
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                   <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <label htmlFor="panel-search-space" className="sr-only">Buscar por número de espacio</label>
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" aria-hidden>
                       <LuSearch className="h-4 w-4 text-slate-400" />
                     </div>
                     <input
-                      type="text"
+                      id="panel-search-space"
+                      type="search"
+                      autoComplete="off"
                       className="block w-full pl-9 sm:pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white placeholder-slate-400"
                       placeholder="Buscar espacio..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      aria-label="Buscar por número de espacio"
                     />
                   </div>
+                  <label htmlFor="panel-filter-status" className="sr-only">Filtrar por estado</label>
                   <select
+                    id="panel-filter-status"
                     className="py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-slate-700 sm:w-48"
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
+                    aria-label="Filtrar espacios por estado"
                   >
                     <option value="all">Todos</option>
                     <option value="available">Disponibles</option>

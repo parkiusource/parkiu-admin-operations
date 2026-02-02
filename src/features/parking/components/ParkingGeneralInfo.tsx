@@ -43,7 +43,7 @@ export const ParkingGeneralInfo: React.FC<ParkingGeneralInfoProps> = ({ parkingL
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs font-medium text-slate-500 mb-0.5 sm:mb-1">Dirección</p>
               <p className="text-xs sm:text-sm font-semibold text-slate-900 break-words">{parkingLot.address}</p>
-              {parkingLot.location && (
+              {parkingLot.location && Number.isFinite(parkingLot.location.latitude) && Number.isFinite(parkingLot.location.longitude) && (
                 <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 hidden sm:block">
                   {parkingLot.location.latitude.toFixed(4)}, {parkingLot.location.longitude.toFixed(4)}
                 </p>
@@ -71,9 +71,11 @@ export const ParkingGeneralInfo: React.FC<ParkingGeneralInfoProps> = ({ parkingL
                 {(() => {
                   const opening = parkingLot.opening_time || '08:00';
                   const closing = parkingLot.closing_time || '20:00';
-                  const openingHour = parseInt(opening.split(':')[0]);
-                  const closingHour = parseInt(closing.split(':')[0]);
-                  const hours = closingHour - openingHour;
+                  const openingHour = parseInt(opening.split(':')[0], 10);
+                  const closingHour = parseInt(closing.split(':')[0], 10);
+                  const hours = Number.isFinite(openingHour) && Number.isFinite(closingHour)
+                    ? Math.max(0, closingHour - openingHour)
+                    : 0;
                   return `${hours}h de servicio`;
                 })()}
               </p>
