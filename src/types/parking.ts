@@ -174,7 +174,8 @@ export function fromParkingLotAPI(api: ParkingLotAPI): ParkingLot {
     fixed_rate_bicycle: api.fixed_rate_bicycle || (api.daily_rate || (api.hourly_rate || 5000) * 10) * 0.2,
     fixed_rate_truck: api.fixed_rate_truck || (api.daily_rate || (api.hourly_rate || 5000) * 10) * 1.4,
 
-    fixed_rate_threshold_minutes: api.fixed_rate_threshold_minutes || 720,
+    // 0 = tarifa plena deshabilitada; solo default 720 cuando el API no envía el campo
+    fixed_rate_threshold_minutes: api.fixed_rate_threshold_minutes ?? 720,
 
     // 📊 CAMPOS LEGACY para compatibilidad
     price_per_hour: api.hourly_rate || api.car_rate_per_minute * 60,

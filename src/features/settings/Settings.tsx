@@ -358,33 +358,77 @@ export default function Settings() {
     );
   };
 
+  // Defaults y normalización para tarifas (API puede devolver strings o omitir campos)
+  const defaultPricingForm = {
+    car_rate_per_minute: 0,
+    motorcycle_rate_per_minute: 0,
+    bicycle_rate_per_minute: 0,
+    truck_rate_per_minute: 0,
+    fixed_rate_car: 0,
+    fixed_rate_motorcycle: 0,
+    fixed_rate_bicycle: 0,
+    fixed_rate_truck: 0,
+    fixed_rate_threshold_minutes: 720,
+  };
+
+  const toNumber = (v: unknown): number => {
+    if (v == null) return 0;
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const normalizePricing = (data: Record<string, unknown> | null) => {
+    if (!data || typeof data !== 'object') return defaultPricingForm;
+    // No usar || 720: cuando el backend devuelve 0 (tarifa plena deshabilitada), 0 || 720 sería 720
+    const rawThreshold = toNumber(data.fixed_rate_threshold_minutes);
+    const fixed_rate_threshold_minutes =
+      data.fixed_rate_threshold_minutes != null && data.fixed_rate_threshold_minutes !== ''
+        ? Math.max(0, rawThreshold)
+        : 720;
+    return {
+      car_rate_per_minute: toNumber(data.car_rate_per_minute),
+      motorcycle_rate_per_minute: toNumber(data.motorcycle_rate_per_minute),
+      bicycle_rate_per_minute: toNumber(data.bicycle_rate_per_minute),
+      truck_rate_per_minute: toNumber(data.truck_rate_per_minute),
+      fixed_rate_car: toNumber(data.fixed_rate_car),
+      fixed_rate_motorcycle: toNumber(data.fixed_rate_motorcycle),
+      fixed_rate_bicycle: toNumber(data.fixed_rate_bicycle),
+      fixed_rate_truck: toNumber(data.fixed_rate_truck),
+      fixed_rate_threshold_minutes,
+    };
+  };
+
   // Pricing Form Component
   const PricingForm = () => {
-    const [formData, setFormData] = useState({
-      car_rate_per_minute: 0,
-      motorcycle_rate_per_minute: 0,
-      bicycle_rate_per_minute: 0,
-      truck_rate_per_minute: 0,
-      fixed_rate_car: 0,
-      fixed_rate_motorcycle: 0,
-      fixed_rate_bicycle: 0,
-      fixed_rate_truck: 0,
-      fixed_rate_threshold_minutes: 720,
-    });
+    const [formData, setFormData] = useState(defaultPricingForm);
+    const [fixedRateEnabled, setFixedRateEnabled] = useState(true);
 
     useEffect(() => {
       if (pricingData) {
-        setFormData(pricingData);
+        const normalized = normalizePricing(pricingData as Record<string, unknown>);
+        setFormData(normalized);
+        setFixedRateEnabled((normalized.fixed_rate_threshold_minutes ?? 0) > 0);
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- sync form when API pricing loads
     }, [pricingData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!selectedParkingLot) return;
+      if (!selectedParkingLot) {
+        addToast('Selecciona un parqueadero', 'error');
+        return;
+      }
+
+      const updates = { ...formData };
+      if (!fixedRateEnabled) {
+        updates.fixed_rate_threshold_minutes = 0;
+      }
 
       try {
-        await updatePricingMutation.mutateAsync({ parkingLotId: selectedParkingLot, updates: formData });
+        await updatePricingMutation.mutateAsync({ parkingLotId: selectedParkingLot, updates });
+        // Actualizar estado local con lo que enviamos para que el checkbox y el form no se “reviertan”
+        setFormData((prev) => ({ ...prev, ...updates }));
+        setFixedRateEnabled((updates.fixed_rate_threshold_minutes ?? 0) > 0);
         addToast('✅ Tarifas actualizadas correctamente', 'success');
       } catch (error) {
         console.error('Error actualizando tarifas:', error);
@@ -400,6 +444,28 @@ export default function Settings() {
       }).format(amount);
     };
 
+    if (!selectedParkingLot) {
+      return (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Parqueadero</label>
+            <select
+              value=""
+              onChange={(e) => setSelectedParkingLot(e.target.value || null)}
+              className="w-full rounded-md border border-gray-300 shadow-sm focus:border-parkiu-500 focus:ring-parkiu-500"
+              aria-label="Seleccionar parqueadero"
+            >
+              <option value="">— Selecciona un parqueadero —</option>
+              {parkingLots?.map((lot: { id: string; name: string }) => (
+                <option key={lot.id} value={lot.id}>{lot.name}</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-sm text-gray-500">Selecciona un parqueadero para ver y editar las tarifas.</p>
+        </div>
+      );
+    }
+
     if (pricingLoading) {
       return <div className="flex items-center gap-2"><LuLoader className="w-4 h-4 animate-spin" /> Cargando tarifas...</div>;
     }
@@ -410,10 +476,12 @@ export default function Settings() {
         <div className="bg-white rounded-xl border p-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Parqueadero</label>
           <select
-            value={selectedParkingLot || ''}
-            onChange={(e) => setSelectedParkingLot(e.target.value)}
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-parkiu-500 focus:ring-parkiu-500"
+            value={selectedParkingLot ?? ''}
+            onChange={(e) => setSelectedParkingLot(e.target.value || null)}
+            className="w-full rounded-md border border-gray-300 shadow-sm focus:border-parkiu-500 focus:ring-parkiu-500"
+            aria-label="Seleccionar parqueadero para configurar tarifas"
           >
+            <option value="">— Selecciona un parqueadero —</option>
             {parkingLots?.map((lot: { id: string; name: string }) => (
               <option key={lot.id} value={lot.id}>{lot.name}</option>
             ))}
@@ -455,8 +523,29 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Tarifas fijas */}
-          <div>
+          {/* Habilitar / deshabilitar tarifa plena */}
+          <div className="bg-gray-50 rounded-xl border p-4 flex items-center justify-between gap-4">
+            <div>
+              <h4 className="text-md font-medium text-gray-900">Tarifa plena (tarifa fija por tiempo prolongado)</h4>
+              <p id="tarifa-plena-desc" className="text-sm text-gray-600 mt-0.5">
+                Cuando está habilitada, después de cierto número de horas se cobra una tarifa fija en lugar del cobro por minuto.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 shrink-0 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={fixedRateEnabled}
+                onChange={(e) => setFixedRateEnabled(e.target.checked)}
+                disabled={updatePricingMutation.isPending}
+                className="rounded border-gray-300 text-parkiu-600 focus:ring-parkiu-500"
+                aria-describedby="tarifa-plena-desc"
+              />
+              <span className="text-sm font-medium text-gray-700">Habilitar tarifa plena</span>
+            </label>
+          </div>
+
+          {/* Tarifas fijas (solo visibles/editables si tarifa plena habilitada) */}
+          <div className={fixedRateEnabled ? '' : 'opacity-60 pointer-events-none'}>
             <h4 className="text-md font-medium mb-4">Tarifas Fijas (Tiempo Prolongado)</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
@@ -483,23 +572,25 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Umbral de tarifa fija */}
-          <div className="bg-yellow-50 p-4 rounded">
+          {/* Umbral de tarifa fija (solo si tarifa plena habilitada) */}
+          <div className={`rounded-xl border p-4 ${fixedRateEnabled ? 'bg-yellow-50' : 'bg-gray-100'}`}>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               ⏰ Aplicar tarifa fija después de (horas)
             </label>
             <Input
               type="number"
               step="1"
-              min="1"
-              max="24"
-              value={Math.floor(formData.fixed_rate_threshold_minutes / 60)}
-              onChange={(e) => setFormData({
-                ...formData,
-                fixed_rate_threshold_minutes: parseInt(e.target.value) * 60 || 720
-              })}
-              disabled={updatePricingMutation.isPending}
+              min={fixedRateEnabled ? 1 : 0}
+              max="168"
+              value={formData.fixed_rate_threshold_minutes <= 0 ? 0 : Math.floor(formData.fixed_rate_threshold_minutes / 60)}
+              onChange={(e) => {
+                const hours = parseInt(e.target.value, 10);
+                const mins = Number.isFinite(hours) && hours > 0 ? hours * 60 : 0;
+                setFormData({ ...formData, fixed_rate_threshold_minutes: mins });
+              }}
+              disabled={updatePricingMutation.isPending || !fixedRateEnabled}
             />
+            <p className="text-xs text-gray-500 mt-1">Máximo 168 horas (1 semana). Si la tarifa plena está deshabilitada, no se aplicará.</p>
           </div>
 
           <div className="flex justify-end">
