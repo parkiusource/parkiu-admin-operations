@@ -427,56 +427,31 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
   if (compact) {
     return (
       <div className="w-full">
-        {/* Header compacto */}
-        <div className="mb-3">
-          <h3 className="flex items-center gap-2 text-lg font-semibold text-green-700 mb-1">
-            <div className="p-1.5 bg-green-100 rounded">
-              <Car className="w-4 h-4 text-green-600" />
-            </div>
-            Registrar Entrada de Vehículo
-          </h3>
-          <p className="text-xs text-gray-600">
-            Seleccione el tipo de vehículo y complete los datos de entrada
-          </p>
+        <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
+          <h3 className="text-base font-semibold text-gray-800">Registrar entrada</h3>
+          {selectedParkingLot && (
+            <span className="text-xs text-gray-500">
+              {selectedParkingLot.total_spots} espacios
+              {selectedVehicleType && ` · $${getRatePerMinute(selectedVehicleType)?.toLocaleString('es-CO')}/min`}
+            </span>
+          )}
         </div>
 
-        {/* Contenido compacto */}
         <div className="space-y-3">
-          <div className="mb-2">
-            <PrinterSelector />
-          </div>
+          <PrinterSelector compact />
           {!isOperatorAuthorized && (
             <Alert className="border-red-200 bg-red-50 p-2">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-700 text-xs">
-                No tiene permisos para registrar entradas. Contacte al administrador.
+                No tiene permisos para registrar entradas.
               </AlertDescription>
             </Alert>
           )}
 
-                 <form onSubmit={handleSubmit} className="space-y-3">
-                   {selectedParkingLot && (
-                     <div className="p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 shadow-sm">
-                       <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-2 text-blue-800">
-                           <MapPin className="w-4 h-4" />
-                           <span className="font-semibold text-sm">{selectedParkingLot.name}</span>
-                         </div>
-                         <div className="text-xs bg-blue-200 text-blue-700 px-2 py-1 rounded-full">
-                           {selectedParkingLot.total_spots} espacios
-                         </div>
-                       </div>
-                       {selectedVehicleType && (
-                         <div className="mt-2 text-xs text-blue-700 bg-blue-200/50 px-2 py-1 rounded">
-                           💰 Tarifa: ${getRatePerMinute(selectedVehicleType)?.toLocaleString('es-CO')}/minuto
-                         </div>
-                       )}
-                     </div>
-                   )}
-
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <Label className="text-sm font-medium mb-2 block">Tipo de Vehículo</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <span className="text-xs font-medium text-gray-600 block mb-1.5">Tipo de vehículo</span>
+              <div className="grid grid-cols-4 gap-1.5">
                 {vehicleTypes.map((vehicleType) => {
                   const Icon = vehicleType.icon;
                   const isSelected = selectedVehicleType === vehicleType.value;
@@ -485,33 +460,25 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                       key={vehicleType.value}
                       type="button"
                       onClick={() => handleVehicleTypeSelect(vehicleType.value)}
-                      className={`p-2 rounded border-2 transition-all text-left ${
+                      className={`p-2 rounded-lg border transition-colors flex flex-col items-center gap-0.5 ${
                         isSelected
-                          ? `${vehicleType.color} text-white shadow-md`
-                          : 'bg-white border-gray-200 hover:border-gray-300'
+                          ? `${vehicleType.color} text-white border-transparent`
+                          : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
-                        <span className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                          {vehicleType.label}
-                        </span>
-                        {isSelected && <Check className="w-3 h-3 text-white ml-auto" />}
-                      </div>
-                      <p className={`text-xs ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>
-                        {vehicleType.description}
-                      </p>
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                      <span className="text-xs font-medium">{vehicleType.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-sm font-medium mb-1 block">Modo de asignación</Label>
-                <div className="space-y-1">
-                  <label className="flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-600 block mb-1">Asignación</span>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="radio"
                       name="assignmentMode"
@@ -520,9 +487,9 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                       onChange={(e) => setAutoAssign(e.target.value === 'auto')}
                       className="w-3 h-3"
                     />
-                    <span className="text-xs">Auto-asignación</span>
+                    <span className="text-xs">Auto</span>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="radio"
                       name="assignmentMode"
@@ -535,18 +502,15 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                   </label>
                 </div>
               </div>
-
               <div>
-                <Label htmlFor="plate" className="text-sm font-medium mb-1 block">
-                  Placa del Vehículo
-                </Label>
+                <Label htmlFor="plate" className="text-xs font-medium text-gray-600 mb-1 block">Placa</Label>
                 <Input
                   id="plate"
                   type="text"
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                  placeholder="EJ: ABC123"
-                  className="text-sm p-2 h-8"
+                  placeholder="ABC123"
+                  className="text-sm p-2 h-9 font-mono"
                   maxLength={8}
                 />
               </div>
@@ -554,22 +518,21 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
 
             {!autoAssign && (
               <div>
-                <Label htmlFor="spaceNumber" className="text-sm font-medium mb-1 block">
-                  Número de Espacio
-                  {spotsLoading && <span className="text-blue-500 ml-2 text-xs">(Cargando...)</span>}
+                <Label htmlFor="spaceNumber" className="text-xs font-medium text-gray-600 mb-1 block">
+                  Espacio {spotsLoading && <span className="text-gray-400">(cargando…)</span>}
                 </Label>
                 {availableSpots && availableSpots.length > 0 ? (
                   <select
                     id="spaceNumber"
                     value={spaceNumber}
                     onChange={(e) => setSpaceNumber(e.target.value)}
-                    className="w-full text-sm p-2 h-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full text-sm p-2 h-9 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Seleccione un espacio</option>
+                    <option value="">Seleccione</option>
                     {availableSpots.map((spot) => (
                       <option key={spot.id} value={spot.number}>
-                        {spot.number} - {spot.type ? `${spot.type.charAt(0).toUpperCase() + spot.type.slice(1)}` : 'General'}
-                        {spot.floor && ` (Piso ${spot.floor})`}
+                        {spot.number} · {spot.type ? `${spot.type.charAt(0).toUpperCase() + spot.type.slice(1)}` : 'General'}
+                        {spot.floor ? ` (Piso ${spot.floor})` : ''}
                       </option>
                     ))}
                   </select>
@@ -579,36 +542,35 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
                     type="text"
                     value={spaceNumber}
                     onChange={(e) => setSpaceNumber(e.target.value)}
-                    placeholder="Ingrese el número del espacio"
-                    className="text-sm p-2 h-8"
+                    placeholder="Número de espacio"
+                    className="text-sm p-2 h-9"
                   />
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  {availableSpots && availableSpots.length > 0
-                    ? `${availableSpots.length} espacios disponibles`
-                    : 'Ingrese el código o número del espacio'}
-                </p>
+                {availableSpots && availableSpots.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-0.5">{availableSpots.length} disponibles</p>
+                )}
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={!canRegisterEntry || !selectedVehicleType || !plate.trim() || !selectedParkingLot || registerEntry.isPending}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!canRegisterEntry ? 'No tienes permisos para registrar entradas' : undefined}
-            >
-              {registerEntry.isPending ? 'Registrando...' : '✓ Confirmar Entrada'}
-            </Button>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={autoReset}
-                onChange={(e) => setAutoReset(e.target.checked)}
-                className="w-3 h-3"
-              />
-              <span className="text-xs text-gray-600">Registrar otra automáticamente</span>
-            </label>
+            <div className="flex items-center gap-3 pt-1">
+              <Button
+                type="submit"
+                disabled={!canRegisterEntry || !selectedVehicleType || !plate.trim() || !selectedParkingLot || registerEntry.isPending}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!canRegisterEntry ? 'Sin permisos' : undefined}
+              >
+                {registerEntry.isPending ? 'Registrando...' : 'Confirmar entrada'}
+              </Button>
+              <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={autoReset}
+                  onChange={(e) => setAutoReset(e.target.checked)}
+                  className="w-3 h-3"
+                />
+                <span className="text-xs text-gray-500">Otra después</span>
+              </label>
+            </div>
           </form>
         </div>
       </div>

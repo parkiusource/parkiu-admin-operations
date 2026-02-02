@@ -196,8 +196,11 @@ export default function AdminParkingDashboard() {
 
   // ✅ HOOKS DE MUTACIÓN REALES DEL BACKEND
   const updateSpotStatus = useUpdateRealParkingSpaceStatus({
-    onSuccess: () => {
+    onSuccess: (updatedSpace) => {
       setUpdatingSpotId(null);
+      if ((updatedSpace as { __offline?: boolean }).__offline) {
+        addToast('Cambio guardado localmente. Se sincronizará cuando haya conexión.', 'success');
+      }
     },
     onError: (error) => {
       setUpdatingSpotId(null);

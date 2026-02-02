@@ -7,7 +7,8 @@ import { parkingLotService } from '@/services/parking/parkingLotService';
 import {
   cacheParkingSpaces,
   getCachedParkingSpaces,
-  isNetworkError
+  isNetworkError,
+  updateCachedParkingSpaceStatus
 } from '@/services/offlineCache';
 import { useStore } from '@/store/useStore';
 import { connectionService } from '@/services/connectionService';
@@ -621,6 +622,60 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
       spaceId: number;
       status: 'available' | 'occupied' | 'maintenance' | 'reserved';
     }) => {
+      // Offline: actualización optimista en caché para evitar loading infinito
+      if (connectionService.considerOffline()) {
+        let updatedParkingLotId: string | undefined;
+        let spaceNumber: string | undefined;
+
+        queryClient.getQueriesData({ queryKey: ['realParkingSpaces'] }).forEach(([queryKey, data]) => {
+          if (data && Array.isArray(data)) {
+            const spaces = data as BackendParkingSpot[];
+            const space = spaces.find(s => s.id === spaceId);
+            if (space) {
+              updatedParkingLotId = queryKey[1] as string;
+              spaceNumber = space.number;
+              queryClient.setQueryData(queryKey,
+                spaces.map(s =>
+                  s.id === spaceId
+                    ? { ...s, status, last_status_change: new Date().toISOString() }
+                    : s
+                )
+              );
+            }
+          }
+        });
+
+        queryClient.getQueriesData({ queryKey: ['realParkingSpacesWithVehicles'] }).forEach(([queryKey, data]) => {
+          if (data && Array.isArray(data)) {
+            const spaces = data as BackendParkingSpot[];
+            if (spaces.some(s => s.id === spaceId)) {
+              if (!updatedParkingLotId) updatedParkingLotId = queryKey[1] as string;
+              if (!spaceNumber) spaceNumber = spaces.find(s => s.id === spaceId)?.number;
+              queryClient.setQueryData(queryKey,
+                spaces.map(s =>
+                  s.id === spaceId
+                    ? { ...s, status, last_status_change: new Date().toISOString() }
+                    : s
+                )
+              );
+            }
+          }
+        });
+
+        if (updatedParkingLotId && spaceNumber) {
+          await updateCachedParkingSpaceStatus(updatedParkingLotId, spaceNumber, status);
+        }
+
+        const synthetic: BackendParkingSpot & { __offline?: boolean } = {
+          id: spaceId,
+          status,
+          number: spaceNumber ?? `${spaceId}`,
+          last_status_change: new Date().toISOString()
+        } as BackendParkingSpot & { __offline?: boolean };
+        synthetic.__offline = true;
+        return synthetic;
+      }
+
       const token = await getAuthToken();
       if (!token) {
         throw new Error('No se pudo obtener el token de autenticación');
@@ -717,13 +772,16 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
 
       }
 
-      // Pasar los variables al callback del usuario, no el backendResponse con placeholders
-      options?.onSuccess?.({
-        id: variables.spaceId,
-        status: variables.status,
-        number: `${variables.spaceId}`, // Mostrar el ID real
-        last_status_change: new Date().toISOString()
-      } as BackendParkingSpot);
+      // Pasar al callback: si fue offline (backendResponse con __offline), pasarlo para toast
+      const payload = (_backendResponse as BackendParkingSpot & { __offline?: boolean }).__offline
+        ? _backendResponse
+        : ({
+            id: variables.spaceId,
+            status: variables.status,
+            number: `${variables.spaceId}`,
+            last_status_change: new Date().toISOString()
+          } as BackendParkingSpot);
+      options?.onSuccess?.(payload as BackendParkingSpot);
     },
     onError: (error) => {
       console.error('Error updating real parking space:', error);

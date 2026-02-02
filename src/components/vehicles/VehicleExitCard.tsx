@@ -635,24 +635,12 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
   if (compact) {
     return (
       <div className="w-full">
-        {/* Header compacto */}
         <div className="mb-3">
-          <h3 className="flex items-center gap-2 text-lg font-semibold text-red-700 mb-1">
-            <div className="p-1.5 bg-red-100 rounded">
-              <Car className="w-4 h-4 text-red-600 rotate-180" />
-            </div>
-            Registrar Salida de Vehículo
-          </h3>
-          <p className="text-xs text-gray-600">
-            Busque el vehículo y procese el pago de salida
-          </p>
+          <h3 className="text-base font-semibold text-gray-800">Registrar salida</h3>
         </div>
 
-        {/* Contenido compacto */}
         <div className="space-y-3">
-          <div className="mb-2">
-            <PrinterSelector />
-          </div>
+          <PrinterSelector compact />
           {!isOperatorAuthorized && !allowExitOffline && (
             <Alert className="border-red-200 bg-red-50 p-2">
               <AlertCircle className="h-4 w-4 text-red-600" />
@@ -729,82 +717,71 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Búsqueda de vehículo compacta */}
             <div>
-              <Label htmlFor="plate" className="text-sm font-medium mb-1 block">
-                Placa del Vehículo
-              </Label>
+              <Label htmlFor="plate" className="text-xs font-medium text-gray-600 mb-1 block">Placa</Label>
               <div className="flex gap-2">
                 <Input
                   id="plate"
                   type="text"
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                  placeholder="Buscar por placa..."
-                  className="text-sm p-2 h-8 flex-1"
+                  placeholder="Buscar por placa"
+                  className="text-sm p-2 h-9 flex-1 font-mono"
                   maxLength={8}
                 />
                 <Button
                   type="button"
                   disabled={!plate.trim() || searchVehicle.isPending}
-                  className="px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700"
+                  className="px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-white rounded-lg"
                 >
-                  {searchVehicle.isPending ? '...' : '🔍'}
+                  {searchVehicle.isPending ? '…' : 'Buscar'}
                 </Button>
               </div>
             </div>
 
-            {/* Información del vehículo encontrado */}
             {searchedVehicle && (
-              <div className="p-2 bg-blue-50 rounded border border-blue-200">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono font-bold text-sm">{searchedVehicle.plate}</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                    {vehicleLabels[searchedVehicle.vehicle_type]}
-                  </span>
+              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono font-semibold text-gray-900">{searchedVehicle.plate}</span>
+                  <span className="text-xs text-gray-500">{vehicleLabels[searchedVehicle.vehicle_type]}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-xs text-blue-600">
-                  <div>Espacio: {searchedVehicle.spot_number}</div>
-                  <div>Entrada: {formatTimeOnly(searchedVehicle.entry_time)}</div>
-                  <div>Duración: {Math.floor(searchedVehicle.duration_minutes / 60)}h {searchedVehicle.duration_minutes % 60}m</div>
+                <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                  <span>Esp. {searchedVehicle.spot_number}</span>
+                  <span>Entrada {formatTimeOnly(searchedVehicle.entry_time)}</span>
+                  <span>{Math.floor(searchedVehicle.duration_minutes / 60)}h {searchedVehicle.duration_minutes % 60}m</span>
                 </div>
                 {currentCost && (
-                  <div className="mt-1 text-sm font-bold text-blue-800">
-                    Costo: ${currentCost.toLocaleString()}
-                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">Costo: ${currentCost.toLocaleString()}</p>
                 )}
               </div>
             )}
 
-            {/* Método de pago compacto */}
             {searchedVehicle && (
               <>
                 <div>
-                  <Label className="text-sm font-medium mb-1 block">Método de Pago</Label>
-                  <div className="grid grid-cols-3 gap-1">
+                  <span className="text-xs font-medium text-gray-600 block mb-1.5">Método de pago</span>
+                  <div className="grid grid-cols-3 gap-1.5">
                     {paymentMethods.map((method) => (
                       <button
                         key={method.value}
                         type="button"
                         onClick={() => setPaymentMethod(method.value)}
-                        className={`p-2 rounded border text-xs ${
+                        className={`p-2 rounded-lg border text-xs flex flex-col items-center gap-0.5 ${
                           paymentMethod === method.value
-                            ? 'bg-blue-100 border-blue-300 text-blue-700'
-                            : 'bg-white border-gray-200 hover:border-gray-300'
+                            ? 'bg-gray-800 border-gray-800 text-white'
+                            : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
-                        <div className="flex flex-col items-center gap-1">
-                          <method.icon className="w-4 h-4" />
-                          <span>{method.label}</span>
-                        </div>
+                        <method.icon className="w-4 h-4" />
+                        <span>{method.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="paymentAmount" className="text-sm font-medium mb-1 block">
-                    Monto Recibido
+                  <Label htmlFor="paymentAmount" className="text-xs font-medium text-gray-600 mb-1 block">
+                    Monto recibido
                   </Label>
                   <div className="space-y-2">
                     <Input

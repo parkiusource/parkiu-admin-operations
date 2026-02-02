@@ -336,8 +336,9 @@ export class VehicleService {
 
   /**
    * 💰 Calcular costo actual de un vehículo
-   * Implementa la lógica de tarifas colombianas del backend
-   * ✅ CON FALLBACK A LOCALSTORAGE Y VALIDACIÓN
+   * Regla de cobro: si duración >= threshold_minutes → tarifa fija; si no → duración × tarifa/min.
+   * Redondeo: Math.floor (nunca redondear hacia arriba en favor del parqueadero).
+   * ✅ Duración y costo nunca negativos (reloj o entry_time erróneos).
    */
   static calculateCurrentCost(
     entryTime: string,
@@ -346,12 +347,11 @@ export class VehicleService {
   ): CostCalculation {
     const now = new Date();
     const entry = new Date(entryTime);
-    const durationMinutes = Math.floor((now.getTime() - entry.getTime()) / (1000 * 60));
+    const rawMinutes = (now.getTime() - entry.getTime()) / (1000 * 60);
+    const durationMinutes = Math.max(0, Math.floor(rawMinutes));
 
-    // 🛡️ Obtener tarifas con fallback y validación
     const tariffs = getTariffsWithFallback(parkingLot, parkingLot.id);
 
-    // Obtener tarifa por minuto según tipo de vehículo
     const getRatePerMinute = (): number => {
       switch (vehicleType) {
         case 'car': return tariffs.car_rate_per_minute;
@@ -362,7 +362,6 @@ export class VehicleService {
       }
     };
 
-    // Obtener tarifa fija según tipo de vehículo
     const getFixedRate = (): number => {
       switch (vehicleType) {
         case 'car': return tariffs.fixed_rate_car;
@@ -377,35 +376,31 @@ export class VehicleService {
     const fixedRate = getFixedRate();
     const thresholdMinutes = tariffs.fixed_rate_threshold_minutes;
 
-    // Verificar si aplica tarifa fija
     const isFixedRate = durationMinutes >= thresholdMinutes;
-    const calculatedCost = isFixedRate ? fixedRate : (durationMinutes * ratePerMinute);
+    const rawCost = isFixedRate ? fixedRate : durationMinutes * ratePerMinute;
+    const calculatedCost = Math.max(0, Math.floor(rawCost));
 
-    // 🐛 FIX: Use Math.floor() instead of Math.round() for consistent, conservative rounding
-    // This matches financial best practices and reduces discrepancies with backend
-    // Note: This is an ESTIMATE - the backend has the final say on cost
     return {
       duration_minutes: durationMinutes,
       vehicle_type: vehicleType,
       rate_per_minute: ratePerMinute,
       is_fixed_rate: isFixedRate,
-      calculated_cost: Math.floor(calculatedCost),
+      calculated_cost: calculatedCost,
       equivalent_hours: parseFloat((durationMinutes / 60).toFixed(1)),
       rate_description: isFixedRate ? 'Tarifa fija' : 'Tarifa por minuto'
     };
   }
 
   /**
-   * 💵 Estimar costo por duración
-   * Para mostrar estimaciones al usuario antes de confirmar
-   * ✅ CON FALLBACK A LOCALSTORAGE Y VALIDACIÓN
+   * 💵 Estimar costo por duración (misma regla que calculateCurrentCost)
+   * Duración y costo se truncan a >= 0 para evitar valores inválidos.
    */
   static estimateCost(
     durationMinutes: number,
     vehicleType: VehicleType,
     parkingLot: ParkingLot
   ): CostCalculation {
-    // 🛡️ Obtener tarifas con fallback y validación
+    const safeDuration = Math.max(0, Math.floor(durationMinutes));
     const tariffs = getTariffsWithFallback(parkingLot, parkingLot.id);
 
     const getRatePerMinute = (): number => {
@@ -432,17 +427,17 @@ export class VehicleService {
     const fixedRate = getFixedRate();
     const thresholdMinutes = tariffs.fixed_rate_threshold_minutes;
 
-    const isFixedRate = durationMinutes >= thresholdMinutes;
-    const calculatedCost = isFixedRate ? fixedRate : (durationMinutes * ratePerMinute);
+    const isFixedRate = safeDuration >= thresholdMinutes;
+    const rawCost = isFixedRate ? fixedRate : safeDuration * ratePerMinute;
+    const calculatedCost = Math.max(0, Math.floor(rawCost));
 
-    // 🐛 FIX: Use Math.floor() for conservative rounding (matches calculateCurrentCost)
     return {
-      duration_minutes: durationMinutes,
+      duration_minutes: safeDuration,
       vehicle_type: vehicleType,
       rate_per_minute: ratePerMinute,
       is_fixed_rate: isFixedRate,
-      calculated_cost: Math.floor(calculatedCost),
-      equivalent_hours: parseFloat((durationMinutes / 60).toFixed(1)),
+      calculated_cost: calculatedCost,
+      equivalent_hours: parseFloat((safeDuration / 60).toFixed(1)),
       rate_description: isFixedRate ? 'Tarifa fija' : 'Tarifa por minuto'
     };
   }

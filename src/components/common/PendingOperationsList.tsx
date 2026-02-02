@@ -70,10 +70,10 @@ export const PendingOperationsList: React.FC = () => {
 
   return (
     <>
-      {/* Botón flotante */}
+      {/* Botón flotante: izquierda inferior para no solaparse con Entrada/Salida/Buscar (derecha) */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 z-40 flex items-center gap-2"
+        className="fixed bottom-6 left-6 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 z-40 flex items-center gap-2"
       >
         <AlertCircle className="w-5 h-5" />
         {operations.length} pendiente{operations.length > 1 ? 's' : ''}

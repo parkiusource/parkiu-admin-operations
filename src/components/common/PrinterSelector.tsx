@@ -6,9 +6,11 @@ import { listQZPrinters, getFavoritePrinterName, setFavoritePrinterName } from '
 interface PrinterSelectorProps {
   onSelected?: (name: string | null) => void;
   className?: string;
+  /** En modales: una sola línea, aviso reducido */
+  compact?: boolean;
 }
 
-export const PrinterSelector: React.FC<PrinterSelectorProps> = ({ onSelected, className }) => {
+export const PrinterSelector: React.FC<PrinterSelectorProps> = ({ onSelected, className, compact = false }) => {
   const [printers, setPrinters] = useState<string[]>([]);
   const [favorite, setFavorite] = useState<string | ''>(getFavoritePrinterName() || '');
   const [loading, setLoading] = useState(false);
@@ -61,6 +63,63 @@ export const PrinterSelector: React.FC<PrinterSelectorProps> = ({ onSelected, cl
     }
     return <span className="text-yellow-600 text-xs">⚠️ Sin impresoras</span>;
   };
+
+  if (compact) {
+    return (
+      <div className={className}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 whitespace-nowrap">Impresora</span>
+          <select
+            value={favorite}
+            onChange={(e) => setFavorite(e.target.value)}
+            className="flex-1 min-w-0 max-w-[180px] py-1.5 px-2 border border-gray-200 rounded text-xs bg-white"
+            disabled={loading || printers.length === 0}
+          >
+            <option value="">(Ninguna)</option>
+            {printers.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="text-xs text-gray-600 hover:text-gray-900 px-2 py-1.5 border border-gray-200 rounded hover:bg-gray-50"
+            disabled={loading}
+          >
+            Guardar
+          </button>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded"
+            disabled={loading}
+            title="Actualizar"
+          >
+            {loading ? (
+              <span className="inline-block w-3 h-3 border border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+            ) : (
+              <span className="text-xs">↻</span>
+            )}
+          </button>
+          {error && (
+            <span className="text-amber-600 text-xs" title={error}>
+              {hideWarning ? (
+                <button type="button" onClick={() => { setHideWarning(false); localStorage.removeItem('qz-warning-hidden'); }}>⚠</button>
+              ) : (
+                <button type="button" onClick={handleHideWarning} className="text-amber-600" title="Ocultar">⚠ ·</button>
+              )}
+            </span>
+          )}
+        </div>
+        {error && !hideWarning && (
+          <div className="mt-1.5 p-2 bg-amber-50 border border-amber-100 rounded text-xs text-amber-800 flex justify-between items-start gap-2">
+            <span>{error}</span>
+            <button type="button" onClick={handleHideWarning} className="text-amber-500 shrink-0">✕</button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={className}>
@@ -123,7 +182,6 @@ export const PrinterSelector: React.FC<PrinterSelectorProps> = ({ onSelected, cl
           </button>
           <p className="text-yellow-800 font-medium pr-6">⚠️ {error}</p>
 
-          {/* Instrucciones específicas para macOS */}
           {navigator.platform.toUpperCase().indexOf('MAC') >= 0 && error.includes('barra de menú') && (
             <div className="mt-2 space-y-2">
               <p className="text-yellow-700 font-medium">🍎 Pasos para macOS:</p>
@@ -136,7 +194,6 @@ export const PrinterSelector: React.FC<PrinterSelectorProps> = ({ onSelected, cl
             </div>
           )}
 
-          {/* Instrucciones generales */}
           {!error.includes('barra de menú') && (
             <p className="text-yellow-700 mt-2">
               💡 <strong>Solución:</strong> Instale y ejecute QZ Tray desde{' '}
