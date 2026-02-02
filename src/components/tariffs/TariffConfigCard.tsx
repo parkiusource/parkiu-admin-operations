@@ -70,7 +70,7 @@ export const TariffConfigCard: React.FC<TariffConfigCardProps> = ({
     fixed_rate_motorcycle: parkingLot?.fixed_rate_motorcycle || 15000,
     fixed_rate_bicycle: parkingLot?.fixed_rate_bicycle || 8000,
     fixed_rate_truck: parkingLot?.fixed_rate_truck || 50000,
-    fixed_rate_threshold_minutes: parkingLot?.fixed_rate_threshold_minutes || 720,
+    fixed_rate_threshold_minutes: parkingLot?.fixed_rate_threshold_minutes ?? 720,
   });
 
   const [showPreview, setShowPreview] = useState(false);
@@ -166,6 +166,8 @@ export const TariffConfigCard: React.FC<TariffConfigCardProps> = ({
 
   const CostPreview = () => {
     const durations = [30, 60, 120, 480, 720]; // 30min, 1h, 2h, 8h, 12h
+    const threshold = tariffs.fixed_rate_threshold_minutes ?? 0;
+    const hasFixedRate = threshold > 0;
 
     return (
       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
@@ -198,7 +200,7 @@ export const TariffConfigCard: React.FC<TariffConfigCardProps> = ({
                       {vehicleLabels[vehicleType]}
                     </td>
                     {durations.map(minutes => {
-                      const isFixed = minutes >= tariffs.fixed_rate_threshold_minutes;
+                      const isFixed = hasFixedRate && minutes >= threshold;
                       const cost = isFixed ? fixedRate : minutes * rate;
 
                       return (
@@ -218,7 +220,11 @@ export const TariffConfigCard: React.FC<TariffConfigCardProps> = ({
         </div>
 
         <div className="mt-2 text-xs text-gray-600">
-          <sup>*</sup> Tarifa fija aplicada después de {Math.round(tariffs.fixed_rate_threshold_minutes / 60)} horas
+          {hasFixedRate ? (
+            <><sup>*</sup> Tarifa fija aplicada después de {Math.round(threshold / 60)} horas</>
+          ) : (
+            <>Tarifa plena deshabilitada. Solo cobro por minuto.</>
+          )}
         </div>
       </div>
     );
@@ -271,7 +277,10 @@ export const TariffConfigCard: React.FC<TariffConfigCardProps> = ({
               <Input
                 type="number"
                 value={tariffs.fixed_rate_threshold_minutes}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateTariff('fixed_rate_threshold_minutes', parseInt(e.target.value) || 720)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const v = parseInt(e.target.value, 10);
+                updateTariff('fixed_rate_threshold_minutes', Number.isFinite(v) ? Math.max(0, v) : 720);
+              }}
                 className="mt-1"
               />
             </div>

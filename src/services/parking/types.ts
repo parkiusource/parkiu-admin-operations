@@ -330,8 +330,8 @@ export function toParkingLotCreatePayload(parking: ParkingLot): CreateParkingLot
     fixed_rate_bicycle: parking.fixed_rate_bicycle || (carRatePerMinute * 600) * 0.2,
     fixed_rate_truck: parking.fixed_rate_truck || (carRatePerMinute * 600) * 1.4,
 
-    // CONFIGURACIÓN TARIFA FIJA - 12 horas por defecto
-    fixed_rate_threshold_minutes: parking.fixed_rate_threshold_minutes || 720,
+    // CONFIGURACIÓN TARIFA FIJA - 0 = deshabilitada; 720 por defecto si no viene
+    fixed_rate_threshold_minutes: parking.fixed_rate_threshold_minutes ?? 720,
 
     // CAMPOS LEGACY (mantener compatibilidad)
     hourly_rate: parking.price_per_hour || carRatePerMinute * 60,

@@ -69,7 +69,9 @@ export const PricingPanel: React.FC<PricingPanelProps> = ({ parkingLot }) => {
     };
   };
 
-  const thresholdHours = (parkingLot.fixed_rate_threshold_minutes || 720) / 60;
+  const thresholdMinutes = parkingLot.fixed_rate_threshold_minutes ?? 0;
+  const hasFixedRate = thresholdMinutes > 0;
+  const thresholdHours = hasFixedRate ? thresholdMinutes / 60 : 0;
 
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
@@ -127,12 +129,14 @@ export const PricingPanel: React.FC<PricingPanelProps> = ({ parkingLot }) => {
                         ${Math.round(pricing.perHour).toLocaleString('es-CO')}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                      <span className="text-[10px] sm:text-xs text-amber-700">Fija (+{thresholdHours}h)</span>
-                      <span className="text-xs sm:text-sm font-bold text-amber-900">
-                        ${Math.round(pricing.fixedRate).toLocaleString('es-CO')}
-                      </span>
-                    </div>
+                    {hasFixedRate && (
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                        <span className="text-[10px] sm:text-xs text-amber-700">Fija (+{Math.round(thresholdHours)}h)</span>
+                        <span className="text-xs sm:text-sm font-bold text-amber-900">
+                          ${Math.round(pricing.fixedRate).toLocaleString('es-CO')}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -140,15 +144,26 @@ export const PricingPanel: React.FC<PricingPanelProps> = ({ parkingLot }) => {
           })}
         </div>
 
-        {/* Info sobre tarifa fija - Más compacto */}
-        <div className="mt-3 sm:mt-6 p-2 sm:p-3 bg-amber-50 rounded-lg border border-amber-200">
-          <div className="flex items-start gap-1.5 sm:gap-2">
-            <LuClock className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] sm:text-xs text-amber-800">
-              Tarifa fija después de {thresholdHours}h
-            </p>
+        {/* Info sobre tarifa fija o estado deshabilitado */}
+        {hasFixedRate ? (
+          <div className="mt-3 sm:mt-6 p-2 sm:p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="flex items-start gap-1.5 sm:gap-2">
+              <LuClock className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] sm:text-xs text-amber-800">
+                Tarifa fija después de {Math.round(thresholdHours)}h
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-3 sm:mt-6 p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-start gap-1.5 sm:gap-2">
+              <LuClock className="w-3 h-3 sm:w-4 sm:h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] sm:text-xs text-slate-600">
+                Tarifa plena deshabilitada. Solo cobro por minuto.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

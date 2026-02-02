@@ -78,13 +78,15 @@ export const CostCalculatorWidget: React.FC<CostCalculatorWidgetProps> = ({
 
   const selectedVehicle = vehicleTypes.find(v => v.value === selectedVehicleType);
 
-  // Calcular costo usando el servicio
+  // Calcular costo usando el servicio (respeta threshold 0 = tarifa plena deshabilitada)
   const costInfo = VehicleService.estimateCost(duration, selectedVehicleType, parkingLot);
 
-  // Calcular break-even point para tarifa fija
+  const thresholdMinutes = parkingLot.fixed_rate_threshold_minutes ?? 0;
+  const hasFixedRate = thresholdMinutes > 0;
+
   const ratePerMinute = parkingLot[`${selectedVehicleType}_rate_per_minute` as keyof ParkingLot] as number;
   const fixedRate = parkingLot[`fixed_rate_${selectedVehicleType}` as keyof ParkingLot] as number;
-  const breakEvenMinutes = Math.ceil(fixedRate / ratePerMinute);
+  const breakEvenMinutes = ratePerMinute > 0 ? Math.ceil(fixedRate / ratePerMinute) : 0;
 
   const formatDuration = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
@@ -134,29 +136,37 @@ export const CostCalculatorWidget: React.FC<CostCalculatorWidgetProps> = ({
         </div>
       </div>
 
-      {costInfo.is_fixed_rate && (
+      {costInfo.is_fixed_rate && hasFixedRate && (
         <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
           <div className="flex items-center gap-2 text-orange-700">
             <AlertTriangle className="w-4 h-4" />
             <span className="text-sm font-medium">Tarifa fija aplicada</span>
           </div>
           <p className="text-xs text-orange-600 mt-1">
-            Tiempo excedido: {formatDuration(duration - parkingLot.fixed_rate_threshold_minutes)}
+            Tiempo excedido: {formatDuration(duration - thresholdMinutes)}
           </p>
         </div>
       )}
 
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-blue-700">Break-even point:</span>
-          <span className="text-sm font-bold text-blue-800">
-            {formatDuration(breakEvenMinutes)}
-          </span>
+      {hasFixedRate ? (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-700">Break-even point:</span>
+            <span className="text-sm font-bold text-blue-800">
+              {formatDuration(breakEvenMinutes)}
+            </span>
+          </div>
+          <p className="text-xs text-blue-600 mt-1">
+            Después de este tiempo es mejor la tarifa fija
+          </p>
         </div>
-        <p className="text-xs text-blue-600 mt-1">
-          Después de este tiempo es mejor la tarifa fija
-        </p>
-      </div>
+      ) : (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+          <p className="text-xs text-slate-600">
+            Tarifa plena deshabilitada. Solo cobro por minuto.
+          </p>
+        </div>
+      )}
     </div>
   );
 
@@ -372,7 +382,9 @@ export const CostCalculatorWidget: React.FC<CostCalculatorWidgetProps> = ({
             <div className="text-sm text-blue-700">
               <p className="font-medium">💡 Tips de optimización:</p>
               <ul className="text-xs mt-1 space-y-1 text-blue-600">
-                <li>• Para estadías largas ({'>'}{Math.round(breakEvenMinutes/60)}h), se aplica automáticamente la tarifa fija</li>
+                {hasFixedRate && breakEvenMinutes > 0 && (
+                  <li>• Para estadías largas ({'>'}{Math.round(breakEvenMinutes / 60)}h), se aplica automáticamente la tarifa fija</li>
+                )}
                 <li>• Las bicicletas tienen la tarifa más económica</li>
                 <li>• Los camiones tienen recargo por ocupar más espacio</li>
               </ul>
