@@ -477,9 +477,10 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 <span className="text-gray-400">Powered by ParkiU</span>
               </div>
               <div className="flex gap-2 mt-4">
+                {/* En móvil no habilitamos impresión */}
                 <Button
                   type="button"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={async () => {
                     try {
                       const vt = (receiptParsed as Record<string, unknown> | null)?.vehicle_type as 'car' | 'motorcycle' | 'bicycle' | 'truck' | undefined;
@@ -586,7 +587,7 @@ export const VehicleExitCard: React.FC<VehicleExitCardProps> = ({
                 </Button>
                 <Button
                   type="button"
-                  className="bg-gray-700 hover:bg-gray-800 text-white"
+                  className="bg-gray-700 hover:bg-gray-800 text-white flex-1 sm:flex-none"
                   onClick={() => {
                     const blob = new Blob([
                       receiptParsed ? JSON.stringify(receiptParsed, null, 2) : (exitResponse.receipt || '')

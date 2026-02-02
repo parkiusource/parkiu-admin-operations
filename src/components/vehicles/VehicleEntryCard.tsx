@@ -308,7 +308,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
             <div className="flex gap-2 mt-4">
               <Button
                 type="button"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={async () => {
                   try {
                     const ok = await tryPrintViaQZ({
@@ -399,7 +399,7 @@ export const VehicleEntryCard: React.FC<VehicleEntryCardProps> = ({
               </Button>
               <Button
                 type="button"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 flex-1 sm:flex-none"
                 onClick={() => {
                   setShowTicket(false);
                   if (autoReset) {

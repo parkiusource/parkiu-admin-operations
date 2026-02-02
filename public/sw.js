@@ -7,7 +7,6 @@ const API_CACHE_NAME = 'parkiu-api-v1.0.0';
 const STATIC_RESOURCES = [
   '/',
   '/index.html',
-  '/src/main.tsx',
   '/favicon.svg',
   '/logo-parkiu.svg',
   '/manifest.json'
