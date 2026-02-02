@@ -143,6 +143,7 @@ export const GooglePlacesParking = ({ mapRef, center, radius = 1000 }: GooglePla
     }
   }, [mapRef, center, searchNearbyParking]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleJoinParkiu = useCallback((_place: PlaceResult) => {
     // TODO: Implement join Parkiu functionality
   }, []);

@@ -46,8 +46,8 @@ export default function ParkingViewEnhanced() {
         await setupMockParkingData();
         const stats = await getMockDataStats();
         setMockDataStats(stats);
-        // Datos mock listos
-      } catch (error) {
+      } catch {
+        // Mock data initialization failed - non-critical, continue
       }
     }
     initializeData();

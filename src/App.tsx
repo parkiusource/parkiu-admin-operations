@@ -31,8 +31,15 @@ const LoginForm = lazy(() => import('./features/auth/components/LoginForm').then
 const CallbackPage = lazy(() => import('./features/auth/components/CallbackPage').then(module => ({ default: module.CallbackPage })));
 const EnhancedOnboardingForm = lazy(() => import('./features/onboarding/components/EnhancedOnboardingForm'));
 
-// Loading component
-const LoadingSpinner = () => null;
+// Loading component - Spinner profesional para lazy loading
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen bg-slate-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-parkiu-600 mx-auto" />
+      <p className="mt-4 text-sm text-gray-500">Cargando...</p>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {

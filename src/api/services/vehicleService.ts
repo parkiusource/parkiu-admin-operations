@@ -70,12 +70,7 @@ function getTariffsWithFallback(
       : Infinity,
   };
 
-  // Warnings for configuration issues
-  if (validated.car_rate_per_minute === 0 && validated.motorcycle_rate_per_minute === 0) {
-  }
-
-  if (!hasValidThreshold && (validated.fixed_rate_car > 0 || validated.fixed_rate_motorcycle > 0)) {
-  }
+  // Note: Configuration warnings handled by backend validation
 
   return validated;
 }

@@ -2,7 +2,37 @@
   command = "npm run build"
   publish = "dist"
 
-# Evitar MIME type incorrecto en chunks .js (application/octet-stream → application/javascript)
+[build.environment]
+  NODE_VERSION = "18"
+
+# ====================================
+# SECURITY HEADERS - PRODUCCIÓN
+# ====================================
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Prevenir clickjacking
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+    # XSS Protection
+    X-XSS-Protection = "1; mode=block"
+
+    # Content Security Policy
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.auth0.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.auth0.com https://*.parkiu.com wss: ws:; frame-src https://*.auth0.com"
+
+    # Referrer Policy
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # Permissions Policy - deshabilitar APIs no usadas
+    Permissions-Policy = "geolocation=(self), microphone=(), camera=(), payment=()"
+
+    # HSTS - Forzar HTTPS
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# ====================================
+# MIME TYPES
+# ====================================
 [[headers]]
   for = "/**/*.js"
   [headers.values]
@@ -13,7 +43,29 @@
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
 
+# ====================================
+# CACHE CONTROL - Assets estáticos
+# ====================================
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# ====================================
+# SPA REDIRECT
+# ====================================
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false

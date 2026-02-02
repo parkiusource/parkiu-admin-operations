@@ -40,13 +40,6 @@ export const ProtectedRoute = () => {
       (role === 'temp_admin' && status === 'pending_verify')
     );
 
-    // Logging adicional para casos específicos
-    if (status === 'active') {
-    }
-    if (role === 'temp_admin' && status === 'pending_verify') {
-    }
-
-    // Logging para debug
     // Si no puede acceder al dashboard, necesita completar onboarding
     if (!canAccessDashboard) {
       return <Navigate to="/onboarding" replace />;
