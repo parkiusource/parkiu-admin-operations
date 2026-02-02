@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
 import {
-  getAdminProfile,
   completeAdminProfile,
   getParkingLots,
   registerParkingLot,
@@ -10,46 +9,39 @@ import {
 } from '../services/admin';
 import { ParkingLot, toParkingLotAPI, fromParkingLotAPI } from '@/types/parking';
 import { AdminProfile as BaseAdminProfile, AdminProfilePayload, ApiError } from '@/types/common';
+import { useAdminProfileCentralized, useRefreshAdminProfile } from '@/hooks/useAdminProfileCentralized';
 
 // Extend base interface for this specific use case
 interface AdminProfile extends BaseAdminProfile {
   parkingLots: ParkingLot[];
 }
 
-// Hook para obtener el perfil del administrador
+/**
+ * 🔥 DEPRECADO: Usar useAdminProfileCentralized en su lugar
+ * Este hook ahora redirige al hook centralizado para evitar solicitudes duplicadas
+ */
 export const useAdminProfile = () => {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const result = useAdminProfileCentralized();
 
-  return useQuery<AdminProfile | null, ApiError>({
-    queryKey: ['adminProfile', 'hook'],
-    queryFn: async () => {
-      const token = await getAccessTokenSilently();
-      if (!token) {
-        return null;
-      }
-      const profile = await getAdminProfile(token);
-      return profile ? { ...profile, parkingLots: profile.parkingLots.map(fromParkingLotAPI) } : null;
-    },
-    enabled: isAuthenticated,
-    retry: (failureCount, error) => {
-      // No retry para errores de conexión
-      if (error?.message?.includes('ERR_NETWORK') || error?.message?.includes('ERR_CONNECTION_REFUSED')) {
-        return false;
-      }
-      return failureCount < 1; // Solo 1 retry para otros errores
-    },
-    // 🔥 FIX INFINITE LOOP: networkMode 'always' evita cancelaciones/reintentos por estado de red
-    networkMode: 'always',
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-  });
+  // Los datos del perfil centralizado ya vienen transformados
+  // Solo necesitamos extraer y retornar en el formato esperado
+  const parkingLotsRaw = result.data?.profile?.parkingLots;
+  const parkingLots: ParkingLot[] = Array.isArray(parkingLotsRaw)
+    ? parkingLotsRaw as ParkingLot[]
+    : [];
+
+  return {
+    ...result,
+    data: result.data ? {
+      ...result.data.profile,
+      parkingLots
+    } : null,
+  };
 };
 
 // Hook para obtener los parqueaderos del administrador
 export const useAdminParkingLots = () => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated, isLoading: isAuthLoading } = useAuth0();
 
   return useQuery<ParkingLot[], ApiError>({
     queryKey: ['adminParkingLots'],
@@ -61,12 +53,18 @@ export const useAdminParkingLots = () => {
       const lots = await getParkingLots(token);
       return lots.map(fromParkingLotAPI);
     },
+    // 🔥 FIX: Solo habilitar cuando Auth0 está listo
+    enabled: !isAuthLoading && isAuthenticated,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    networkMode: 'always',
   });
 };
 
 // Hook para obtener el estado del onboarding
 export const useOnboardingStatus = () => {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated, isLoading: isAuthLoading } = useAuth0();
 
   return useQuery<{ step: number; completed: boolean }, ApiError>({
     queryKey: ['onboardingStatus'],
@@ -77,13 +75,19 @@ export const useOnboardingStatus = () => {
       }
       return getOnboardingStatus(token);
     },
+    // 🔥 FIX: Solo habilitar cuando Auth0 está listo
+    enabled: !isAuthLoading && isAuthenticated,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    networkMode: 'always',
   });
 };
 
 // Hook para completar el perfil del administrador
 export const useCompleteProfile = () => {
   const { getAccessTokenSilently } = useAuth0();
-  const queryClient = useQueryClient();
+  const { refreshProfile } = useRefreshAdminProfile();
 
   return useMutation<AdminProfile, ApiError, AdminProfilePayload>({
     mutationFn: async (payload) => {
@@ -94,9 +98,9 @@ export const useCompleteProfile = () => {
       const profile = await completeAdminProfile(token, payload);
       return { ...profile, parkingLots: profile.parkingLots.map(fromParkingLotAPI) };
     },
-    onSuccess: () => {
-      // Invalidar todas las queries de adminProfile (incluye centralized)
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
+    onSuccess: async () => {
+      // 🔥 FIX: Usar el hook de refresh controlado en lugar de invalidar todas las queries
+      await refreshProfile();
     },
   });
 };

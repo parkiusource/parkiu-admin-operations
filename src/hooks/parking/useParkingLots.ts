@@ -211,7 +211,7 @@ export const useCreateParkingLot = (options?: {
     onSuccess: (data) => {
       // Invalidar cache de parking lots
       queryClient.invalidateQueries({ queryKey: ['parkingLots'] });
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] }); // Puede afectar perfil del admin
+      // 🔥 FIX LOOP: Removido invalidateQueries de adminProfile - no es necesario y causaba loops
 
       options?.onSuccess?.(data);
     },
@@ -243,7 +243,7 @@ export const useRegisterParkingLot = (options?: {
     onSuccess: (data) => {
       // Invalidar cache relevante
       queryClient.invalidateQueries({ queryKey: ['parkingLots'] });
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
+      // 🔥 FIX LOOP: Removido invalidateQueries de adminProfile - causaba loops
       queryClient.invalidateQueries({ queryKey: ['onboardingStatus'] });
 
       options?.onSuccess?.(data);

@@ -58,8 +58,18 @@ export const useUpdateAdminProfile = () => {
     onSuccess: (updatedProfile) => {
       // Actualizar cache del perfil
       queryClient.setQueryData(['admin-profile-settings'], updatedProfile);
-      // También invalidar otros caches relacionados
-      queryClient.invalidateQueries({ queryKey: ['admin-profile'] });
+      // 🔥 FIX LOOP: Removido invalidateQueries de admin-profile - usar setQueryData para actualización directa
+      // Actualizar también el cache centralizado con los nuevos datos
+      queryClient.setQueryData(['adminProfile', 'centralized'], (oldData: unknown) => {
+        if (!oldData || typeof oldData !== 'object') return oldData;
+        return {
+          ...(oldData as Record<string, unknown>),
+          profile: {
+            ...(((oldData as Record<string, unknown>).profile) as Record<string, unknown> || {}),
+            ...updatedProfile
+          }
+        };
+      });
     },
   });
 };

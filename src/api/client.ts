@@ -41,53 +41,86 @@ const createClient = () => {
     auth0Client = auth0Instance;
   };
 
+  // 🔥 SINGLETON: Protección contra solicitudes de token duplicadas
+  let tokenRequestInFlight: Promise<string | null> | null = null;
+  let lastTokenRequestTime = 0;
+  const MIN_TOKEN_REQUEST_INTERVAL = 2000; // 2 segundos mínimo entre solicitudes de token
+
   const getToken = async (retryCount = 0): Promise<string | null> => {
-    try {
-      if (!auth0Client) {
-        if (retryCount < 2) {
-          // Esperar a que Auth0 se inicialice (puede tomar tiempo tras cargar la app)
-          await new Promise((r) => setTimeout(r, 1000));
+    // 🔥 THROTTLE: Evitar solicitudes de token demasiado frecuentes
+    const now = Date.now();
+    if (now - lastTokenRequestTime < MIN_TOKEN_REQUEST_INTERVAL && retryCount === 0) {
+      // Si hay una solicitud en vuelo, esperar por ella
+      if (tokenRequestInFlight) {
+        return tokenRequestInFlight;
+      }
+    }
+
+    // 🔥 SINGLETON: Reusar solicitud en vuelo
+    if (tokenRequestInFlight && retryCount === 0) {
+      return tokenRequestInFlight;
+    }
+
+    const executeTokenRequest = async (): Promise<string | null> => {
+      try {
+        if (!auth0Client) {
+          if (retryCount < 2) {
+            // Esperar a que Auth0 se inicialice (puede tomar tiempo tras cargar la app)
+            await new Promise((r) => setTimeout(r, 1000));
+            return getToken(retryCount + 1);
+          }
+          throw new Error('Auth0 client not initialized after retries');
+        }
+
+        lastTokenRequestTime = Date.now();
+
+        // Try to get the token with refresh token
+        const response = await auth0Client.getTokenSilently({
+          detailedResponse: true,
+          timeoutInSeconds: 10,
+          authorizationParams: {
+            audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+            scope: 'openid profile email offline_access'
+          },
+          cacheMode: 'on' // Intenta usar cache primero antes de renovar
+        });
+
+        // Manejar caso donde response es null (error del mock client)
+        if (!response) {
+          return null;
+        }
+
+        return response.access_token;
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // Si es error de login requerido, no reintentar
+        if (errorMsg.includes('login_required') || errorMsg.includes('consent_required')) {
+          console.error('Se requiere nuevo login:', error);
+          return null;
+        }
+
+        // Un reintento con espera (útil tras reconectar: red o refresh pueden no estar listos)
+        if (retryCount === 0) {
+          const isRefreshError = errorMsg.includes('refresh token');
+          await new Promise((r) => setTimeout(r, isRefreshError ? 1500 : 2500));
           return getToken(retryCount + 1);
         }
-        throw new Error('Auth0 client not initialized after retries');
-      }
 
-      // Try to get the token with refresh token
-      const response = await auth0Client.getTokenSilently({
-        detailedResponse: true,
-        timeoutInSeconds: 10,
-        authorizationParams: {
-          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-          scope: 'openid profile email offline_access'
-        },
-        cacheMode: 'on' // Intenta usar cache primero antes de renovar
-      });
-
-      // Manejar caso donde response es null (error del mock client)
-      if (!response) {
+        console.error('No se pudo obtener token después de reintentos:', error);
         return null;
+      } finally {
+        tokenRequestInFlight = null;
       }
+    };
 
-      return response.access_token;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-
-      // Si es error de login requerido, no reintentar
-      if (errorMsg.includes('login_required') || errorMsg.includes('consent_required')) {
-        console.error('Se requiere nuevo login:', error);
-        return null;
-      }
-
-      // Un reintento con espera (útil tras reconectar: red o refresh pueden no estar listos)
-      if (retryCount === 0) {
-        const isRefreshError = errorMsg.includes('refresh token');
-        await new Promise((r) => setTimeout(r, isRefreshError ? 1500 : 2500));
-        return getToken(retryCount + 1);
-      }
-
-      console.error('No se pudo obtener token después de reintentos:', error);
-      return null;
+    // Guardar la promesa para reusar en solicitudes concurrentes
+    if (retryCount === 0) {
+      tokenRequestInFlight = executeTokenRequest();
+      return tokenRequestInFlight;
     }
+
+    return executeTokenRequest();
   };
 
   // Interceptor para manejar éxito/errores y marcar estado offline/online
