@@ -629,8 +629,16 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
       spaceId: number;
       status: 'available' | 'occupied' | 'maintenance' | 'reserved';
     }) => {
+      // 📴 OFFLINE-FIRST: Verificar estado offline de múltiples formas
+      const navigatorOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      const serviceOffline = connectionService.considerOffline();
+      const isOffline = navigatorOffline || serviceOffline;
+
+      console.log(`🔄 [updateSpaceStatus] spaceId=${spaceId}, status=${status}, navigatorOffline=${navigatorOffline}, serviceOffline=${serviceOffline}`);
+
       // Offline: actualización optimista en caché para evitar loading infinito
-      if (connectionService.considerOffline()) {
+      if (isOffline) {
+        console.log('📴 [updateSpaceStatus] Modo offline detectado - actualizando caché local');
         let updatedParkingLotId: string | undefined;
         let spaceNumber: string | undefined;
 
@@ -680,9 +688,12 @@ export const useUpdateRealParkingSpaceStatus = (options?: {
           last_status_change: new Date().toISOString()
         } as BackendParkingSpot & { __offline?: boolean };
         synthetic.__offline = true;
+        console.log('✅ [updateSpaceStatus] Actualización offline completada:', synthetic);
         return synthetic;
       }
 
+      // Online: intentar actualizar en el backend
+      console.log('🌐 [updateSpaceStatus] Modo online - llamando al backend');
       const token = await getAuthToken();
       if (!token) {
         throw new Error('No se pudo obtener el token de autenticación');
