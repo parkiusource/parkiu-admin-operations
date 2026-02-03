@@ -2,16 +2,16 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   LuBuilding2,
   LuMapPin,
-  LuCar,
   LuDollarSign,
   LuActivity,
-  LuTriangle,
   LuCheck,
   LuTrendingUp,
   LuPlus,
   LuSettings,
   LuEye,
-  LuRefreshCw
+  LuRefreshCw,
+  LuFileText,
+  LuClock
 } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
 import {
@@ -22,35 +22,12 @@ import {
   formatDuration
 } from './hooks/useRealDashboardData';
 import { useParkingLots } from '../../hooks/parking/useParkingLots';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // ===================================
 // CONFIGURACIÓN
 // ===================================
-
-// Datos mock para actividad reciente (hasta implementar endpoint)
-const mockRecentActivity = [
-  {
-    id: '1',
-    type: 'high_occupancy',
-    message: 'Ocupación alta detectada en Centro Comercial Plaza',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    status: 'warning' as const
-  },
-  {
-    id: '2',
-    type: 'revenue_milestone',
-    message: 'Meta de ingresos diarios alcanzada',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    status: 'success' as const
-  },
-  {
-    id: '3',
-    type: 'system_info',
-    message: '45 nuevos vehículos registrados hoy',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    status: 'info' as const
-  }
-];
 
 // ===================================
 // COMPONENTE PRINCIPAL
@@ -131,15 +108,6 @@ export default function DashboardWithRealData() {
   // Calcular KPIs adicionales
   const kpis = realtimeStats.stats ? calculateKPIs(realtimeStats.stats) : null;
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-
-    if (diffInMinutes < 1) return 'Hace un momento';
-    if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
-    if (diffInMinutes < 1440) return `Hace ${Math.floor(diffInMinutes / 60)} h`;
-    return `Hace ${Math.floor(diffInMinutes / 1440)} días`;
-  };
 
   const getHealthColor = (health: string) => {
     switch (health) {
@@ -162,37 +130,37 @@ export default function DashboardWithRealData() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard ParkiU</h1>
-          <p className="text-gray-600">
-            Sistema en tiempo real • Última actualización: {lastUpdate.toLocaleTimeString('es-CO')}
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard ParkiU</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy • HH:mm", { locale: es })}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setRealtimeEnabled(!realtimeEnabled)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
               realtimeEnabled
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            <div className={`w-2 h-2 rounded-full ${realtimeEnabled ? 'bg-green-500' : 'bg-gray-400'}`} />
-            {realtimeEnabled ? 'Tiempo Real ON' : 'Tiempo Real OFF'}
+            <div className={`w-2 h-2 rounded-full ${realtimeEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+            <span className="hidden sm:inline">{realtimeEnabled ? 'Tiempo Real' : 'Manual'}</span>
           </button>
           <button
             onClick={() => {
               dashboardStats.refetchAll();
               realtimeStats.refetch();
             }}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-sm"
             disabled={dashboardStats.isLoading || isLoadingParkingLots}
           >
             <LuRefreshCw className={`w-4 h-4 ${(dashboardStats.isLoading || isLoadingParkingLots) ? 'animate-spin' : ''}`} />
-            Actualizar
+            <span className="hidden sm:inline">Actualizar</span>
           </button>
         </div>
       </div>
@@ -327,26 +295,30 @@ export default function DashboardWithRealData() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Parqueaderos Overview */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Parqueaderos en Tiempo Real</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Parqueadero Seleccionado - Vista Detallada */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Parqueadero Seleccionado</h3>
               <Link
                 to="/parking"
                 className="text-parkiu-600 hover:text-parkiu-700 text-sm font-medium flex items-center gap-1"
               >
-                Ver todos <LuEye className="w-4 h-4" />
+                <LuEye className="w-4 h-4" />
+                <span className="hidden sm:inline">Ver todos</span>
               </Link>
             </div>
 
-            {/* Selector de parqueadero para vista detallada */}
-            <div className="mb-4">
+            {/* Selector de parqueadero */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Seleccionar Parqueadero
+              </label>
               <select
                 value={selectedParkingLot}
                 onChange={(e) => setSelectedParkingLot(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-parkiu-500 focus:border-parkiu-500"
+                className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-parkiu-500 focus:border-parkiu-500 text-sm"
                 disabled={isLoadingParkingLots}
               >
                 {isLoadingParkingLots ? (
@@ -358,7 +330,7 @@ export default function DashboardWithRealData() {
                 ) : (
                   parkingLots.map(lot => (
                     <option key={lot.id} value={lot.id}>
-                      {lot.name} - {lot.address}
+                      {lot.name}
                     </option>
                   ))
                 )}
@@ -367,9 +339,9 @@ export default function DashboardWithRealData() {
 
             {/* Estadísticas del parqueadero seleccionado */}
             {realtimeStats.loading ? (
-              <div className="flex items-center justify-center py-8">
-                <LuRefreshCw className="w-6 h-6 animate-spin text-gray-400" />
-                <span className="ml-2 text-gray-500">Cargando estadísticas...</span>
+              <div className="flex flex-col items-center justify-center py-12">
+                <LuRefreshCw className="w-8 h-8 animate-spin text-parkiu-500 mb-3" />
+                <span className="text-gray-500 text-sm">Cargando estadísticas...</span>
               </div>
             ) : hasError ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -379,40 +351,67 @@ export default function DashboardWithRealData() {
               </div>
             ) : realtimeStats.stats ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600">Ocupación</div>
-                    <div className="text-2xl font-bold text-gray-900">
+                {/* Ocupación Visual */}
+                <div className="bg-gradient-to-br from-parkiu-50 to-blue-50 rounded-xl p-5 border border-parkiu-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Ocupación Actual</span>
+                    <span className="text-2xl font-bold text-parkiu-600">
                       {realtimeStats.stats.occupancy_rate.toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {realtimeStats.stats.occupied_spots}/{realtimeStats.stats.total_spots} espacios
-                    </div>
+                    </span>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600">Ingresos Hoy</div>
-                    <div className="text-2xl font-bold text-gray-900">
+                  <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                    <div
+                      className="bg-gradient-to-r from-parkiu-500 to-parkiu-600 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${realtimeStats.stats.occupancy_rate}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>{realtimeStats.stats.occupied_spots} ocupados</span>
+                    <span>{realtimeStats.stats.available_spots} disponibles</span>
+                  </div>
+                </div>
+
+                {/* Grid de Métricas */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <LuDollarSign className="w-4 h-4 text-purple-600" />
+                      <span className="text-xs font-medium text-purple-900">Hoy</span>
+                    </div>
+                    <div className="text-lg font-bold text-purple-900">
                       {formatCurrency(realtimeStats.stats.revenue_today)}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      Mes: {formatCurrency(realtimeStats.stats.revenue_month)}
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <LuTrendingUp className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-medium text-blue-900">Mes</span>
+                    </div>
+                    <div className="text-lg font-bold text-blue-900">
+                      {formatCurrency(realtimeStats.stats.revenue_month)}
                     </div>
                   </div>
                 </div>
 
                 {/* KPIs adicionales */}
                 {kpis && (
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                    <div>
-                      <div className="text-sm text-gray-600">Estadía Promedio</div>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {formatDuration(realtimeStats.stats.avg_stay_duration)}
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t">
+                    <div className="flex items-start gap-2">
+                      <LuClock className="w-4 h-4 text-gray-500 mt-0.5" />
+                      <div>
+                        <div className="text-xs text-gray-600">Estadía Promedio</div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatDuration(realtimeStats.stats.avg_stay_duration)}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Ingresos/Espacio</div>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {formatCurrency(kpis.revenuePerSpace)}
+                    <div className="flex items-start gap-2">
+                      <LuDollarSign className="w-4 h-4 text-gray-500 mt-0.5" />
+                      <div>
+                        <div className="text-xs text-gray-600">Por Espacio</div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(kpis.revenuePerSpace)}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -422,24 +421,67 @@ export default function DashboardWithRealData() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Resumen del Sistema */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Actividad Reciente</h3>
+          <div className="p-4 sm:p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Sistema</h3>
+
+            {/* Estadísticas Globales */}
             <div className="space-y-4">
-              {mockRecentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.status === 'success' ? 'bg-green-500' :
-                    activity.status === 'warning' ? 'bg-yellow-500' :
-                    'bg-parkiu-500'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <p className="text-xs text-gray-500 mt-1">{formatTimeAgo(activity.timestamp)}</p>
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-parkiu-50 to-blue-50 rounded-lg border border-parkiu-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-parkiu-100 rounded-lg flex items-center justify-center">
+                    <LuBuilding2 className="w-5 h-5 text-parkiu-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Parqueaderos</p>
+                    <p className="text-xl font-bold text-gray-900">{dashboardStats.aggregatedStats.totalParkings}</p>
                   </div>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className="text-xs text-green-600 font-medium">{dashboardStats.aggregatedStats.activeParkings} activos</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <LuMapPin className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Espacios Totales</p>
+                    <p className="text-xl font-bold text-gray-900">{dashboardStats.aggregatedStats.totalSpaces}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-600">{dashboardStats.aggregatedStats.occupiedSpaces} ocupados</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <LuDollarSign className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Ingresos del Día</p>
+                    <p className="text-lg font-bold text-gray-900">{formatCurrency(dashboardStats.aggregatedStats.todayRevenue)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estado del Sistema */}
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${getHealthColor('good').split(' ')[1]}`} />
+                    <span className="text-sm font-medium text-gray-700">Sistema Operativo</span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {realtimeEnabled ? 'Actualización automática' : 'Modo manual'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -447,55 +489,58 @@ export default function DashboardWithRealData() {
 
       {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Acciones Rápidas</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 sm:p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Link
               to="/parking"
-              className="flex items-center gap-3 p-4 bg-parkiu-50 hover:bg-parkiu-100 rounded-lg transition-colors group"
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-parkiu-50 to-blue-50 hover:from-parkiu-100 hover:to-blue-100 rounded-xl transition-all duration-200 group border border-parkiu-100"
             >
-              <div className="w-10 h-10 bg-parkiu-100 group-hover:bg-parkiu-200 rounded-lg flex items-center justify-center">
-                <LuPlus className="w-5 h-5 text-parkiu-600" />
+              <div className="w-10 h-10 bg-parkiu-500 group-hover:bg-parkiu-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuPlus className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="font-medium text-gray-900">Nuevo Parqueadero</div>
-                <div className="text-sm text-gray-600">Crear parqueadero</div>
+                <div className="font-semibold text-gray-900 text-sm">Nuevo Parqueadero</div>
+                <div className="text-xs text-gray-600">Crear parqueadero</div>
               </div>
             </Link>
 
             <Link
               to="/vehicles/entry"
-              className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl transition-all duration-200 group border border-green-100"
             >
-              <div className="w-10 h-10 bg-green-100 group-hover:bg-green-200 rounded-lg flex items-center justify-center">
-                <LuCar className="w-5 h-5 text-green-600" />
+              <div className="w-10 h-10 bg-green-500 group-hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuMapPin className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="font-medium text-gray-900">Registrar Entrada</div>
-                <div className="text-sm text-gray-600">Nuevo vehículo</div>
+                <div className="font-semibold text-gray-900 text-sm">Registrar Entrada</div>
+                <div className="text-xs text-gray-600">Nuevo vehículo</div>
               </div>
             </Link>
 
-            <button className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors group">
-              <div className="w-10 h-10 bg-purple-100 group-hover:bg-purple-200 rounded-lg flex items-center justify-center">
-                <LuTrendingUp className="w-5 h-5 text-purple-600" />
+            <Link
+              to="/reports"
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-200 group border border-purple-100"
+            >
+              <div className="w-10 h-10 bg-purple-500 group-hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuFileText className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="font-medium text-gray-900">Ver Reportes</div>
-                <div className="text-sm text-gray-600">Análisis detallado</div>
+                <div className="font-semibold text-gray-900 text-sm">Ver Reportes</div>
+                <div className="text-xs text-gray-600">Análisis detallado</div>
               </div>
-            </button>
+            </Link>
 
             <Link
               to="/settings"
-              className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
+              className="flex items-center gap-3 p-4 bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 rounded-xl transition-all duration-200 group border border-gray-200"
             >
-              <div className="w-10 h-10 bg-gray-100 group-hover:bg-gray-200 rounded-lg flex items-center justify-center">
-                <LuSettings className="w-5 h-5 text-gray-600" />
+              <div className="w-10 h-10 bg-gray-500 group-hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuSettings className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="font-medium text-gray-900">Configuración</div>
-                <div className="text-sm text-gray-600">Ajustes del sistema</div>
+                <div className="font-semibold text-gray-900 text-sm">Configuración</div>
+                <div className="text-xs text-gray-600">Ajustes del sistema</div>
               </div>
             </Link>
           </div>
