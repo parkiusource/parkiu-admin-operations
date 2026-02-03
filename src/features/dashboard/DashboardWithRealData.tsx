@@ -4,7 +4,6 @@ import {
   LuMapPin,
   LuDollarSign,
   LuActivity,
-  LuCheck,
   LuTrendingUp,
   LuPlus,
   LuSettings,
@@ -43,7 +42,7 @@ export default function DashboardWithRealData() {
     message: string;
     priority: 'high' | 'medium' | 'low';
   }>>([]);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  // lastUpdate state removed - not currently used
 
   // ✅ Obtener parqueaderos reales usando el hook existente
   const { parkingLots, isLoading: isLoadingParkingLots, error: parkingLotsError } = useParkingLots();
@@ -93,7 +92,7 @@ export default function DashboardWithRealData() {
         if (realtimeStats.stats) {
           const newAlerts = generateAlerts(realtimeStats.stats);
           setAlerts(newAlerts);
-          setLastUpdate(new Date());
+          // Last update tracking removed
         }
       };
 
@@ -120,15 +119,7 @@ export default function DashboardWithRealData() {
     }
   };
 
-  const getHealthIcon = (health: string) => {
-    switch (health) {
-      case 'excellent': return <LuCheck className="w-5 h-5" />;
-      case 'good': return <LuActivity className="w-5 h-5" />;
-      case 'warning': return <LuTriangle className="w-5 h-5" />;
-      case 'critical': return <LuTriangle className="w-5 h-5" />;
-      default: return <LuActivity className="w-5 h-5" />;
-    }
-  };
+  // getHealthIcon removed - not currently used in UI
 
   return (
     <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
