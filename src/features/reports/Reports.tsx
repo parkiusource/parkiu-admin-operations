@@ -366,20 +366,20 @@ export default function Reports() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
+    <div className="max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 md:space-y-8">
       {/* Premium Header */}
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-parkiu-500/10 to-parkiu-700/10 rounded-3xl blur-3xl"></div>
-        <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-8 shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-parkiu-500 to-parkiu-700 flex items-center justify-center shadow-xl">
-              <TrendingUp className="w-8 h-8 text-white" />
+        <div className="absolute inset-0 bg-gradient-to-r from-parkiu-500/10 to-parkiu-700/10 rounded-2xl sm:rounded-3xl blur-2xl sm:blur-3xl"></div>
+        <div className="relative bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 shadow-lg">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-parkiu-500 to-parkiu-700 flex items-center justify-center shadow-xl flex-shrink-0">
+              <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
             </div>
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent truncate">
                 Reportes e Ingresos
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 mt-0.5 sm:mt-1 line-clamp-2">
                 Análisis financiero y operacional de tu parqueadero
               </p>
             </div>
@@ -389,14 +389,14 @@ export default function Reports() {
 
       {/* Parking Lot Selector */}
       {parkingLots.length > 1 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <label className="block text-sm font-semibold text-gray-700 mb-3">
+        <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+          <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
             Seleccionar Parqueadero
           </label>
           <select
             value={selectedParkingLot}
             onChange={(e) => setSelectedParkingLot(e.target.value)}
-            className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-parkiu-500 focus:border-transparent transition-all"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-parkiu-500 focus:border-transparent transition-all text-sm sm:text-base"
           >
             {parkingLots.map(lot => (
               <option key={lot.id} value={lot.id}>
@@ -408,96 +408,99 @@ export default function Reports() {
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <nav className="flex border-b border-gray-200">
+      <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <nav className="flex flex-col sm:flex-row border-b border-gray-200">
           <button
             onClick={() => setActiveTab('daily')}
-            className={`flex-1 py-4 px-6 font-semibold text-sm transition-all ${
+            className={`flex-1 py-3 px-4 sm:py-4 sm:px-6 font-semibold text-xs sm:text-sm transition-all ${
               activeTab === 'daily'
-                ? 'bg-parkiu-50 text-parkiu-700 border-b-2 border-parkiu-600'
+                ? 'bg-parkiu-50 text-parkiu-700 border-b-2 sm:border-b-2 border-parkiu-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
-            <Calendar className="w-5 h-5 inline-block mr-2" />
-            Cierre Diario
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Cierre Diario</span>
+            <span className="xs:hidden">Diario</span>
           </button>
           <button
             onClick={() => setActiveTab('monthly')}
-            className={`flex-1 py-4 px-6 font-semibold text-sm transition-all ${
+            className={`flex-1 py-3 px-4 sm:py-4 sm:px-6 font-semibold text-xs sm:text-sm transition-all ${
               activeTab === 'monthly'
-                ? 'bg-parkiu-50 text-parkiu-700 border-b-2 border-parkiu-600'
+                ? 'bg-parkiu-50 text-parkiu-700 border-b-2 sm:border-b-2 border-parkiu-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
-            <TrendingUp className="w-5 h-5 inline-block mr-2" />
-            Reporte Mensual
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Reporte Mensual</span>
+            <span className="xs:hidden">Mensual</span>
           </button>
           <button
             onClick={() => setActiveTab('custom')}
-            className={`flex-1 py-4 px-6 font-semibold text-sm transition-all ${
+            className={`flex-1 py-3 px-4 sm:py-4 sm:px-6 font-semibold text-xs sm:text-sm transition-all ${
               activeTab === 'custom'
-                ? 'bg-parkiu-50 text-parkiu-700 border-b-2 border-parkiu-600'
+                ? 'bg-parkiu-50 text-parkiu-700 border-b-2 sm:border-b-2 border-parkiu-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
-            <FileText className="w-5 h-5 inline-block mr-2" />
-            Rango Personalizado
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Rango Personalizado</span>
+            <span className="sm:hidden">Rango</span>
           </button>
         </nav>
 
         {/* Date Selector */}
-        <div className="p-6 bg-gray-50 flex items-end gap-4">
+        <div className="p-4 sm:p-6 bg-gray-50 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
           {activeTab === 'custom' ? (
             <>
               <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Desde</label>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Desde</label>
                 <input
                   type="date"
                   value={dateRange.from}
                   onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-parkiu-500 transition-all"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-parkiu-500 transition-all text-sm sm:text-base"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Hasta</label>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Hasta</label>
                 <input
                   type="date"
                   value={dateRange.to}
                   onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-parkiu-500 transition-all"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-parkiu-500 transition-all text-sm sm:text-base"
                 />
               </div>
             </>
           ) : (
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
                 {activeTab === 'daily' ? 'Fecha' : 'Mes'}
               </label>
               <input
                 type={activeTab === 'daily' ? 'date' : 'month'}
                 value={activeTab === 'daily' ? selectedDate : selectedMonth}
                 onChange={(e) => activeTab === 'daily' ? setSelectedDate(e.target.value) : setSelectedMonth(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-parkiu-500 transition-all"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-parkiu-500 transition-all text-sm sm:text-base"
               />
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               onClick={exportToCSV}
               variant="outline"
               disabled={transactions.length === 0}
-              className="px-6 py-3"
+              className="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               CSV
             </Button>
             <Button
               onClick={exportToPDF}
               variant="outline"
               disabled={transactions.length === 0}
-              className="px-6 py-3"
+              className="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm"
             >
-              <FileDown className="w-4 h-4 mr-2" />
+              <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               PDF
             </Button>
           </div>
@@ -515,47 +518,47 @@ export default function Reports() {
       {/* Summary Cards */}
       {!transactionsLoading && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {/* Total Revenue - Premium Card */}
-            <div className="group relative bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl border border-green-200/50 p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-green-400/10 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700"></div>
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-400/10 rounded-full -ml-16 -mb-16 group-hover:scale-125 transition-transform duration-700"></div>
+            <div className="group relative bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl sm:rounded-2xl border border-green-200/50 p-4 sm:p-5 md:p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-green-400/10 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-emerald-400/10 rounded-full -ml-12 sm:-ml-16 -mb-12 sm:-mb-16 group-hover:scale-125 transition-transform duration-700"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Ingresos Totales</span>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <DollarSign className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <span className="text-[10px] sm:text-xs font-bold text-green-700 uppercase tracking-wider">Ingresos Totales</span>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-4xl font-black text-gray-900 mb-2">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-1.5 sm:mb-2 truncate">
                   ${summary.totalRevenue.toLocaleString('es-CO')}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-green-700 font-medium">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  {summary.totalTransactions} transacciones
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-green-700 font-medium">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></div>
+                  <span className="truncate">{summary.totalTransactions} transacciones</span>
                 </div>
               </div>
             </div>
 
             {/* Cash - Premium Card */}
-            <div className="group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200/50 p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-amber-400/10 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl sm:rounded-2xl border border-amber-200/50 p-4 sm:p-5 md:p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-amber-400/10 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Efectivo</span>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Banknote className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <span className="text-[10px] sm:text-xs font-bold text-amber-700 uppercase tracking-wider">Efectivo</span>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Banknote className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-4xl font-black text-gray-900 mb-3">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-2 sm:mb-3 truncate">
                   ${summary.cashRevenue.toLocaleString('es-CO')}
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold">
                     <span className="text-amber-700">Participación</span>
                     <span className="text-amber-900">{Math.round((summary.cashRevenue / summary.totalRevenue) * 100) || 0}%</span>
                   </div>
-                  <div className="h-2.5 bg-amber-200/50 rounded-full overflow-hidden">
+                  <div className="h-2 sm:h-2.5 bg-amber-200/50 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-amber-500 to-orange-600 rounded-full transition-all duration-1000 ease-out"
                       style={{width: `${Math.round((summary.cashRevenue / summary.totalRevenue) * 100) || 0}%`}}
@@ -566,24 +569,24 @@ export default function Reports() {
             </div>
 
             {/* Card - Premium Card */}
-            <div className="group relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-200/50 p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-blue-400/10 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="group relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl sm:rounded-2xl border border-blue-200/50 p-4 sm:p-5 md:p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-blue-400/10 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Tarjeta</span>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <CreditCard className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <span className="text-[10px] sm:text-xs font-bold text-blue-700 uppercase tracking-wider">Tarjeta</span>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                    <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-4xl font-black text-gray-900 mb-3">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-2 sm:mb-3 truncate">
                   ${summary.cardRevenue.toLocaleString('es-CO')}
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold">
                     <span className="text-blue-700">Participación</span>
                     <span className="text-blue-900">{Math.round((summary.cardRevenue / summary.totalRevenue) * 100) || 0}%</span>
                   </div>
-                  <div className="h-2.5 bg-blue-200/50 rounded-full overflow-hidden">
+                  <div className="h-2 sm:h-2.5 bg-blue-200/50 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out"
                       style={{width: `${Math.round((summary.cardRevenue / summary.totalRevenue) * 100) || 0}%`}}
@@ -594,24 +597,24 @@ export default function Reports() {
             </div>
 
             {/* Digital - Premium Card */}
-            <div className="group relative bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-2xl border border-purple-200/50 p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-400/10 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="group relative bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-xl sm:rounded-2xl border border-purple-200/50 p-4 sm:p-5 md:p-6 hover:shadow-2xl transition-all duration-500 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-purple-400/10 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-purple-700 uppercase tracking-wider">Digital</span>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Smartphone className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <span className="text-[10px] sm:text-xs font-bold text-purple-700 uppercase tracking-wider">Digital</span>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                 </div>
-                <div className="text-4xl font-black text-gray-900 mb-3">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-2 sm:mb-3 truncate">
                   ${summary.digitalRevenue.toLocaleString('es-CO')}
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold">
                     <span className="text-purple-700">Participación</span>
                     <span className="text-purple-900">{Math.round((summary.digitalRevenue / summary.totalRevenue) * 100) || 0}%</span>
                   </div>
-                  <div className="h-2.5 bg-purple-200/50 rounded-full overflow-hidden">
+                  <div className="h-2 sm:h-2.5 bg-purple-200/50 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-purple-500 to-pink-600 rounded-full transition-all duration-1000 ease-out"
                       style={{width: `${Math.round((summary.digitalRevenue / summary.totalRevenue) * 100) || 0}%`}}
@@ -623,17 +626,17 @@ export default function Reports() {
           </div>
 
           {/* By Vehicle Type - Premium Section */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-parkiu-500 to-parkiu-700 flex items-center justify-center shadow-lg">
-                <Car className="w-7 h-7 text-white" />
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-parkiu-500 to-parkiu-700 flex items-center justify-center shadow-lg flex-shrink-0">
+                <Car className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">Análisis por Tipo de Vehículo</h3>
-                <p className="text-sm text-gray-600">Desglose de ingresos por categoría</p>
+              <div className="min-w-0">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 truncate">Análisis por Tipo de Vehículo</h3>
+                <p className="text-xs sm:text-sm text-gray-600 line-clamp-1">Desglose de ingresos por categoría</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {Object.entries(summary.byVehicleType).map(([type, data]) => {
                 const maxRevenue = Math.max(...Object.values(summary.byVehicleType).map(v => v.revenue));
                 const percentage = maxRevenue > 0 ? (data.revenue / maxRevenue) * 100 : 0;
@@ -645,23 +648,23 @@ export default function Reports() {
                 }[type] || { emoji: '🚗', label: type, gradient: 'from-gray-500 to-gray-700', bg: 'from-gray-50 to-gray-100' };
 
                 return (
-                  <div key={type} className={`group relative bg-gradient-to-br ${config.bg} border border-gray-200 rounded-2xl p-6 hover:shadow-xl transition-all duration-300`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-4xl">{config.emoji}</span>
-                      <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">{config.label}</span>
+                  <div key={type} className={`group relative bg-gradient-to-br ${config.bg} border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 hover:shadow-xl transition-all duration-300`}>
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <span className="text-3xl sm:text-4xl">{config.emoji}</span>
+                      <span className="text-[10px] sm:text-xs font-bold text-gray-600 uppercase tracking-wider">{config.label}</span>
                     </div>
-                    <div className="text-3xl font-black text-gray-900 mb-2">
+                    <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1.5 sm:mb-2 truncate">
                       ${data.revenue.toLocaleString('es-CO')}
                     </div>
-                    <div className="text-sm text-gray-600 font-medium mb-4">
+                    <div className="text-xs sm:text-sm text-gray-600 font-medium mb-3 sm:mb-4">
                       {data.count} vehículos
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-gray-600">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold text-gray-600">
                         <span>Proporción</span>
                         <span>{percentage.toFixed(0)}%</span>
                       </div>
-                      <div className="h-3 bg-gray-200/50 rounded-full overflow-hidden">
+                      <div className="h-2.5 sm:h-3 bg-gray-200/50 rounded-full overflow-hidden">
                         <div
                           className={`h-full bg-gradient-to-r ${config.gradient} rounded-full transition-all duration-1000 ease-out`}
                           style={{width: `${percentage}%`}}
@@ -675,51 +678,53 @@ export default function Reports() {
           </div>
 
           {/* Transactions Table - Premium */}
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-white">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-parkiu-500 to-parkiu-700 flex items-center justify-center shadow-lg">
-                  <FileText className="w-6 h-6 text-white" />
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <div className="p-4 sm:p-6 border-b bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-parkiu-500 to-parkiu-700 flex items-center justify-center shadow-lg flex-shrink-0">
+                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Detalle de Transacciones</h3>
-                  <p className="text-sm text-gray-600">Registro completo del período seleccionado</p>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 truncate">Detalle de Transacciones</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-1">Registro completo del período seleccionado</p>
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-gray-100 to-gray-50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Placa</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Tipo</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Entrada</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Salida</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Duración</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Pago</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Placa</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Tipo</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Entrada</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Salida</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Duración</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Pago</th>
+                    <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedTransactions.map((transaction) => (
                     <tr key={transaction.transaction_id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-mono font-bold text-gray-900">{transaction.plate}</span>
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                        <span className="font-mono font-bold text-gray-900 text-sm">{transaction.plate}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600 capitalize">{transaction.vehicle_type}</span>
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                        <span className="text-xs lg:text-sm text-gray-600 capitalize">{transaction.vehicle_type}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-600">
                         {format(new Date(transaction.entry_time), 'dd/MM HH:mm', { locale: es })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-600">
                         {transaction.exit_time ? format(new Date(transaction.exit_time), 'dd/MM HH:mm', { locale: es }) : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-600">
                         {transaction.duration_minutes ? `${transaction.duration_minutes} min` : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                        <span className={`px-2 lg:px-3 py-1 lg:py-1.5 rounded-full text-[10px] lg:text-xs font-bold ${
                           transaction.payment_method === 'cash' ? 'bg-amber-100 text-amber-800' :
                           transaction.payment_method === 'card' ? 'bg-blue-100 text-blue-800' :
                           'bg-purple-100 text-purple-800'
@@ -728,8 +733,8 @@ export default function Reports() {
                            transaction.payment_method === 'card' ? 'Tarjeta' : 'Digital'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-lg font-black text-gray-900">
+                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                        <span className="text-base lg:text-lg font-black text-gray-900">
                           ${(transaction.total_cost || 0).toLocaleString('es-CO')}
                         </span>
                       </td>
@@ -737,33 +742,82 @@ export default function Reports() {
                   ))}
                 </tbody>
               </table>
-              {completedTransactions.length === 0 && (
-                <div className="text-center py-16">
-                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">No hay transacciones para el período seleccionado</p>
-                  <p className="text-sm text-gray-400 mt-2">Selecciona otra fecha o rango para ver resultados</p>
-                </div>
-              )}
             </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {paginatedTransactions.map((transaction) => (
+                <div key={transaction.transaction_id} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono font-bold text-gray-900 text-lg mb-1">{transaction.plate}</div>
+                      <div className="text-xs text-gray-500 capitalize">{transaction.vehicle_type}</div>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <div className="text-xl font-black text-gray-900">
+                        ${(transaction.total_cost || 0).toLocaleString('es-CO')}
+                      </div>
+                      <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        transaction.payment_method === 'cash' ? 'bg-amber-100 text-amber-800' :
+                        transaction.payment_method === 'card' ? 'bg-blue-100 text-blue-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>
+                        {transaction.payment_method === 'cash' ? 'Efectivo' :
+                         transaction.payment_method === 'card' ? 'Tarjeta' : 'Digital'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-500 font-medium">Entrada:</span>
+                      <div className="text-gray-900 font-semibold">
+                        {format(new Date(transaction.entry_time), 'dd/MM HH:mm', { locale: es })}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 font-medium">Salida:</span>
+                      <div className="text-gray-900 font-semibold">
+                        {transaction.exit_time ? format(new Date(transaction.exit_time), 'dd/MM HH:mm', { locale: es }) : '-'}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500 font-medium">Duración: </span>
+                      <span className="text-gray-900 font-semibold">
+                        {transaction.duration_minutes ? `${transaction.duration_minutes} min` : '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {completedTransactions.length === 0 && (
+              <div className="text-center py-12 sm:py-16">
+                <FileText className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-gray-500 font-medium px-4">No hay transacciones para el período seleccionado</p>
+                <p className="text-xs sm:text-sm text-gray-400 mt-1 sm:mt-2 px-4">Selecciona otra fecha o rango para ver resultados</p>
+              </div>
+            )}
 
             {/* Paginación */}
             {completedTransactions.length > 0 && (
-              <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-gray-700">
+              <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t bg-gray-50">
+                {/* Info y selector - Responsive */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
                     Mostrando <span className="font-semibold">{startIndex + 1}</span> a{' '}
                     <span className="font-semibold">{Math.min(endIndex, completedTransactions.length)}</span> de{' '}
                     <span className="font-semibold">{completedTransactions.length}</span> transacciones
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">Por página:</label>
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <label className="text-xs sm:text-sm text-gray-600">Por página:</label>
                     <select
                       value={itemsPerPage}
                       onChange={(e) => {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                       }}
-                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-parkiu-500"
+                      className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-parkiu-500"
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -773,22 +827,26 @@ export default function Reports() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Controles de paginación */}
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  {/* Botones Primera/Anterior - Solo desktop */}
                   <button
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="hidden sm:block px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Primera
                   </button>
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Anterior
+                    <span className="hidden sm:inline">Anterior</span>
+                    <span className="sm:hidden">«</span>
                   </button>
 
+                  {/* Números de página */}
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNum;
@@ -806,7 +864,7 @@ export default function Reports() {
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                             currentPage === pageNum
                               ? 'bg-parkiu-600 text-white'
                               : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
@@ -818,17 +876,19 @@ export default function Reports() {
                     })}
                   </div>
 
+                  {/* Botones Siguiente/Última */}
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Siguiente
+                    <span className="hidden sm:inline">Siguiente</span>
+                    <span className="sm:hidden">»</span>
                   </button>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="hidden sm:block px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Última
                   </button>
