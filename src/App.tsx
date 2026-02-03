@@ -27,6 +27,7 @@ const ParkingViewEnhanced = lazy(() => import('./features/parking/ParkingViewEnh
 const ParkingTestView = lazy(() => import('./features/parking/ParkingTestView'));
 const AdminParkingDashboard = lazy(() => import('./features/parking/AdminParkingDashboard'));
 const Settings = lazy(() => import('./features/settings/Settings'));
+const Reports = lazy(() => import('./features/reports/Reports'));
 const LoginForm = lazy(() => import('./features/auth/components/LoginForm').then(module => ({ default: module.LoginForm })));
 const CallbackPage = lazy(() => import('./features/auth/components/CallbackPage').then(module => ({ default: module.CallbackPage })));
 const EnhancedOnboardingForm = lazy(() => import('./features/onboarding/components/EnhancedOnboardingForm'));
@@ -100,6 +101,11 @@ function App() {
                     <Route path="/vehicles/exit" element={<VehicleExit />} />
                   </Route>
 
+                  {/* Reportes */}
+                  <Route element={<RoleGuard allowed={["global_admin", "local_admin"]} />}>
+                    <Route path="/reports" element={<Reports />} />
+                  </Route>
+
                   {/* Rutas de desarrollo y testing */}
                   <Route path="/parking-legacy" element={<ParkingView />} />
                   <Route path="/parking-enhanced" element={<ParkingViewEnhanced />} />
@@ -120,7 +126,7 @@ function App() {
         <PendingOperationsList />
       </ToastProvider>
       <BackendStatus />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

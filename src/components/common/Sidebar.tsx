@@ -8,7 +8,7 @@ const links = [
   { to: '/vehicles/entry', label: 'Entradas', icon: <LuLogIn className="w-5 h-5" /> },
   { to: '/vehicles/exit', label: 'Salidas', icon: <LuLogOut className="w-5 h-5" /> },
   { to: '/parking', label: 'Parqueaderos', icon: <LuMapPin className="w-5 h-5" /> },
-  { to: '/reports', label: 'Reportes', icon: <LuActivity className="w-5 h-5" />, disabled: true },
+  { to: '/reports', label: 'Reportes', icon: <LuActivity className="w-5 h-5" /> },
   { to: '/settings', label: 'Configuración', icon: <LuSettings className="w-5 h-5" /> },
 ];
 
@@ -72,16 +72,14 @@ export function Sidebar() {
             );
 
             return (
-              <li key={link.to} title={link.disabled ? 'Próximamente' : undefined}>
+              <li key={link.to}>
                 <Link
-                  to={link.disabled ? location.pathname : link.to}
+                  to={link.to}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium group
                     ${isActive
                       ? 'bg-parkiu-50 text-parkiu-700 border-r-2 border-parkiu-700'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}
-                    ${link.disabled ? 'opacity-60 cursor-not-allowed' : ''}
                   `}
-                  aria-disabled={link.disabled}
                 >
                   {content}
                   {link.label}

@@ -83,8 +83,9 @@ function validateExitPayload(payload: Record<string, unknown>): { valid: boolean
     return { valid: false, error: 'Placa es requerida' };
   }
 
-  if (!payload.payment_amount || typeof payload.payment_amount !== 'number' || payload.payment_amount <= 0) {
-    return { valid: false, error: 'Monto de pago debe ser mayor a 0' };
+  // ✅ Permitir payment_amount = 0 para casos de cortesía/salida sin cobro
+  if (payload.payment_amount == null || typeof payload.payment_amount !== 'number' || payload.payment_amount < 0) {
+    return { valid: false, error: 'Monto de pago debe ser mayor o igual a 0' };
   }
 
   const validPaymentMethods = ['cash', 'card', 'digital'];
@@ -158,6 +159,18 @@ export async function getPendingCount(): Promise<number> {
 
 export async function listPending(): Promise<OfflineOperation[]> {
   return db.operations.where('status').equals('pending').toArray();
+}
+
+/**
+ * Lista operaciones pendientes Y con error (para mostrar en UI)
+ * Útil para PendingOperationsList que necesita mostrar ambos estados
+ */
+export async function listPendingAndErrors(): Promise<OfflineOperation[]> {
+  const pending = await db.operations.where('status').equals('pending').toArray();
+  const errors = await db.operations.where('status').equals('error').toArray();
+  return [...pending, ...errors].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 /** Placas con salida pendiente de sincronizar (por lot opcional) para no mostrarlas como activas desde backend */

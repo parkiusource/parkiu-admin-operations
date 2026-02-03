@@ -149,10 +149,15 @@ export async function syncPendingOperations(runCtx: {
         }
       }
 
-      // ✅ CASO 6: Errores de servidor (5xx) u otros errores
-      // Mantener en cola para reintentar después
+      // ✅ CASO 6: Errores de servidor (5xx) u otros errores temporales
+      // Mantener en cola (status: pending) para reintentar después
       console.error(`❌ Error sincronizando operación ${op.id} (placa: ${op.plate}):`, msg);
-      await markAsError(op.id!, msg);
+
+      // 🔄 NO marcar como 'error' - mantener 'pending' para que se reintente automáticamente
+      // Solo actualizar errorMessage para debugging
+      await db.operations.update(op.id!, {
+        errorMessage: `Reintento pendiente: ${msg}`
+      });
       failed += 1;
     }
   }

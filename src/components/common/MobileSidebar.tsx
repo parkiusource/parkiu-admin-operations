@@ -1,14 +1,15 @@
 import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Link, useLocation } from 'react-router-dom';
-import { LuLayoutDashboard, LuMapPin, LuLogIn, LuLogOut, LuSettings, LuUser, LuPower, LuX } from 'react-icons/lu';
+import { LuLayoutDashboard, LuMapPin, LuLogIn, LuLogOut, LuSettings, LuUser, LuPower, LuX, LuActivity } from 'react-icons/lu';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard', icon: <LuLayoutDashboard className="w-5 h-5" /> },
-  { to: '/parking', label: 'Parqueaderos', icon: <LuMapPin className="w-5 h-5" /> },
   { to: '/vehicles/entry', label: 'Entradas', icon: <LuLogIn className="w-5 h-5" /> },
   { to: '/vehicles/exit', label: 'Salidas', icon: <LuLogOut className="w-5 h-5" /> },
+  { to: '/parking', label: 'Parqueaderos', icon: <LuMapPin className="w-5 h-5" /> },
+  { to: '/reports', label: 'Reportes', icon: <LuActivity className="w-5 h-5" /> },
   { to: '/settings', label: 'Configuración', icon: <LuSettings className="w-5 h-5" /> },
 ];
 
