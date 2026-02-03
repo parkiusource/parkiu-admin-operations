@@ -72,7 +72,8 @@ export async function cacheVehicleEntry(
   plate: string,
   vehicleType: 'car' | 'motorcycle' | 'bicycle' | 'truck',
   spotNumber: string,
-  transactionId?: number
+  transactionId?: number,
+  entryTime?: string
 ): Promise<void> {
   try {
     const vehicle: ActiveVehicleCache = {
@@ -81,7 +82,7 @@ export async function cacheVehicleEntry(
       plate: plate.toUpperCase(),
       vehicleType,
       spotNumber,
-      entryTime: new Date().toISOString(),
+      entryTime: entryTime || new Date().toISOString(),
       transactionId,
       syncStatus: transactionId ? 'synced' : 'local',
       cachedAt: new Date().toISOString()

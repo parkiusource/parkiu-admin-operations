@@ -14,6 +14,7 @@ import {
 } from '@/services/offlineCache';
 import { connectionService } from '@/services/connectionService';
 import { useToken } from '@/hooks/useToken';
+import { hasValidOfflineSession } from '@/services/offlineSession';
 
 // ===============================
 // QUERY HOOKS
@@ -22,6 +23,7 @@ import { useToken } from '@/hooks/useToken';
 /**
  * Hook para obtener parking lots del administrador autenticado
  * ✅ Con soporte offline: guarda en caché y hace fallback cuando el backend no responde
+ * ✅ OFFLINE-FIRST: Permite cargar datos del caché incluso sin Auth0 activo
  */
 export const useParkingLots = (filters?: ParkingLotFilters, options?: {
   enabled?: boolean;
@@ -32,21 +34,28 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
   const { getAuthToken } = useToken();
   const [isFromCache, setIsFromCache] = useState(false);
 
+  // 📴 OFFLINE-FIRST: Verificar si hay sesión offline válida
+  const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+  const canOperateOffline = !isOnline && hasValidOfflineSession();
+
   const query = useQuery({
     queryKey: ['parkingLots', filters],
     queryFn: async () => {
-      if (!isAuthenticated) {
-        return [];
-      }
-
-      // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché
-      if (connectionService.considerOffline()) {
+      // 📴 OFFLINE-FIRST: Si estamos offline, ir directo al caché sin verificar Auth0
+      if (connectionService.considerOffline() || !isOnline) {
         const cached = await getCachedParkingLots();
         if (cached && cached.length > 0) {
           setIsFromCache(true);
+          console.log('📴 [useParkingLots] Cargando desde caché offline:', cached.length, 'parqueaderos');
           return cached;
         }
-        throw new Error('No hay datos en caché');
+        // Si no hay caché y estamos offline, lanzar error descriptivo
+        throw new Error('Sin conexión y no hay datos en caché');
+      }
+
+      // Online pero no autenticado - no podemos hacer nada
+      if (!isAuthenticated) {
+        return [];
       }
 
       try {
@@ -86,7 +95,8 @@ export const useParkingLots = (filters?: ParkingLotFilters, options?: {
         throw error;
       }
     },
-    enabled: isAuthenticated && (options?.enabled ?? true),
+    // 📴 OFFLINE-FIRST: Habilitar query si está autenticado O si puede operar offline
+    enabled: (isAuthenticated || canOperateOffline) && (options?.enabled ?? true),
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutos por defecto
     refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
     retry: (failureCount, error) => {
