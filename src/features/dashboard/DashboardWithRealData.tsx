@@ -189,10 +189,10 @@ export default function DashboardWithRealData() {
       )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Parqueaderos */}
         <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-5 lg:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-parkiu-100 rounded-lg flex items-center justify-center">
@@ -201,10 +201,10 @@ export default function DashboardWithRealData() {
               </div>
               <div className="ml-4 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                     Total Parqueaderos
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">
+                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                     {dashboardStats.isLoading ? '...' : dashboardStats.aggregatedStats.totalParkings}
                   </dd>
                   <dd className="text-sm text-green-600">
@@ -218,7 +218,7 @@ export default function DashboardWithRealData() {
 
         {/* Ocupación General */}
         <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-5 lg:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -227,10 +227,10 @@ export default function DashboardWithRealData() {
               </div>
               <div className="ml-4 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                     Ocupación General
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">
+                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                     {dashboardStats.isLoading ? '...' : `${dashboardStats.aggregatedStats.occupancyRate}%`}
                   </dd>
                   <dd className="text-sm text-gray-600">
@@ -244,7 +244,7 @@ export default function DashboardWithRealData() {
 
         {/* Ingresos Hoy */}
         <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-5 lg:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -253,10 +253,10 @@ export default function DashboardWithRealData() {
               </div>
               <div className="ml-4 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                     Ingresos Hoy
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">
+                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                     {dashboardStats.isLoading ? '...' : formatCurrency(dashboardStats.aggregatedStats.todayRevenue)}
                   </dd>
                   <dd className="text-sm text-gray-600">
@@ -270,7 +270,7 @@ export default function DashboardWithRealData() {
 
         {/* Estado del Sistema */}
         <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-5 lg:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getHealthColor('good')}`}>
@@ -279,10 +279,10 @@ export default function DashboardWithRealData() {
               </div>
               <div className="ml-4 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                     Estado del Sistema
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">
+                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
                     Operativo
                   </dd>
                   <dd className="text-sm text-gray-600">
@@ -296,7 +296,7 @@ export default function DashboardWithRealData() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Parqueadero Seleccionado - Vista Detallada */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-4 sm:p-6">
@@ -353,42 +353,42 @@ export default function DashboardWithRealData() {
             ) : realtimeStats.stats ? (
               <div className="space-y-4">
                 {/* Ocupación Visual */}
-                <div className="bg-gradient-to-br from-parkiu-50 to-blue-50 rounded-xl p-5 border border-parkiu-100">
+                <div className="bg-gradient-to-br from-parkiu-50 to-blue-50 rounded-xl p-4 sm:p-5 border border-parkiu-100">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-gray-700">Ocupación Actual</span>
-                    <span className="text-2xl font-bold text-parkiu-600">
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Ocupación Actual</span>
+                    <span className="text-xl sm:text-2xl font-bold text-parkiu-600">
                       {realtimeStats.stats.occupancy_rate.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-3 mb-2">
                     <div
-                      className="bg-gradient-to-r from-parkiu-500 to-parkiu-600 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-parkiu-500 to-parkiu-600 h-2.5 sm:h-3 rounded-full transition-all duration-500"
                       style={{ width: `${realtimeStats.stats.occupancy_rate}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600">
+                  <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600">
                     <span>{realtimeStats.stats.occupied_spots} ocupados</span>
                     <span>{realtimeStats.stats.available_spots} disponibles</span>
                   </div>
                 </div>
 
                 {/* Grid de Métricas */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <LuDollarSign className="w-4 h-4 text-purple-600" />
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="bg-purple-50 rounded-lg p-3 sm:p-4 border border-purple-100">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                      <LuDollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
                       <span className="text-xs font-medium text-purple-900">Hoy</span>
                     </div>
-                    <div className="text-lg font-bold text-purple-900">
+                    <div className="text-sm sm:text-base lg:text-lg font-bold text-purple-900">
                       {formatCurrency(realtimeStats.stats.revenue_today)}
                     </div>
                   </div>
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <LuTrendingUp className="w-4 h-4 text-blue-600" />
+                  <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-100">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                      <LuTrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
                       <span className="text-xs font-medium text-blue-900">Mes</span>
                     </div>
-                    <div className="text-lg font-bold text-blue-900">
+                    <div className="text-sm sm:text-base lg:text-lg font-bold text-blue-900">
                       {formatCurrency(realtimeStats.stats.revenue_month)}
                     </div>
                   </div>
@@ -396,9 +396,9 @@ export default function DashboardWithRealData() {
 
                 {/* KPIs adicionales */}
                 {kpis && (
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t">
-                    <div className="flex items-start gap-2">
-                      <LuClock className="w-4 h-4 text-gray-500 mt-0.5" />
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-3 border-t">
+                    <div className="flex items-start gap-1.5 sm:gap-2">
+                      <LuClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500 mt-0.5" />
                       <div>
                         <div className="text-xs text-gray-600">Estadía Promedio</div>
                         <div className="text-sm font-semibold text-gray-900">
@@ -406,8 +406,8 @@ export default function DashboardWithRealData() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <LuDollarSign className="w-4 h-4 text-gray-500 mt-0.5" />
+                    <div className="flex items-start gap-1.5 sm:gap-2">
+                      <LuDollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500 mt-0.5" />
                       <div>
                         <div className="text-xs text-gray-600">Por Espacio</div>
                         <div className="text-sm font-semibold text-gray-900">
@@ -428,15 +428,15 @@ export default function DashboardWithRealData() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Sistema</h3>
 
             {/* Estadísticas Globales */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-parkiu-50 to-blue-50 rounded-lg border border-parkiu-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-parkiu-100 rounded-lg flex items-center justify-center">
-                    <LuBuilding2 className="w-5 h-5 text-parkiu-600" />
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-parkiu-50 to-blue-50 rounded-lg border border-parkiu-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-parkiu-100 rounded-lg flex items-center justify-center">
+                    <LuBuilding2 className="w-4 h-4 sm:w-5 sm:h-5 text-parkiu-600" />
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Parqueaderos</p>
-                    <p className="text-xl font-bold text-gray-900">{dashboardStats.aggregatedStats.totalParkings}</p>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900">{dashboardStats.aggregatedStats.totalParkings}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -444,14 +444,14 @@ export default function DashboardWithRealData() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <LuMapPin className="w-5 h-5 text-green-600" />
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <LuMapPin className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Espacios Totales</p>
-                    <p className="text-xl font-bold text-gray-900">{dashboardStats.aggregatedStats.totalSpaces}</p>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900">{dashboardStats.aggregatedStats.totalSpaces}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -459,14 +459,14 @@ export default function DashboardWithRealData() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <LuDollarSign className="w-5 h-5 text-purple-600" />
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <LuDollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Ingresos del Día</p>
-                    <p className="text-lg font-bold text-gray-900">{formatCurrency(dashboardStats.aggregatedStats.todayRevenue)}</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(dashboardStats.aggregatedStats.todayRevenue)}</p>
                   </div>
                 </div>
               </div>
@@ -492,56 +492,56 @@ export default function DashboardWithRealData() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             <Link
               to="/parking"
-              className="flex items-center gap-3 p-4 bg-gradient-to-br from-parkiu-50 to-blue-50 hover:from-parkiu-100 hover:to-blue-100 rounded-xl transition-all duration-200 group border border-parkiu-100"
+              className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-parkiu-50 to-blue-50 hover:from-parkiu-100 hover:to-blue-100 rounded-xl transition-all duration-200 group border border-parkiu-100"
             >
-              <div className="w-10 h-10 bg-parkiu-500 group-hover:bg-parkiu-600 rounded-lg flex items-center justify-center transition-colors">
-                <LuPlus className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-parkiu-500 group-hover:bg-parkiu-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuPlus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900 text-sm">Nuevo Parqueadero</div>
-                <div className="text-xs text-gray-600">Crear parqueadero</div>
+                <div className="font-semibold text-gray-900 text-xs sm:text-sm">Nuevo Parqueadero</div>
+                <div className="text-xs text-gray-600 hidden sm:block">Crear parqueadero</div>
               </div>
             </Link>
 
             <Link
               to="/vehicles/entry"
-              className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl transition-all duration-200 group border border-green-100"
+              className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl transition-all duration-200 group border border-green-100"
             >
-              <div className="w-10 h-10 bg-green-500 group-hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors">
-                <LuMapPin className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-green-500 group-hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuMapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900 text-sm">Registrar Entrada</div>
-                <div className="text-xs text-gray-600">Nuevo vehículo</div>
+                <div className="font-semibold text-gray-900 text-xs sm:text-sm">Registrar Entrada</div>
+                <div className="text-xs text-gray-600 hidden sm:block">Nuevo vehículo</div>
               </div>
             </Link>
 
             <Link
               to="/reports"
-              className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-200 group border border-purple-100"
+              className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-200 group border border-purple-100"
             >
-              <div className="w-10 h-10 bg-purple-500 group-hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors">
-                <LuFileText className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-purple-500 group-hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuFileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900 text-sm">Ver Reportes</div>
-                <div className="text-xs text-gray-600">Análisis detallado</div>
+                <div className="font-semibold text-gray-900 text-xs sm:text-sm">Ver Reportes</div>
+                <div className="text-xs text-gray-600 hidden sm:block">Análisis detallado</div>
               </div>
             </Link>
 
             <Link
               to="/settings"
-              className="flex items-center gap-3 p-4 bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 rounded-xl transition-all duration-200 group border border-gray-200"
+              className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 rounded-xl transition-all duration-200 group border border-gray-200"
             >
-              <div className="w-10 h-10 bg-gray-500 group-hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors">
-                <LuSettings className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-500 group-hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors">
+                <LuSettings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <div className="font-semibold text-gray-900 text-sm">Configuración</div>
-                <div className="text-xs text-gray-600">Ajustes del sistema</div>
+                <div className="font-semibold text-gray-900 text-xs sm:text-sm">Configuración</div>
+                <div className="text-xs text-gray-600 hidden sm:block">Ajustes del sistema</div>
               </div>
             </Link>
           </div>
