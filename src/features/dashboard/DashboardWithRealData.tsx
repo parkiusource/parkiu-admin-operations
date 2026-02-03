@@ -131,7 +131,7 @@ export default function DashboardWithRealData() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -189,25 +189,25 @@ export default function DashboardWithRealData() {
       )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         {/* Total Parqueaderos */}
-        <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-4 sm:p-5 lg:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-parkiu-100 rounded-lg flex items-center justify-center">
-                  <LuBuilding2 className="h-6 w-6 text-parkiu-600" />
+        <div className="bg-gradient-to-br from-white to-parkiu-50 overflow-hidden shadow-md rounded-2xl border border-parkiu-200 hover:shadow-lg transition-shadow">
+          <div className="p-3 sm:p-5 lg:p-6">
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="flex-shrink-0 mb-2 sm:mb-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-parkiu-500 to-parkiu-600 rounded-xl flex items-center justify-center shadow-md">
+                  <LuBuilding2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
-              <div className="ml-4 flex-1">
+              <div className="sm:ml-4 flex-1">
                 <dl>
-                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
-                    Total Parqueaderos
+                  <dt className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Parqueaderos
                   </dt>
-                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
+                  <dd className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                     {dashboardStats.isLoading ? '...' : dashboardStats.aggregatedStats.totalParkings}
                   </dd>
-                  <dd className="text-sm text-green-600">
+                  <dd className="text-xs sm:text-sm text-green-600 font-medium mt-0.5">
                     {dashboardStats.aggregatedStats.activeParkings} activos
                   </dd>
                 </dl>
@@ -217,24 +217,24 @@ export default function DashboardWithRealData() {
         </div>
 
         {/* Ocupación General */}
-        <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-4 sm:p-5 lg:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <LuMapPin className="h-6 w-6 text-green-600" />
+        <div className="bg-gradient-to-br from-white to-green-50 overflow-hidden shadow-md rounded-2xl border border-green-200 hover:shadow-lg transition-shadow">
+          <div className="p-3 sm:p-5 lg:p-6">
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="flex-shrink-0 mb-2 sm:mb-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                  <LuMapPin className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
-              <div className="ml-4 flex-1">
+              <div className="sm:ml-4 flex-1">
                 <dl>
-                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
-                    Ocupación General
+                  <dt className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Ocupación
                   </dt>
-                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
+                  <dd className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                     {dashboardStats.isLoading ? '...' : `${dashboardStats.aggregatedStats.occupancyRate}%`}
                   </dd>
-                  <dd className="text-sm text-gray-600">
-                    {dashboardStats.aggregatedStats.occupiedSpaces} de {dashboardStats.aggregatedStats.totalSpaces} espacios
+                  <dd className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5">
+                    {dashboardStats.aggregatedStats.occupiedSpaces}/{dashboardStats.aggregatedStats.totalSpaces}
                   </dd>
                 </dl>
               </div>
@@ -243,24 +243,24 @@ export default function DashboardWithRealData() {
         </div>
 
         {/* Ingresos Hoy */}
-        <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-4 sm:p-5 lg:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <LuDollarSign className="h-6 w-6 text-purple-600" />
+        <div className="bg-gradient-to-br from-white to-purple-50 overflow-hidden shadow-md rounded-2xl border border-purple-200 hover:shadow-lg transition-shadow col-span-2 sm:col-span-1">
+          <div className="p-3 sm:p-5 lg:p-6">
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="flex-shrink-0 mb-2 sm:mb-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-md">
+                  <LuDollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
-              <div className="ml-4 flex-1">
+              <div className="sm:ml-4 flex-1">
                 <dl>
-                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     Ingresos Hoy
                   </dt>
-                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
+                  <dd className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                     {dashboardStats.isLoading ? '...' : formatCurrency(dashboardStats.aggregatedStats.todayRevenue)}
                   </dd>
-                  <dd className="text-sm text-gray-600">
-                    {dashboardStats.aggregatedStats.activeVehicles} vehículos activos
+                  <dd className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5">
+                    {dashboardStats.aggregatedStats.activeVehicles} vehículos
                   </dd>
                 </dl>
               </div>
@@ -269,24 +269,24 @@ export default function DashboardWithRealData() {
         </div>
 
         {/* Estado del Sistema */}
-        <div className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
-          <div className="p-4 sm:p-5 lg:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getHealthColor('good')}`}>
-                  {getHealthIcon('good')}
+        <div className="bg-gradient-to-br from-white to-blue-50 overflow-hidden shadow-md rounded-2xl border border-blue-200 hover:shadow-lg transition-shadow col-span-2 sm:col-span-1">
+          <div className="p-3 sm:p-5 lg:p-6">
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="flex-shrink-0 mb-2 sm:mb-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <LuActivity className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
-              <div className="ml-4 flex-1">
+              <div className="sm:ml-4 flex-1">
                 <dl>
-                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
-                    Estado del Sistema
+                  <dt className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Sistema
                   </dt>
-                  <dd className="text-xl sm:text-2xl font-bold text-gray-900">
+                  <dd className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                     Operativo
                   </dd>
-                  <dd className="text-sm text-gray-600">
-                    {realtimeEnabled ? 'Tiempo real activo' : 'Modo manual'}
+                  <dd className="text-xs sm:text-sm text-green-600 font-medium mt-0.5">
+                    {realtimeEnabled ? '● En vivo' : 'Manual'}
                   </dd>
                 </dl>
               </div>
