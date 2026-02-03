@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { listPending } from '@/services/offlineQueue';
+import { listPendingAndErrors } from '@/services/offlineQueue';
 import { OfflineOperation } from '@/db/schema';
 import { Clock, AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { connectionService } from '@/services/connectionService';
@@ -11,7 +11,7 @@ export const PendingOperationsList: React.FC = () => {
 
   useEffect(() => {
     const loadOperations = async () => {
-      const ops = await listPending();
+      const ops = await listPendingAndErrors();
       setOperations(ops);
     };
 
@@ -58,7 +58,7 @@ export const PendingOperationsList: React.FC = () => {
       await connectionService.retrySync();
       // Esperar un momento para que se actualice el estado
       setTimeout(async () => {
-        const ops = await listPending();
+        const ops = await listPendingAndErrors();
         setOperations(ops);
         setIsSyncing(false);
       }, 1000);

@@ -1,12 +1,13 @@
 import axios from 'axios';
 import { Auth0Client } from '@auth0/auth0-spa-js';
 import { useStore } from '@/store/useStore';
+import { BACKEND_URLS } from '@/config/backend';
 
 let auth0Client: Auth0Client | null = null;
 
 const createClient = () => {
   const client = axios.create({
-    baseURL: import.meta.env.VITE_API_BACKEND_URL,
+    baseURL: BACKEND_URLS.CURRENT,
     headers: {
       'Content-Type': 'application/json',
     },

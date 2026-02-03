@@ -120,7 +120,7 @@ function App() {
         <PendingOperationsList />
       </ToastProvider>
       <BackendStatus />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

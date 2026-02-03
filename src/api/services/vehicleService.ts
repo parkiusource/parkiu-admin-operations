@@ -141,9 +141,25 @@ export class VehicleService {
       return { data: normalized };
     } catch (error: unknown) {
       console.error('Error registering vehicle entry:', error);
-      return {
-        error: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Error registrando entrada del vehículo'
-      };
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const code = (error as { code?: string })?.code;
+      const backendMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+
+      // Mensajes específicos según tipo de error
+      if (code === 'ERR_NETWORK' || !status) {
+        return { error: 'Sin conexión. La operación se guardará localmente.' };
+      }
+      if (status === 401 || status === 403) {
+        return { error: 'Sesión expirada. Por favor inicia sesión nuevamente.' };
+      }
+      if (status === 422) {
+        return { error: backendMsg || 'Datos inválidos. Verifica la información ingresada.' };
+      }
+      if (status && status >= 500) {
+        return { error: 'Error del servidor. Reintentando automáticamente...' };
+      }
+
+      return { error: backendMsg || 'Error registrando entrada del vehículo' };
     }
   }
 
@@ -196,9 +212,25 @@ export class VehicleService {
       return { data: body };
     } catch (error: unknown) {
       console.error('Error registering vehicle exit:', error);
-      return {
-        error: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Error registrando salida del vehículo'
-      };
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const code = (error as { code?: string })?.code;
+      const backendMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+
+      // Mensajes específicos según tipo de error
+      if (code === 'ERR_NETWORK' || !status) {
+        return { error: 'Sin conexión. La operación se guardará localmente.' };
+      }
+      if (status === 401 || status === 403) {
+        return { error: 'Sesión expirada. Por favor inicia sesión nuevamente.' };
+      }
+      if (status === 422) {
+        return { error: backendMsg || 'Datos inválidos. Verifica la información ingresada.' };
+      }
+      if (status && status >= 500) {
+        return { error: 'Error del servidor. Reintentando automáticamente...' };
+      }
+
+      return { error: backendMsg || 'Error registrando salida del vehículo' };
     }
   }
 
@@ -230,9 +262,18 @@ export class VehicleService {
       return { data: body };
     } catch (error: unknown) {
       console.error('Error fetching active vehicles:', error);
-      return {
-        error: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Error obteniendo vehículos activos'
-      };
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const code = (error as { code?: string })?.code;
+      const backendMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+
+      if (code === 'ERR_NETWORK' || !status) {
+        return { error: 'Sin conexión. Mostrando datos en caché.' };
+      }
+      if (status === 401 || status === 403) {
+        return { error: 'Sesión expirada. Por favor inicia sesión nuevamente.' };
+      }
+
+      return { error: backendMsg || 'Error obteniendo vehículos activos' };
     }
   }
 
@@ -287,9 +328,18 @@ export class VehicleService {
       return { data: body.data };
     } catch (error: unknown) {
       console.error('Error fetching transaction history:', error);
-      return {
-        error: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Error obteniendo historial de transacciones'
-      };
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const code = (error as { code?: string })?.code;
+      const backendMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+
+      if (code === 'ERR_NETWORK' || !status) {
+        return { error: 'Sin conexión. Mostrando datos en caché.' };
+      }
+      if (status === 401 || status === 403) {
+        return { error: 'Sesión expirada. Por favor inicia sesión nuevamente.' };
+      }
+
+      return { error: backendMsg || 'Error obteniendo historial de transacciones' };
     }
   }
 
@@ -324,9 +374,21 @@ export class VehicleService {
       return { data: body };
     } catch (error: unknown) {
       console.error('Error searching vehicle:', error);
-      return {
-        error: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Error buscando vehículo'
-      };
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const code = (error as { code?: string })?.code;
+      const backendMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+
+      if (code === 'ERR_NETWORK' || !status) {
+        return { error: 'Sin conexión. Buscando en caché local.' };
+      }
+      if (status === 404) {
+        return { error: 'Vehículo no encontrado en el parqueadero.' };
+      }
+      if (status === 401 || status === 403) {
+        return { error: 'Sesión expirada. Por favor inicia sesión nuevamente.' };
+      }
+
+      return { error: backendMsg || 'Error buscando vehículo' };
     }
   }
 
