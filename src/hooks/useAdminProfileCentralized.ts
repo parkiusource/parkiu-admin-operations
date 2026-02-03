@@ -3,7 +3,8 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { getAdminProfile } from '@/services/profile';
 import { ProfileResponse } from '@/types/common';
 import { useToken } from './useToken';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { saveOfflineSession, getOfflineSession } from '@/services/offlineSession';
 
 // 🔥 SINGLETON: Variable global para rastrear si hay una solicitud en curso
 // Esto previene solicitudes duplicadas incluso entre diferentes instancias del hook
@@ -96,15 +97,60 @@ export const useRefreshAdminProfile = () => {
 /**
  * Hook ligero para componentes que solo necesitan el estado del perfil
  * sin hacer requests adicionales
+ *
+ * ✅ OFFLINE-FIRST: Guarda sesión offline cuando el perfil se carga exitosamente
  */
 export const useAdminProfileStatus = () => {
   const { data, isLoading, error } = useAdminProfileCentralized();
 
+  // 📴 OFFLINE-FIRST: Guardar sesión cuando el perfil se carga exitosamente
+  useEffect(() => {
+    if (data?.profile && !error) {
+      const profile = data.profile;
+      // Solo guardar si tenemos datos válidos
+      if (profile.id && profile.email && profile.role) {
+        // Extraer IDs de parkingLots si existen
+        const parkingLotIds = (profile.parkingLots || [])
+          .map((lot) => (lot as { id?: string })?.id)
+          .filter((id): id is string => !!id);
+
+        saveOfflineSession({
+          userId: String(profile.id),
+          email: profile.email,
+          role: profile.role,
+          status: profile.status || 'active',
+          parkingLotIds
+        });
+      }
+    }
+  }, [data?.profile, error]);
+
+  // 📴 OFFLINE-FIRST: Si estamos offline y no hay datos del servidor, usar sesión offline
+  const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+  const offlineSession = !isOnline && !data?.profile ? getOfflineSession() : null;
+
+  // Construir perfil desde sesión offline si es necesario
+  // El perfil offline tiene campos mínimos pero suficientes para operar
+  const offlineProfile = offlineSession ? {
+    id: parseInt(offlineSession.userId, 10) || 0,
+    email: offlineSession.email,
+    name: offlineSession.email.split('@')[0], // Usar parte del email como nombre
+    nit: '',
+    contact_phone: '',
+    role: offlineSession.role,
+    status: offlineSession.status as 'active' | 'initial' | 'pending_profile' | 'pending_parking' | 'pending_verify' | 'rejected' | 'suspended' | 'inactive',
+    parkingLots: offlineSession.parkingLotIds.map(id => ({ id })),
+    __offline: true // Marcador para indicar que viene de sesión offline
+  } : undefined;
+
+  const effectiveProfile = data?.profile || offlineProfile;
+
   return {
-    profile: data?.profile,
-    status: data?.profile?.status,
-    isLoading,
-    error,
-    isAuthenticated: !!data?.profile,
+    profile: effectiveProfile,
+    status: effectiveProfile?.status,
+    isLoading: isOnline ? isLoading : false, // No mostrar loading si estamos offline con sesión
+    error: isOnline ? error : null, // No mostrar error si estamos offline con sesión
+    isAuthenticated: !!effectiveProfile,
+    isOfflineSession: !!offlineSession
   };
 };

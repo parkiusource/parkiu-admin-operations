@@ -229,7 +229,9 @@ export const useSearchVehicle = (
             parkingLotId,
             response.data.plate,
             response.data.vehicle_type,
-            response.data.spot_number
+            response.data.spot_number,
+            undefined,
+            response.data.entry_time
           );
         } else {
           console.log('ℹ️ [useSearchVehicle] Backend retornó 200 pero sin data');
@@ -322,7 +324,7 @@ export const useRegisterVehicleEntry = (options?: {
           });
           console.log('✅ [useRegisterVehicleEntry] Operación encolada en IndexedDB');
           const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
-          await cacheVehicleEntry(parkingLotId, vehicleData.plate, vehicleData.vehicle_type, spotNumber);
+          await cacheVehicleEntry(parkingLotId, vehicleData.plate, vehicleData.vehicle_type, spotNumber, undefined, now);
           console.log('✅ [useRegisterVehicleEntry] Vehículo cacheado localmente');
           return {
             transaction_id: Date.now(),
@@ -361,7 +363,8 @@ export const useRegisterVehicleEntry = (options?: {
                 vehicleData.plate,
                 vehicleData.vehicle_type,
                 response.data!.spot_number,
-                response.data!.transaction_id
+                response.data!.transaction_id,
+                response.data!.entry_time
               );
               return response.data!;
             })(),
@@ -391,7 +394,7 @@ export const useRegisterVehicleEntry = (options?: {
             idempotencyKey,
           });
           const { cacheVehicleEntry } = await import('@/services/activeVehiclesCache');
-          await cacheVehicleEntry(parkingLotId, vehicleData.plate, vehicleData.vehicle_type, spotNumber);
+          await cacheVehicleEntry(parkingLotId, vehicleData.plate, vehicleData.vehicle_type, spotNumber, undefined, now);
           return {
             transaction_id: Date.now(),
             entry_time: now,
@@ -461,7 +464,8 @@ export const useRegisterVehicleEntry = (options?: {
             variables.vehicleData.plate,
             variables.vehicleData.vehicle_type,
             spotNumber,
-            data.transaction_id
+            data.transaction_id,
+            data.entry_time
           )
         );
       }

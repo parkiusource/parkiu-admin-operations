@@ -13,6 +13,7 @@ import {
 import { useStore } from '@/store/useStore';
 import { connectionService } from '@/services/connectionService';
 import { useToken } from '@/hooks/useToken';
+import { hasValidOfflineSession } from '@/services/offlineSession';
 
 // ===============================
 // QUERY HOOKS
@@ -539,19 +540,24 @@ export const useRealParkingSpacesWithVehicles = (
   const [isFromCache, setIsFromCache] = useState(false);
   const isOffline = useStore((s) => s.isOffline);
 
+  // 📴 OFFLINE-FIRST: Verificar si puede operar offline
+  const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+  const canOperateOffline = !isOnline && hasValidOfflineSession();
+
   const query = useQuery({
     queryKey: ['realParkingSpacesWithVehicles', parkingLotId],
     queryFn: async () => {
       if (!parkingLotId) throw new Error('Parking lot ID is required');
 
-      // OFFLINE-FIRST: navigator.onLine o store offline → ir directo al caché
-      if (connectionService.considerOffline()) {
+      // 📴 OFFLINE-FIRST: Si estamos offline, ir directo al caché
+      if (connectionService.considerOffline() || !isOnline) {
         const cached = await getCachedParkingSpaces(parkingLotId);
         if (cached && cached.length > 0) {
           setIsFromCache(true);
+          console.log('📴 [useRealParkingSpacesWithVehicles] Cargando desde caché:', cached.length, 'espacios');
           return cached as BackendParkingSpot[];
         }
-        throw new Error('No hay datos en caché para este parqueadero');
+        throw new Error('Sin conexión y no hay datos en caché para este parqueadero');
       }
 
       try {
@@ -585,7 +591,8 @@ export const useRealParkingSpacesWithVehicles = (
         throw error;
       }
     },
-    enabled: (options?.enabled ?? true) && !!parkingLotId,
+    // 📴 OFFLINE-FIRST: Habilitar si puede operar offline
+    enabled: (options?.enabled ?? true) && !!parkingLotId && (isOnline || canOperateOffline),
     staleTime: options?.staleTime ?? 1000 * 30,
     refetchInterval: isOffline ? false : (options?.refetchInterval ?? 1000 * 30),
     retry: (failureCount, error) => {
